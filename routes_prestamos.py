@@ -6,6 +6,8 @@ from flask import (
 from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
+import os
+from werkzeug.utils import secure_filename
 
 # Import defensivo (para no romper el arranque si no están instalados)
 try:
@@ -70,6 +72,11 @@ def _normalize_image_url(path_value: str) -> str:
         # asumimos que es relativo a static_folder
         return url_for('static', filename=path_value)
     return ""
+
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # ==========================================================
 # Consultas (USANDO SOLO dbo.PrestamosElementos + ElementosPublicitarios)
@@ -393,138 +400,167 @@ def crear_elemento_publicitario_get():
 
     return render_template('prestamos/elemento_crear.html')
 
-# POST: /prestamos/elementos/crearmaterial
 @bp_prestamos.route('/elementos/crearmaterial', methods=['POST'], endpoint='crear_elemento_publicitario_post')
 def crear_elemento_publicitario_post():
     if not _require_login():
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'No autorizado'}), 401
         return redirect('/login')
-    
-    # ✅ VERIFICACIÓN: Restringir para oficinas específicas
-    if _has_role('oficina_pereira', 'oficina_neiva', 'oficina_kennedy', 'oficina_bucaramanga', 
-                 'oficina_polo_club', 'oficina_nogal', 'oficina_tunja', 'oficina_lourdes',
-                 'oficina_cartagena', 'oficina_morato', 'oficina_medellin', 'oficina_cedritos'):
-        flash('No tiene permisos para crear materiales publicitarios', 'danger')
-        return redirect('/prestamos')
-    
-    if not _has_role('administrador', 'lider_inventario'):
-        flash('No autorizado para crear materiales', 'danger')
-        return redirect('/prestamos/elementos/crearmaterial')
 
+    # 🔒 PROTECCIÓN CONTRA DOBLE ENVÍO (5 segundos)
+    session_key = f"last_material_submit_{session.get('usuario_id')}"
+    last_submit = session.get(session_key)
+    current_time = datetime.now().timestamp()
+    
+    if last_submit and (current_time - last_submit) < 5:
+        return jsonify({
+            'success': False, 
+            'message': '⚠️ Por favor espera unos segundos antes de enviar nuevamente'
+        }), 429
+    
+    session[session_key] = current_time
+
+    # ====== CAMPOS ======
     nombre_elemento = (request.form.get('nombre_elemento') or '').strip()
     valor_unitario_str = request.form.get('valor_unitario', '0')
     cantidad_disp_str = request.form.get('cantidad_disponible', '0')
+    cantidad_minima_str = request.form.get('cantidad_minima', '0')
     imagen = request.files.get('imagen')
 
-    oficina_id = session.get('oficina_id')
-    usuario_nombre = (session.get('usuario_nombre') or 'administrador').strip() or 'administrador'
+    # OFICINA FIJA: COQ (ID 1)
+    oficina_id = 1
+    usuario_nombre = (session.get('usuario_nombre') or 'administrador').strip()
 
-    if not oficina_id:
-        flash('No se encontró la oficina en la sesión. Vuelve a iniciar sesión.', 'danger')
-        return redirect('/prestamos/elementos/crearmaterial')
+    # ====== VALIDACIONES ======
+    if not nombre_elemento:
+        return jsonify({'success': False, 'message': 'El nombre es obligatorio'}), 400
 
-    # Validaciones de campos numéricos
     try:
         valor_unitario = float(valor_unitario_str) if valor_unitario_str else 0.0
         cantidad_disp = int(cantidad_disp_str) if cantidad_disp_str else 0
-    except (ValueError, TypeError):
-        flash('Valor unitario o cantidad no válidos.', 'warning')
-        return redirect('/prestamos/elementos/crearmaterial')
+        cantidad_minima = int(cantidad_minima_str) if cantidad_minima_str else 0
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Valores numéricos inválidos'}), 400
 
-    if not nombre_elemento or valor_unitario <= 0 or cantidad_disp < 0:
-        flash('Complete nombre, valor (>0) y stock (>=0).', 'warning')
-        return redirect('/prestamos/elementos/crearmaterial')
+    if valor_unitario <= 0 or cantidad_disp < 0 or cantidad_minima < 0:
+        return jsonify({'success': False, 'message': 'Valores deben ser mayores o iguales a 0'}), 400
 
-    # Guardar imagen en static/uploads/elementos
+    # ===========================================================
+    # Guardar imagen
+    # ===========================================================
     ruta_imagen = None
     if imagen and imagen.filename:
+        if not allowed_file(imagen.filename):
+            return jsonify({'success': False, 'message': 'Tipo de archivo no permitido. Use PNG, JPG, JPEG, GIF o WEBP.'}), 400
+            
+        filename = secure_filename(imagen.filename)
+        upload_dir = os.path.join(current_app.static_folder, 'uploads', 'elementos')
+        os.makedirs(upload_dir, exist_ok=True)
+        path_file = os.path.join(upload_dir, filename)
+        
         try:
-            from werkzeug.utils import secure_filename
-            import os
-            filename = secure_filename(imagen.filename)
-            static_dir = current_app.static_folder
-            upload_dir = os.path.join(static_dir, 'uploads', 'elementos')
-            os.makedirs(upload_dir, exist_ok=True)
-            file_path = os.path.join(upload_dir, filename)
-            imagen.save(file_path)
+            imagen.save(path_file)
             ruta_imagen = f'uploads/elementos/{filename}'
-            print(f"✅ Imagen guardada: {ruta_imagen}")
         except Exception as e:
-            print(f"❌ Error guardando imagen: {e}")
-            flash('Error al guardar la imagen', 'warning')
+            return jsonify({'success': False, 'message': f'Error al guardar imagen: {str(e)}'}), 500
 
-    # Calcular valor total (para mensaje)
-    valor_total = valor_unitario * cantidad_disp
-
+    # ===========================================================
+    # VERIFICAR SI YA EXISTE EL MATERIAL CON EL MISMO NOMBRE
+    # ===========================================================
     conn = cur = None
     try:
         conn = get_database_connection()
         cur = conn.cursor()
 
-        # Verificar columnas disponibles
-        cur.execute("""
-            SELECT COLUMN_NAME
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='ElementosPublicitarios'
-        """)
-        cols = {r[0] for r in cur.fetchall()}
+        # 🔒 INICIAR TRANSACCIÓN EXPLÍCITA
+        conn.autocommit = False
 
-        # Campos a insertar
+        # =======================================================
+        # VERIFICAR SI YA EXISTE UN MATERIAL CON EL MISMO NOMBRE EN LA MISMA OFICINA
+        # =======================================================
+        cur.execute("""
+            SELECT ElementoId, NombreElemento, Activo 
+            FROM dbo.ElementosPublicitarios 
+            WHERE OficinaCreadoraId = ? AND LOWER(LTRIM(RTRIM(NombreElemento))) = LOWER(LTRIM(RTRIM(?)))
+        """, (oficina_id, nombre_elemento))
+        
+        material_existente = cur.fetchone()
+
+        if material_existente:
+            elemento_id, nombre_existente, activo = material_existente
+            conn.rollback()  # 🔒 IMPORTANTE: Rollback de la transacción
+            
+            if activo:
+                mensaje = f'❌ Ya existe un material ACTIVO llamado "{nombre_elemento}" en esta oficina. (ID: {elemento_id})'
+            else:
+                mensaje = f'⚠️ Ya existe un material INACTIVO llamado "{nombre_elemento}" en esta oficina. (ID: {elemento_id})'
+
+            return jsonify({
+                'success': False,
+                'message': mensaje
+            }), 409
+
+        # =======================================================
+        # INSERT REAL - SOLO SI NO EXISTE DUPLICADO
+        # =======================================================
         columnas = [
-            "NombreElemento", 
-            "ValorUnitario", 
-            "CantidadDisponible", 
-            "OficinaCreadoraId", 
-            "Activo", 
-            "FechaCreacion",
-            "CantidadMinima"
+            "NombreElemento", "ValorUnitario", "CantidadDisponible", "CantidadMinima",
+            "OficinaCreadoraId", "Activo", "FechaCreacion", "UsuarioCreador"
         ]
         valores = [
-            nombre_elemento, 
-            valor_unitario, 
-            cantidad_disp, 
-            int(oficina_id), 
-            1, 
-            datetime.now(),
-            10
+            nombre_elemento, valor_unitario, cantidad_disp, cantidad_minima,
+            oficina_id, 1, datetime.now(), usuario_nombre
         ]
 
-        # Agregar campos opcionales si existen
-        if "UsuarioCreador" in cols:
-            columnas.append("UsuarioCreador")
-            valores.append(usuario_nombre)
-
-        if "RutaImagen" in cols and ruta_imagen:
+        if ruta_imagen:
             columnas.append("RutaImagen")
             valores.append(ruta_imagen)
 
-        # Insertar en la base de datos
         placeholders = ", ".join(["?"] * len(columnas))
-        sql = f"INSERT INTO dbo.ElementosPublicitarios ({', '.join(columnas)}) VALUES ({placeholders})"
+        sql = f"INSERT INTO dbo.ElementosPublicitarios ({','.join(columnas)}) VALUES ({placeholders})"
+
+        print("SQL:", sql)
+        print("VALORES:", valores)
+
+        cur.execute(sql, valores)
         
-        print(f"🔍 Ejecutando SQL: {sql}")
-        print(f"🔍 Valores: {valores}")
-        
-        cur.execute(sql, tuple(valores))
+        # ✅ CONFIRMAR TRANSACCIÓN
         conn.commit()
 
-        flash(f'✅ Elemento publicitario "{nombre_elemento}" creado correctamente. Valor total: ${valor_total:.2f}', 'success')
-        return redirect('/prestamos/elementos/crearmaterial')
+        return jsonify({
+            'success': True,
+            'message': f'✅ Elemento "{nombre_elemento}" creado correctamente'
+        })
 
     except Exception as e:
+        # 🔒 ROLLBACK EN CASO DE ERROR
         try:
-            if conn: 
+            if conn:
                 conn.rollback()
-        except: 
+        except:
             pass
-        flash(f'Error al crear el material: {str(e)}', 'danger')
-        return redirect('/prestamos/elementos/crearmaterial')
+
+        error_msg = str(e)
+        
+        # Manejar específicamente el error de duplicado
+        if "2601" in error_msg and "UX_ElementosPublicitarios_Oficina_Nombre" in error_msg:
+            return jsonify({
+                'success': False,
+                'message': f'❌ Ya existe un material con el nombre "{nombre_elemento}" en esta oficina.'
+            }), 409
+        else:
+            return jsonify({'success': False, 'message': f'Error al crear material: {error_msg}'}), 500
+
     finally:
         try:
+            # Restaurar autocommit
+            if conn:
+                conn.autocommit = True
             if cur: 
                 cur.close()
             if conn: 
                 conn.close()
-        except: 
+        except:
             pass
 
 @bp_prestamos.get('/crear')

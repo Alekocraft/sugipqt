@@ -6,15 +6,12 @@
 {% endblock %}
 
 {% block content %}
-{% set rol = (session.get('rol','usuario') or 'usuario')|lower|trim %}
-{% set puede_gestionar = rol in ['administrador','lider_inventario'] %}
-
- <div class="container-fluid">
+<div class="container-fluid">
     <!-- Header con botón de exportación -->
-    <div class="row mb-4 debug-bg">
+    <div class="row mb-4">
         <div class="col-md-8">
             <h1 class="text-primary">Inventario Corporativo</h1>
-            <p>Productos cargados: {{ productos|length }}</p>
+            <p>Productos cargados: {{ total_productos }}</p>
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
@@ -25,16 +22,9 @@
                     <li><a class="dropdown-item" href="{{ url_for('inventario_corporativo.exportar_inventario_corporativo_excel', tipo='todo') }}">
                         <i class="fas fa-table"></i> Todo el inventario
                     </a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('inventario_corporativo.exportar_inventario_corporativo_excel', tipo='asignables') }}">
-                        <i class="fas fa-laptop"></i> Solo asignables
-                    </a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('inventario_corporativo.exportar_inventario_corporativo_excel', tipo='bajo_stock') }}">
-                        <i class="fas fa-exclamation-triangle"></i> Stock bajo
-                    </a></li>
                 </ul>
             </div>
-            {% if puede_gestionar %}
-            <!-- ✅ Ruta corregida -->
+            {% if puede_gestionar_inventario %}
             <a href="/inventario-corporativo/crear" class="btn btn-primary ms-2">
                 <i class="fas fa-plus"></i> Nuevo Producto
             </a>
@@ -42,44 +32,44 @@
         </div>
     </div>
 
-    <!-- Tarjetas simples -->
+    <!-- Tarjetas de estadísticas -->
     <div class="row mb-4">
         <div class="col-md-3 mb-3">
-            <div class="card debug-border">
+            <div class="card">
                 <div class="card-body">
                     <h5>Total Productos</h5>
-                    <h3>{{ productos|length }}</h3>
+                    <h3>{{ total_productos }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
-            <div class="card debug-border">
+            <div class="card">
                 <div class="card-body">
                     <h5>Valor Total</h5>
-                    <h3>${{ "{:,.0f}".format(valor_total_inventario) if valor_total_inventario is defined else "0" }}</h3>
+                    <h3>${{ "{:,.0f}".format(valor_total_inventario) }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
-            <div class="card debug-border">
+            <div class="card">
                 <div class="card-body">
                     <h5>Stock Bajo</h5>
-                    <h3>{{ productos_bajo_stock if productos_bajo_stock is defined else "0" }}</h3>
+                    <h3>{{ productos_bajo_stock }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
-            <div class="card debug-border">
+            <div class="card">
                 <div class="card-body">
                     <h5>Asignables</h5>
-                    <h3>{{ productos_asignables if productos_asignables is defined else "0" }}</h3>
+                    <h3>{{ productos_asignables }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Tabla simple -->
-    <div class="card debug-border">
+    <!-- Tabla de productos -->
+    <div class="card">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-striped">
@@ -90,7 +80,7 @@
                             <th>Categoría</th>
                             <th>Valor</th>
                             <th>Stock</th>
-                            {% if puede_gestionar %}
+                            {% if puede_ver_acciones_inventario %}
                             <th>Acciones</th>
                             {% endif %}
                         </tr>
@@ -107,7 +97,7 @@
                                     {{ producto.cantidad }} u
                                 </span>
                             </td>
-                            {% if puede_gestionar %}
+                            {% if puede_ver_acciones_inventario %}
                             <td>
                                 <a href="/inventario-corporativo/{{ producto.id }}" class="btn btn-sm btn-primary">
                                     <i class="fas fa-eye"></i>
@@ -120,7 +110,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="{% if puede_gestionar %}6{% else %}5{% endif %}" class="text-center text-muted py-4">
+                            <td colspan="{% if puede_ver_acciones_inventario %}6{% else %}5{% endif %}" class="text-center text-muted py-4">
                                 No hay productos registrados
                             </td>
                         </tr>
@@ -135,9 +125,27 @@
 
 {% block scripts %}
 <script>
-console.log('Inventario Corporativo cargado');
-console.log('Productos:', {{ productos|length }});
-console.log('Rol normalizado:', '{{ rol }}');
-console.log('Puede gestionar:', {{ puede_gestionar }});
+// Cargar estadísticas cuando se abre el modal
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalInventarioCorporativo');
+    if (modal) {
+        modal.addEventListener('show.bs.modal', function () {
+            fetch('/api/inventario-corporativo/estadisticas')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-productos').textContent = data.total_productos || 0;
+                    document.getElementById('valor-total').textContent = '$' + (data.valor_total || 0).toLocaleString();
+                    document.getElementById('stock-bajo').textContent = data.stock_bajo || 0;
+                })
+                .catch(error => {
+                    console.error('Error cargando estadísticas:', error);
+                    // Valores por defecto en caso de error
+                    document.getElementById('total-productos').textContent = '0';
+                    document.getElementById('valor-total').textContent = '$0';
+                    document.getElementById('stock-bajo').textContent = '0';
+                });
+        });
+    }
+});
 </script>
 {% endblock %}

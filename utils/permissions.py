@@ -3,7 +3,7 @@
 Sistema de verificación de permisos
 """
 from flask import session
-from typing import Union, Optional
+from typing import Optional
 from config.permissions import ROLE_PERMISSIONS, OFFICE_MAPPING, get_office_key
 
 
@@ -42,21 +42,18 @@ class PermissionManager:
     def can_view_actions() -> bool:
         """Verifica si puede ver columnas de acciones en préstamos"""
         role = session.get('rol', '').lower()
-        
-        # ✅ SOLO ADMINISTRADOR Y APROBADOR PUEDEN VER ACCIONES
         roles_con_acciones = {'administrador', 'aprobador'}
-        
         return role in roles_con_acciones
 
+    # ⬇️ ESTA ES LA PARTE QUE QUERÍAS CAMBIAR (NUEVA LÓGICA)
     @staticmethod
     def can_manage_inventario_corporativo() -> bool:
-        """Verifica si puede gestionar inventario corporativo (sedes y oficinas)"""
-        role = session.get('rol', '').lower()
-        
-        # ✅ SOLO ADMINISTRADOR Y LIDER_INVENTARIO PUEDEN GESTIONAR INVENTARIO CORPORATIVO
-        roles_con_gestion = {'administrador', 'lider_inventario'}
-        
-        return role in roles_con_gestion
+        """Verifica si puede gestionar inventario corporativo usando acciones del rol"""
+        return (
+            PermissionManager.has_action_permission('inventario_corporativo', 'create') or
+            PermissionManager.has_action_permission('inventario_corporativo', 'edit') or
+            PermissionManager.has_action_permission('inventario_corporativo', 'delete')
+        )
 
     @staticmethod
     def can_view_inventario_actions() -> bool:
@@ -65,12 +62,7 @@ class PermissionManager:
 
     @staticmethod
     def get_office_filter():
-        """Obtiene el filtro de oficina para consultas
-
-        Retorna:
-            - None si el usuario puede ver 'all' oficinas.
-            - office_key (str) si debe filtrar por su oficina.
-        """
+        """Obtiene el filtro de oficina para consultas"""
         perms = PermissionManager.get_user_permissions()
         office_filter = perms.get('office_filter', 'own')
         office_key = perms.get('office_key')
@@ -81,7 +73,7 @@ class PermissionManager:
             return office_key
 
 
-# Funciones de conveniencia para usar en templates y rutas
+# Funciones de conveniencia
 def can_access(module: str, action: Optional[str] = None) -> bool:
     if action:
         return PermissionManager.has_action_permission(module, action)
@@ -102,8 +94,7 @@ def can_view_inventario_actions() -> bool:
 
 def get_accessible_modules():
     perms = PermissionManager.get_user_permissions()
-    role_modules = perms['role'].get('modules', [])
-    return role_modules
+    return perms['role'].get('modules', [])
 
 
 def get_office_filter():
@@ -116,10 +107,7 @@ def user_can_view_all() -> bool:
 
 
 def assign_role_by_office(office_name: str) -> str:
-    """Asigna un rol por defecto según la oficina.
-
-    Nota: Se usa get_office_key(office_name) para normalizar la clave de oficina.
-    """
+    """Asigna un rol por defecto según la oficina"""
     office_roles = {
         'COQ': 'oficina_coq',
         'CALI': 'oficina_cali',

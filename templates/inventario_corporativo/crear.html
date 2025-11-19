@@ -1,92 +1,181 @@
 {% extends "base.html" %}
-{% block title %}Crear Producto - Inventario Corporativo{% endblock %}
-{% block content %}
 
+{% block title %}Crear Producto - Inventario Corporativo{% endblock %}
+
+{% block styles %}
+<style>
+    .card-inventario { border-radius: 0.75rem; }
+    .card-inventario .card-header {
+        border-top-left-radius: 0.75rem;
+        border-top-right-radius: 0.75rem;
+    }
+    .preview-img {
+        max-width: 150px; max-height: 150px;
+        border: 1px solid #dee2e6; border-radius: 4px;
+        object-fit: cover;
+    }
+    .is-invalid { border-color: #dc3545 !important; }
+    .fade-in { animation: fadeIn .4s ease-in; }
+    @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+</style>
+{% endblock %}
+
+{% block content %}
 <div class="container-fluid fade-in">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm">
+
+            {% if can_access is defined and not can_access('inventario_corporativo', 'create') %}
+                <div class="alert alert-danger shadow-sm">
+                    <i class="fas fa-lock me-2"></i> No tienes permisos para crear productos.
+                </div>
+            {% else %}
+
+            <div class="card card-inventario shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title mb-0">
                         <i class="fas fa-plus"></i> Nuevo Producto Corporativo
                     </h5>
                 </div>
+
                 <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" enctype="multipart/form-data" id="productForm" novalidate>
+
                         <div class="row">
                             <div class="col-md-6">
-                                
+                                <!-- Nombre -->
                                 <div class="mb-3">
-                                    <label for="nombre" class="form-label">Nombre del Producto *</label>
-                                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                                    <label class="form-label">Nombre *</label>
+                                    <input type="text" class="form-control" name="nombre"
+                                           required value="{{ request.form.nombre if request.form else '' }}">
                                 </div>
+
+                                <!-- Categoría -->
                                 <div class="mb-3">
-                                    <label for="categoria_id" class="form-label">Categoría *</label>
-                                    <select id="categoria_id" name="categoria_id" class="form-select" required>
-                                        <option value="" disabled selected>Seleccione una categoría</option>
+                                    <label class="form-label">Categoría *</label>
+                                    <select class="form-select" name="categoria_id" required>
+                                        <option disabled selected>Seleccione</option>
                                         {% for c in categorias %}
-                                        <option value="{{ c.id }}">{{ c.nombre }}</option>
+                                            <option value="{{ c.id }}"
+                                                {% if request.form.get('categoria_id') == c.id|string %}selected{% endif %}>
+                                                {{ c.nombre }}
+                                            </option>
                                         {% endfor %}
                                     </select>
                                 </div>
+
+                                <!-- Proveedor -->
                                 <div class="mb-3">
-                                    <label for="proveedor_id" class="form-label">Proveedor *</label>
-                                    <select id="proveedor_id" name="proveedor_id" class="form-select" required>
-                                        <option value="" disabled selected>Seleccione un proveedor</option>
+                                    <label class="form-label">Proveedor *</label>
+                                    <select class="form-select" name="proveedor_id" required>
+                                        <option disabled selected>Seleccione</option>
                                         {% for p in proveedores %}
-                                        <option value="{{ p.id }}">{{ p.nombre }}</option>
+                                            <option value="{{ p.id }}"
+                                                {% if request.form.get('proveedor_id') == p.id|string %}selected{% endif %}>
+                                                {{ p.nombre }}
+                                            </option>
                                         {% endfor %}
                                     </select>
                                 </div>
                             </div>
+
                             <div class="col-md-6">
+                                <!-- Valor unitario -->
                                 <div class="mb-3">
-                                    <label for="valor_unitario" class="form-label">Valor Unitario *</label>
-                                    <input type="number" class="form-control" id="valor_unitario" name="valor_unitario" step="0.01" min="0" required>
+                                    <label class="form-label">Valor Unitario *</label>
+                                    <input type="number" class="form-control" name="valor_unitario"
+                                           min="0.01" step="0.01" required
+                                           value="{{ request.form.valor_unitario }}">
                                 </div>
+
+                                <!-- Cantidad -->
                                 <div class="mb-3">
-                                    <label for="cantidad" class="form-label">Cantidad Inicial *</label>
-                                    <input type="number" class="form-control" id="cantidad" name="cantidad" min="0" required>
+                                    <label class="form-label">Cantidad *</label>
+                                    <input type="number" class="form-control" name="cantidad"
+                                           min="0" required
+                                           value="{{ request.form.cantidad }}">
                                 </div>
+
+                                <!-- Cantidad mínima -->
                                 <div class="mb-3">
-                                    <label for="cantidad_minima" class="form-label">Cantidad Mínima</label>
-                                    <input type="number" class="form-control" id="cantidad_minima" name="cantidad_minima" min="1" value="5">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="ubicacion" class="form-label">Ubicación</label>
-                                    <input type="text" class="form-control" id="ubicacion" name="ubicacion">
+                                    <label class="form-label">Cantidad Mínima</label>
+                                    <input type="number" class="form-control" name="cantidad_minima"
+                                           min="0" value="{{ request.form.cantidad_minima }}">
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Descripción -->
                         <div class="mb-3">
-                            <label for="descripcion" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="imagen" class="form-label">Imagen del Producto</label>
-                            <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" name="descripcion" rows="3"
+                                      maxlength="500">{{ request.form.descripcion }}</textarea>
                         </div>
 
-                        <!-- Checkbox es_asignable: marcado y oculto + hidden redundante -->
-                        <div class="mb-3 form-check d-none">
-                            <input type="checkbox" class="form-check-input" id="es_asignable" name="es_asignable" checked>
-                            <label class="form-check-label" for="es_asignable">Producto asignable a usuarios</label>
+                        <!-- Ubicación e imagen -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Ubicación</label>
+                                <input type="text" class="form-control" name="ubicacion" value="COQ" readonly>
+                                <input type="hidden" name="es_asignable" value="1">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Imagen</label>
+                                <input type="file" class="form-control" name="imagen" accept="image/*">
+                                <img id="preview" class="preview-img d-none mt-2">
+                            </div>
                         </div>
-                        <input type="hidden" name="es_asignable" value="on">
+
+                        <hr>
 
                         <div class="d-flex justify-content-between">
-                            <a href="/dashboard" class="btn btn-secondary">
+                            <a href="/inventario-corporativo" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Cancelar
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Guardar Producto
+                            <button class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-save"></i> Guardar
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
+
+            {% endif %}
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const img = document.getElementById("preview");
+    const file = document.querySelector("input[name=imagen]");
+    if (file) {
+        file.addEventListener("change", e => {
+            const f = e.target.files[0];
+            if (f) {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    img.src = ev.target.result;
+                    img.classList.remove("d-none");
+                };
+                reader.readAsDataURL(f);
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

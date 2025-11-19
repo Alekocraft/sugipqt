@@ -747,9 +747,10 @@ class InventarioCorporativoModel:
             if conn: conn.close()
 
     # ================== VISTAS POR TIPO DE OFICINA ==================
+
     @staticmethod
     def obtener_por_sede_principal():
-        """Obtiene productos de la sede principal"""
+        """Obtiene productos de la sede principal (no asignados a oficinas)"""
         conn = get_database_connection()
         if not conn:
             return []
@@ -757,18 +758,33 @@ class InventarioCorporativoModel:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT * 
-                FROM InventarioCorporativo 
-                WHERE oficina = 'Sede Principal' 
-                   OR oficina IS NULL 
-                   OR oficina = ''
-                ORDER BY nombre
+                SELECT 
+                    p.ProductoId           AS id,
+                    p.CodigoUnico          AS codigo_unico,
+                    p.NombreProducto       AS nombre,
+                    p.Descripcion          AS descripcion,
+                    c.NombreCategoria      AS categoria,
+                    pr.NombreProveedor     AS proveedor,
+                    p.ValorUnitario        AS valor_unitario,
+                    p.CantidadDisponible   AS cantidad,
+                    p.CantidadMinima       AS cantidad_minima,
+                    p.Ubicacion            AS ubicacion,
+                    p.EsAsignable          AS es_asignable,
+                    p.RutaImagen           AS ruta_imagen,
+                    p.FechaCreacion        AS fecha_creacion,
+                    p.UsuarioCreador       AS usuario_creador,
+                    'Sede Principal'       AS oficina
+                FROM ProductosCorporativos p
+                INNER JOIN CategoriasProductos c ON p.CategoriaId = c.CategoriaId
+                INNER JOIN Proveedores pr        ON p.ProveedorId = pr.ProveedorId
+                WHERE p.Activo = 1
+                AND p.ProductoId NOT IN (
+                    SELECT ProductoId FROM Asignaciones WHERE Activo = 1
+                )
+                ORDER BY p.NombreProducto
             """)
-            productos = []
             cols = [c[0] for c in cursor.description]
-            for row in cursor.fetchall():
-                productos.append(dict(zip(cols, row)))
-            return productos
+            return [dict(zip(cols, r)) for r in cursor.fetchall()]
         except Exception as e:
             print(f"Error obteniendo sede principal: {e}")
             return []
@@ -778,7 +794,7 @@ class InventarioCorporativoModel:
 
     @staticmethod
     def obtener_por_oficinas_servicio():
-        """Obtiene productos de oficinas de servicio (excluyendo sede principal)"""
+        """Obtiene productos de oficinas de servicio (asignados a oficinas)"""
         conn = get_database_connection()
         if not conn:
             return []
@@ -786,18 +802,32 @@ class InventarioCorporativoModel:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT * 
-                FROM InventarioCorporativo 
-                WHERE oficina != 'Sede Principal' 
-                  AND oficina IS NOT NULL 
-                  AND oficina != ''
-                ORDER BY oficina, nombre
+                SELECT 
+                    p.ProductoId           AS id,
+                    p.CodigoUnico          AS codigo_unico,
+                    p.NombreProducto       AS nombre,
+                    p.Descripcion          AS descripcion,
+                    c.NombreCategoria      AS categoria,
+                    pr.NombreProveedor     AS proveedor,
+                    p.ValorUnitario        AS valor_unitario,
+                    p.CantidadDisponible   AS cantidad,
+                    p.CantidadMinima       AS cantidad_minima,
+                    p.Ubicacion            AS ubicacion,
+                    p.EsAsignable          AS es_asignable,
+                    p.RutaImagen           AS ruta_imagen,
+                    p.FechaCreacion        AS fecha_creacion,
+                    p.UsuarioCreador       AS usuario_creador,
+                    o.NombreOficina        AS oficina
+                FROM ProductosCorporativos p
+                INNER JOIN CategoriasProductos c ON p.CategoriaId = c.CategoriaId
+                INNER JOIN Proveedores pr        ON p.ProveedorId = pr.ProveedorId
+                INNER JOIN Asignaciones a        ON p.ProductoId = a.ProductoId
+                INNER JOIN Oficinas o            ON a.OficinaId = o.OficinaId
+                WHERE p.Activo = 1 AND a.Activo = 1
+                ORDER BY o.NombreOficina, p.NombreProducto
             """)
-            productos = []
             cols = [c[0] for c in cursor.description]
-            for row in cursor.fetchall():
-                productos.append(dict(zip(cols, row)))
-            return productos
+            return [dict(zip(cols, r)) for r in cursor.fetchall()]
         except Exception as e:
             print(f"Error obteniendo oficinas servicio: {e}")
             return []

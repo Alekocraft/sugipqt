@@ -54,10 +54,12 @@
                                     <td>{{ material.oficina_id }}</td>
                                     <td>
                                         {% if material.ruta_imagen %}
-                                        <img src="/static/{{ material.ruta_imagen }}"
+                                        <!-- CORRECCIÓN: Agregar /uploads/ en la ruta -->
+                                        <img src="/static/uploads/{{ material.ruta_imagen }}"
                                              alt="{{ material.nombre }}"
                                              style="max-width: 50px; max-height: 50px;"
-                                             class="img-thumbnail">
+                                             class="img-thumbnail"
+                                             onerror="this.style.display='none'">
                                         {% else %}
                                         <span class="text-muted">Sin imagen</span>
                                         {% endif %}

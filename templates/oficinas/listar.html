@@ -2,12 +2,15 @@
 {% block title %}Gestión de Oficinas{% endblock %}
 {% block content %}
 <h1>🏢 Gestión de Oficinas</h1>
+
 <div class="d-flex justify-content-between mb-3">
     <a href="/dashboard" class="btn btn-secondary">← Volver al Dashboard</a>
 </div>
+
 <div class="card">
     <div class="card-body">
         <h5>Lista de Oficinas ({{ oficinas|length }} encontradas)</h5>
+
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
@@ -21,18 +24,17 @@
                         <th>Estado</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     {% if oficinas %}
-                    {% for ofi in oficinas %}
+                    {% for ofi in oficinas | sort(attribute='id') %}
                     <tr>
                         <td><strong>{{ ofi.id }}</strong></td>
                         <td>{{ ofi.nombre }}</td>
                         <td>{{ ofi.director }}</td>
                         <td>
                             {% if ofi.email %}
-                            <a href="mailto:{{ ofi.email }}" class="text-decoration-none">
-                                📧 {{ ofi.email }}
-                            </a>
+                            <a href="mailto:{{ ofi.email }}" class="text-decoration-none">📧 {{ ofi.email }}</a>
                             {% else %}
                             <span class="text-muted">No especificado</span>
                             {% endif %}
@@ -42,7 +44,7 @@
                             {% if ofi.es_principal %}
                             <span class="badge bg-primary">Sede Principal</span>
                             {% else %}
-                            <span class="badge bg-secondary">Oficina Normal</span>
+                            <span class="badge bg-secondary">Oficina de Servicios </span>
                             {% endif %}
                         </td>
                         <td>
@@ -60,4 +62,5 @@
         </div>
     </div>
 </div>
+
 {% endblock %}

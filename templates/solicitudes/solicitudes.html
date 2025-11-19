@@ -133,6 +133,7 @@
                                 {% for solicitud in solicitudes %}
                                 {% set material_nombre = solicitud.material_nombre if solicitud.material_nombre else 'Material no encontrado' %}
                                 {% set stock_actual = materiales_dict[solicitud.material_id].cantidad if materiales_dict and materiales_dict.get(solicitud.material_id) else 0 %}
+                                {% set material_imagen = materiales_dict[solicitud.material_id].ruta_imagen if materiales_dict and materiales_dict.get(solicitud.material_id) else None %}
                                 {% set solicitante_nombre = solicitud.usuario_solicitante if solicitud.usuario_solicitante else 'N/A' %}
                                 {% set oficina_nombre = solicitud.oficina_nombre if solicitud.oficina_nombre else 'N/A' %}
                                 {% set fecha_solicitud = solicitud.fecha_solicitud if solicitud.fecha_solicitud else 'N/A' %}
@@ -199,7 +200,8 @@
                                                     {{ solicitud.valor_total_solicitado|default(0) }},
                                                     {{ solicitud.valor_oficina|default(0) }},
                                                     {{ solicitud.valor_sede|default(0) }},
-                                                    {{ solicitud.observacion|default("")|tojson }}
+                                                    {{ solicitud.observacion|default("")|tojson }},
+                                                    {{ material_imagen|tojson }}
                                                 )'
                                                 title="Ver detalles completos">
                                                 👁️ Ver
@@ -339,38 +341,86 @@
 
 <!-- Modal para devolución -->
 <div class="modal fade" id="modalDevolucion" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0 rounded-3">
+            <!-- Header -->
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">🔄 Registrar Devolución</h5>
+                <div class="d-flex align-items-center">
+                    <span class="me-2 fs-4">🔄</span>
+                    <h5 class="modal-title mb-0">Registrar Devolución</h5>
+                </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+
+            <!-- Body -->
             <div class="modal-body">
-                <div class="alert alert-info">
-                    <strong id="infoMaterialDevolucion"></strong><br>
-                    <strong>Solicitante:</strong> <span id="infoSolicitanteDevolucion"></span><br>
-                    <strong>Cantidad máxima a devolver:</strong> <span id="infoCantidadDevolucion"></span>
+                <!-- Info resumen -->
+                <div class="border rounded-3 p-3 mb-3 bg-light">
+                    <p class="mb-2">
+                        <strong>Material:</strong>
+                        <span id="infoMaterialDevolucion" class="text-primary"></span>
+                    </p>
+                    <p class="mb-1">
+                        <strong>Solicitante:</strong>
+                        <span id="infoSolicitanteDevolucion"></span>
+                    </p>
+                    <p class="mb-0">
+                        <strong>Cant. máxima a devolver:</strong>
+                        <span id="infoCantidadDevolucion" class="badge bg-info text-dark"></span>
+                    </p>
                 </div>
+
                 <form id="formDevolucion" method="POST">
                     <input type="hidden" id="solicitud_id_devolucion" name="solicitud_id">
+
+                    <!-- Cantidad -->
                     <div class="mb-3">
-                        <label for="cantidad_devuelta" class="form-label">Cantidad a devolver:</label>
-                        <input type="number" class="form-control" id="cantidad_devuelta" name="cantidad_devuelta" min="1" required>
-                        <small class="form-text text-muted" id="maximo_devolucion"></small>
+                        <label for="cantidad_devuelta" class="form-label fw-semibold">
+                            Cantidad a devolver <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number"
+                                   class="form-control"
+                                   id="cantidad_devuelta"
+                                   name="cantidad_devuelta"
+                                   min="1"
+                                   required>
+                            <span class="input-group-text">
+                                máx: <span id="maximo_devolucion" class="ms-1"></span>
+                            </span>
+                        </div>
+                        <div class="form-text">
+                            Ingrese una cantidad menor o igual al máximo permitido.
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="observacion_devolucion" class="form-label">Observación (opcional):</label>
-                        <textarea class="form-control" id="observacion_devolucion" name="observacion" rows="3" placeholder="Observación sobre la devolución..."></textarea>
+
+                    <!-- Observación -->
+                    <div class="mb-2">
+                        <label for="observacion_devolucion" class="form-label fw-semibold">
+                            Observación <span class="text-muted">(opcional)</span>
+                        </label>
+                        <textarea class="form-control"
+                                  id="observacion_devolucion"
+                                  name="observacion"
+                                  rows="3"
+                                  placeholder="Escriba aquí una observación sobre la devolución..."></textarea>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-info" onclick="confirmarDevolucion()">✅ Confirmar Devolución</button>
+
+            <!-- Footer -->
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    ✖ Cancelar
+                </button>
+                <button type="button" class="btn btn-info" onclick="confirmarDevolucion()">
+                    ✅ Confirmar devolución
+                </button>
             </div>
         </div>
     </div>
 </div>
+
 
 <style>
     .table th {
@@ -403,67 +453,112 @@
         window.location.href = url.toString();
     }
 
-    function verDetallesSolicitud(solicitudId, materialNombre, cantidadSolicitada, stockActual, solicitanteNombre, oficinaNombre, fechaSolicitud, estado, porcentajeOficina, valorTotalSolicitado, valorOficina, valorSede, observacion) {
-        const detallesHTML = `
-        <div class="row">
-            <div class="col-md-6">
-                <h6>Información Básica</h6>
-                <p><strong>ID:</strong> #${solicitudId}</p>
-                <p><strong>Estado:</strong> <span class="badge ${estado.toLowerCase() === 'pendiente' ? 'bg-warning' : estado.toLowerCase() === 'aprobada' ? 'bg-success' : estado.toLowerCase() === 'devuelta' ? 'bg-info' : 'bg-danger'}">${estado}</span></p>
-                <p><strong>Fecha de Solicitud:</strong> ${fechaSolicitud}</p>
-                <p><strong>Observación:</strong> ${observacion || 'Sin observación'}</p>
-            </div>
-            <div class="col-md-6">
-                <h6>Detalles del Material</h6>
-                <p><strong>Material:</strong> ${materialNombre}</p>
-                <p><strong>Cantidad Solicitada:</strong> ${cantidadSolicitada} unidades</p>
-                <p><strong>Stock Disponible:</strong> ${stockActual} unidades</p>
-                <p><strong>Porcentaje Oficina:</strong> ${porcentajeOficina}%</p>
-            </div>
-        </div>
-        <div class="row mt-3">
-            <div class="col-md-12">
-                <h6>Información del Solicitante</h6>
-                <p><strong>Nombre:</strong> ${solicitanteNombre}</p>
-                <p><strong>Oficina:</strong> ${oficinaNombre}</p>
-            </div>
-        </div>
-        <div class="row mt-3">
-            <div class="col-md-12">
-                <h6>📊 Valores Financieros</h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Concepto</th>
-                                <th>Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><strong>Valor Total Solicitado</strong></td>
-                                <td class="text-primary fw-bold">$${valorTotalSolicitado.toLocaleString()}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Valor a Cargo de la Oficina (${porcentajeOficina}%)</strong></td>
-                                <td class="text-success">$${valorOficina.toLocaleString()}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Valor a Cargo de Sede Principal</strong></td>
-                                <td class="text-info">$${valorSede.toLocaleString()}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+    function verDetallesSolicitud(solicitudId, materialNombre, cantidadSolicitada, stockActual, solicitanteNombre, oficinaNombre, fechaSolicitud, estado, porcentajeOficina, valorTotalSolicitado, valorOficina, valorSede, observacion, materialImagen) {
+    // Construir el HTML de la imagen si está disponible
+    let imagenHTML = '';
+    if (materialImagen && materialImagen !== 'null' && materialImagen !== 'None') {
+        // NORMALIZAR LA RUTA: Si ya incluye "uploads/", usar tal cual, sino agregarlo
+        let rutaImagen = materialImagen;
+        if (rutaImagen.includes('uploads/')) {
+            // Si ya tiene uploads/, usar directamente
+            imagenHTML = `
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <h6>🖼️ Imagen del Material</h6>
+                    <div class="text-center">
+                        <img src="/static/${rutaImagen}" 
+                             alt="${materialNombre}" 
+                             class="img-fluid rounded"
+                             style="max-height: 200px; object-fit: cover;"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div class="alert alert-warning mt-2" style="display: none;">
+                            <small><i class="fas fa-exclamation-triangle"></i> La imagen no se pudo cargar</small>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>`;
-
-        const detallesElement = document.getElementById('detallesSolicitud');
-        if (detallesElement) {
-            detallesElement.innerHTML = detallesHTML;
-            new bootstrap.Modal(document.getElementById('modalDetalles')).show();
+            </div>`;
+        } else {
+            // Si no tiene uploads/, agregarlo
+            imagenHTML = `
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <h6>🖼️ Imagen del Material</h6>
+                    <div class="text-center">
+                        <img src="/static/uploads/${rutaImagen}" 
+                             alt="${materialNombre}" 
+                             class="img-fluid rounded"
+                             style="max-height: 200px; object-fit: cover;"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div class="alert alert-warning mt-2" style="display: none;">
+                            <small><i class="fas fa-exclamation-triangle"></i> La imagen no se pudo cargar</small>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
         }
     }
+
+    const detallesHTML = `
+    <div class="row">
+        <div class="col-md-6">
+            <h6>Información Básica</h6>
+            <p><strong>ID:</strong> #${solicitudId}</p>
+            <p><strong>Estado:</strong> <span class="badge ${estado.toLowerCase() === 'pendiente' ? 'bg-warning' : estado.toLowerCase() === 'aprobada' ? 'bg-success' : estado.toLowerCase() === 'devuelta' ? 'bg-info' : 'bg-danger'}">${estado}</span></p>
+            <p><strong>Fecha de Solicitud:</strong> ${fechaSolicitud}</p>
+            <p><strong>Observación:</strong> ${observacion || 'Sin observación'}</p>
+        </div>
+        <div class="col-md-6">
+            <h6>Detalles del Material</h6>
+            <p><strong>Material:</strong> ${materialNombre}</p>
+            <p><strong>Cantidad Solicitada:</strong> ${cantidadSolicitada} unidades</p>
+            <p><strong>Stock Disponible:</strong> ${stockActual} unidades</p>
+            <p><strong>Porcentaje Oficina:</strong> ${porcentajeOficina}%</p>
+        </div>
+    </div>
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <h6>Información del Solicitante</h6>
+            <p><strong>Nombre:</strong> ${solicitanteNombre}</p>
+            <p><strong>Oficina:</strong> ${oficinaNombre}</p>
+        </div>
+    </div>
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <h6>📊 Valores Financieros</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Valor Total Solicitado</strong></td>
+                            <td class="text-primary fw-bold">$${valorTotalSolicitado.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Valor a Cargo de la Oficina (${porcentajeOficina}%)</strong></td>
+                            <td class="text-success">$${valorOficina.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Valor a Cargo de Sede Principal</strong></td>
+                            <td class="text-info">$${valorSede.toLocaleString()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    ${imagenHTML}`;
+
+    const detallesElement = document.getElementById('detallesSolicitud');
+    if (detallesElement) {
+        detallesElement.innerHTML = detallesHTML;
+        new bootstrap.Modal(document.getElementById('modalDetalles')).show();
+    }
+}
 
     function mostrarModalAprobacionParcial(solicitudId, cantidadSolicitada, materialNombre, solicitanteNombre) {
         document.getElementById('solicitud_id_parcial').value = solicitudId;

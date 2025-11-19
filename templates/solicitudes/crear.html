@@ -156,7 +156,11 @@
                             <div class="card-body">
                                 <div id="imagen-material" class="text-center mb-3" style="display: none;">
                                     <img id="imagen-material-src" src="" alt="Imagen del material"
-                                         class="img-fluid rounded" style="max-height: 150px;">
+                                         class="img-fluid rounded" style="max-height: 150px;"
+                                         onerror="this.style.display='none';">
+                                    <div class="alert alert-warning mt-2" style="display: none;">
+                                        <small><i class="fas fa-exclamation-triangle"></i> La imagen no se pudo cargar</small>
+                                    </div>
                                 </div>
                                 <div id="info-material" class="text-muted">
                                     {% if materiales %}
@@ -220,6 +224,7 @@
         const resumenSolicitud = document.getElementById('resumen-solicitud');
         const imagenMaterialDiv = document.getElementById('imagen-material');
         const imagenMaterialSrc = document.getElementById('imagen-material-src');
+        const imagenErrorDiv = imagenMaterialDiv.querySelector('.alert-warning');
 
         // Verificar si hay materiales disponibles
         const hayMateriales = materialSelect.options.length > 1;
@@ -260,10 +265,14 @@
 
                 // Mostrar u ocultar imagen
                 if (imagen && imagen !== 'None' && imagen !== '') {
-                    imagenMaterialSrc.src = '/static/' + imagen;
+                    // CORRECCIÓN: Usar la ruta correcta /static/uploads/
+                    imagenMaterialSrc.src = '/static/uploads/' + imagen;
+                    imagenMaterialSrc.style.display = 'block';
                     imagenMaterialDiv.style.display = 'block';
+                    imagenErrorDiv.style.display = 'none';
                 } else {
                     imagenMaterialDiv.style.display = 'none';
+                    imagenErrorDiv.style.display = 'none';
                 }
 
                 infoMaterial.innerHTML =
@@ -273,6 +282,7 @@
                     '<strong>Valor total disponible:</strong> $' + (valorNum * stockNum).toFixed(2);
             } else {
                 imagenMaterialDiv.style.display = 'none';
+                imagenErrorDiv.style.display = 'none';
                 infoMaterial.innerHTML = 'Seleccione un material para ver información detallada...';
             }
 
@@ -293,6 +303,12 @@
                 resumenSolicitud.innerHTML = 'Complete los campos para ver el resumen...';
             }
         }
+
+        // Manejar errores de carga de imagen
+        imagenMaterialSrc.addEventListener('error', function() {
+            this.style.display = 'none';
+            imagenErrorDiv.style.display = 'block';
+        });
 
         // Solo agregar event listeners si hay materiales
         if (hayMateriales) {

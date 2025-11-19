@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Sistema de Gestión de Inventarios{% endblock %}</title>
 
-    <!--Bootstrap & Icons-->
+    <!-- Bootstrap & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
@@ -15,6 +15,9 @@
     {% block styles %}{% endblock %}
 </head>
 <body class="bg-light">
+
+    {# Aseguramos una variable segura para el path actual #}
+    {% set current_path = request.path if request is defined and request.path else '' %}
 
     <!-- Navbar superior -->
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background-color: #532D8C;">
@@ -30,39 +33,42 @@
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <!-- Menú dinámico según la ruta actual -->
-                {% if request.path.startswith('/inventario-corporativo') %}
+                {% if current_path.startswith('/inventario-corporativo') %}
                 <!-- Menú Inventario Corporativo -->
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">
+                        <a class="nav-link {% if current_path == '/dashboard' %}active{% endif %}" href="/dashboard">
                             <i class="fas fa-tachometer-alt"></i> Dashboard
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/inventario-corporativo') and not request.path.startswith('/inventario-corporativo/sede-principal') and not request.path.startswith('/inventario-corporativo/oficinas-servicio') and not request.path.startswith('/inventario-corporativo/crear') %}active{% endif %}" 
+                        <a class="nav-link {% if current_path.startswith('/inventario-corporativo') 
+                                             and not current_path.startswith('/inventario-corporativo/sede-principal') 
+                                             and not current_path.startswith('/inventario-corporativo/oficinas-servicio') 
+                                             and not current_path.startswith('/inventario-corporativo/crear') %}active{% endif %}" 
                            href="/inventario-corporativo">
                             <i class="fas fa-boxes"></i> Todos los Productos
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/inventario-corporativo/sede-principal') %}active{% endif %}" 
+                        <a class="nav-link {% if current_path.startswith('/inventario-corporativo/sede-principal') %}active{% endif %}" 
                            href="/inventario-corporativo/sede-principal">
                             <i class="fas fa-building"></i> Sede Principal
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/inventario-corporativo/oficinas-servicio') %}active{% endif %}" 
+                        <a class="nav-link {% if current_path.startswith('/inventario-corporativo/oficinas-servicio') %}active{% endif %}" 
                            href="/inventario-corporativo/oficinas-servicio">
                             <i class="fas fa-map-marker-alt"></i> Oficinas de Servicio
                         </a>
                     </li>
 
-                    {% if can_access('inventario', 'create') %}
+                    {% if can_access is defined and can_access('inventario', 'create') %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/inventario-corporativo/crear') %}active{% endif %}" 
+                        <a class="nav-link {% if current_path.startswith('/inventario-corporativo/crear') %}active{% endif %}" 
                            href="/inventario-corporativo/crear">
                             <i class="fas fa-plus-circle"></i> Nuevo Producto
                         </a>
@@ -70,43 +76,45 @@
                     {% endif %}
                 </ul>
 
-                {% elif request.path.startswith('/prestamos') %}
+                {% elif current_path.startswith('/prestamos') %}
                 <!-- Menú Préstamos -->
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">
+                        <a class="nav-link {% if current_path == '/dashboard' %}active{% endif %}" href="/dashboard">
                             <i class="fas fa-tachometer-alt"></i> Dashboard
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/prestamos') and not request.path.startswith('/prestamos/crear') and not request.path.startswith('/prestamos/listar') %}active{% endif %}" 
+                        <a class="nav-link {% if current_path.startswith('/prestamos') 
+                                             and not current_path.startswith('/prestamos/crear') 
+                                             and not current_path.startswith('/prestamos/listar') %}active{% endif %}" 
                            href="/prestamos">
                             <i class="fas fa-clipboard-list"></i> Todos los Préstamos
                         </a>
                     </li>
 
-                    {% if can_access('prestamos', 'create') %}
+                    {% if can_access is defined and can_access('prestamos', 'create') %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/prestamos/crear') %}active{% endif %}" 
+                        <a class="nav-link {% if current_path.startswith('/prestamos/crear') %}active{% endif %}" 
                            href="/prestamos/crear">
                             <i class="fas fa-plus-circle"></i> Nuevo Préstamo
                         </a>
                     </li>
                     {% endif %}
 
-                    {% if can_access('materiales', 'view') %}
+                    {% if can_access is defined and can_access('materiales', 'view') %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/prestamos/elementos') %}active{% endif %}" 
+                        <a class="nav-link {% if current_path.startswith('/prestamos/elementos') %}active{% endif %}" 
                            href="/prestamos/elementos">
                             <i class="fas fa-box"></i> Materiales
                         </a>
                     </li>
                     {% endif %}
 
-                    {% if can_access('reportes', 'view') %}
+                    {% if can_access is defined and can_access('reportes', 'view') %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/prestamos/reportes') %}active{% endif %}" 
+                        <a class="nav-link {% if current_path.startswith('/prestamos/reportes') %}active{% endif %}" 
                            href="/prestamos/reportes">
                             <i class="fas fa-chart-bar"></i> Reportes
                         </a>
@@ -118,14 +126,14 @@
                 <!-- Menú Material POP (por defecto) -->
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">
+                        <a class="nav-link {% if current_path == '/dashboard' %}active{% endif %}" href="/dashboard">
                             <i class="fas fa-tachometer-alt"></i> Dashboard
                         </a>
                     </li>
 
-                    {% if can_access('solicitudes', 'view') %}
+                    {% if can_access is defined and can_access('solicitudes', 'view') %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/solicitudes') %}active{% endif %}" href="/solicitudes">
+                        <a class="nav-link {% if current_path.startswith('/solicitudes') %}active{% endif %}" href="/solicitudes">
                             <i class="fas fa-clipboard-list"></i> Solicitudes
                         </a>
                     </li>
@@ -133,29 +141,29 @@
 
                     <!-- Aprobadores y Oficinas SIEMPRE visibles -->
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/aprobadores') %}active{% endif %}" href="/aprobadores">
+                        <a class="nav-link {% if current_path.startswith('/aprobadores') %}active{% endif %}" href="/aprobadores">
                             <i class="fas fa-user-check"></i> Aprobadores
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/oficinas') %}active{% endif %}" href="/oficinas">
+                        <a class="nav-link {% if current_path.startswith('/oficinas') %}active{% endif %}" href="/oficinas">
                             <i class="fas fa-building"></i> Oficinas
                         </a>
                     </li>
                     <!-- /Aprobadores y Oficinas SIEMPRE visibles -->
 
-                    {% if can_access('materiales', 'view') %}
+                    {% if can_access is defined and can_access('materiales', 'view') %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/materiales') %}active{% endif %}" href="/materiales">
+                        <a class="nav-link {% if current_path.startswith('/materiales') %}active{% endif %}" href="/materiales">
                             <i class="fas fa-box"></i> Materiales
                         </a>
                     </li>
                     {% endif %}
 
-                    {% if can_access('reportes', 'view') %}
+                    {% if can_access is defined and can_access('reportes', 'view') %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/reportes') %}active{% endif %}" href="/reportes">
+                        <a class="nav-link {% if current_path.startswith('/reportes') %}active{% endif %}" href="/reportes">
                             <i class="fas fa-chart-bar"></i> Reportes
                         </a>
                     </li>
@@ -168,9 +176,9 @@
                     <li class="nav-item">
                         <span class="nav-link text-light fw-semibold">
                             <i class="fas fa-layer-group"></i> 
-                            {% if request.path.startswith('/inventario-corporativo') %}
+                            {% if current_path.startswith('/inventario-corporativo') %}
                                 Módulo: Inventario Corporativo
-                            {% elif request.path.startswith('/prestamos') %}
+                            {% elif current_path.startswith('/prestamos') %}
                                 Módulo: Préstamos
                             {% else %}
                                 Módulo: Material POP
@@ -201,7 +209,9 @@
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="/login"><i class="fas fa-sign-in-alt"></i> Login</a>
+                        <a class="nav-link" href="/login">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
                     </li>
                     {% endif %}
                 </ul>

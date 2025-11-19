@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*- AAP.PY
 import os
 from datetime import datetime
 from flask import (
@@ -116,16 +116,11 @@ app.register_blueprint(reportes_bp)
 app.register_blueprint(aprobacion_bp)
 app.register_blueprint(api_bp)
 
-# SOLUCIÓN: Registrar solo UN blueprint de inventario corporativo
-if HAS_INVENTARIO_BP:
-    app.register_blueprint(inventario_corporativo_bp)
-    print("✅ Blueprint de inventario registrado desde blueprints/")
-else:
-    try:
-        app.register_blueprint(inventario_corporativo_bp)
-        print("✅ Blueprint de inventario registrado desde routes/")
-    except NameError:
-        print("⚠️  No se registró ningún blueprint de inventario corporativo")
+# ===============================
+# 🔄 ACTUALIZACIÓN: Registro de inventario_corporativo_bp
+# ===============================
+# Registro directo del blueprint sin url_prefix (como en el primer código)
+app.register_blueprint(inventario_corporativo_bp)   # No usar url_prefix, ya viene en las rutas
 
 # ===============================
 # ✅ Verificación de Registro
