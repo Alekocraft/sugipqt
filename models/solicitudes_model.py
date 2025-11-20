@@ -1,10 +1,11 @@
 ﻿# models/solicitudes_model.py
 from database import get_database_connection
-import datetime
 
 class SolicitudModel:
+    
     @staticmethod
     def crear(oficina_id, material_id, cantidad_solicitada, porcentaje_oficina, usuario_nombre, observacion=""):
+        """Crea una nueva solicitud"""
         conn = get_database_connection()
         if conn is None:
             return None
@@ -25,19 +26,8 @@ class SolicitudModel:
             conn.close()
 
     @staticmethod
-    def _obtener_aprobador_id(usuario_id):
-        conn = get_database_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT AprobadorId FROM Usuarios WHERE UsuarioId = ?", (usuario_id,))
-            row = cursor.fetchone()
-            return row[0] if row and row[0] else 1
-        finally:
-            cursor.close()
-            conn.close()
-
-    @staticmethod
     def aprobar(solicitud_id, usuario_aprobador_id):
+        """Aprueba una solicitud completamente"""
         conn = get_database_connection()
         if conn is None:
             return False, "Error de conexión"
@@ -65,30 +55,40 @@ class SolicitudModel:
 
     @staticmethod
     def aprobar_parcial(solicitud_id, usuario_aprobador_id, cantidad_aprobada):
-        success, msg = SolicitudModel.aprobar(solicitud_id, usuario_aprobador_id)
-        if not success:
-            return False, msg
+        """Aprobar parcialmente una solicitud"""
         conn = get_database_connection()
         if conn is None:
             return False, "Error de conexión"
+        
         cursor = conn.cursor()
         try:
-            usuario_nombre = "Sistema"
+            aprobador_id = SolicitudModel._obtener_aprobador_id(usuario_aprobador_id)
+            
             cursor.execute(
-                "{CALL sp_RegistrarEntrega (?, ?, ?, ?)}",
-                (solicitud_id, cantidad_aprobada, usuario_nombre, "Aprobación parcial")
+                "{CALL sp_AprobarParcialSolicitud (?, ?, ?)}",
+                (solicitud_id, aprobador_id, cantidad_aprobada)
             )
             conn.commit()
-            return True, f"✅ {cantidad_aprobada} unidades entregadas"
+            return True, f"✅ {cantidad_aprobada} unidades aprobadas y entregadas"
+        
         except Exception as e:
             conn.rollback()
-            return False, f"⚠️ Error al registrar entrega: {e}"
+            error_msg = str(e)
+            if "Cantidad aprobada inválida" in error_msg:
+                return False, "❌ Cantidad aprobada inválida"
+            elif "solicitudes pendientes" in error_msg:
+                return False, "❌ Solo se pueden aprobar parcialmente solicitudes pendientes"
+            elif "Solicitud no encontrada" in error_msg:
+                return False, "❌ Solicitud no encontrada"
+            else:
+                return False, f"❌ Error al aprobar parcialmente: {error_msg}"
         finally:
             cursor.close()
             conn.close()
 
     @staticmethod
     def rechazar(solicitud_id, usuario_aprobador_id, observacion=""):
+        """Rechaza una solicitud"""
         conn = get_database_connection()
         if conn is None:
             return False
@@ -112,187 +112,111 @@ class SolicitudModel:
             cursor.close()
             conn.close()
 
-    # ✅ NUEVO MÉTODO: Registrar devolución
+    # Método registrar_devolucion - VERSIÓN CORREGIDA
     @staticmethod
-    def registrar_devolucion(solicitud_id, usuario_id, cantidad_devuelta, observacion=""):
-        """Registra la devolución de una solicitud aprobada"""
+    def registrar_devolucion(solicitud_id, cantidad_devuelta, usuario_nombre, observacion):
+        """Registrar devolución - VERSIÓN CORREGIDA"""
         conn = get_database_connection()
         if conn is None:
-            return False, "Error de conexión"
+            return False, "Error de conexión a la base de datos"
+
+        cursor = conn.cursor()
+        try:
+            # Primero obtener información actualizada de la solicitud
+            cursor.execute("""
+                SELECT 
+                    sm.MaterialId,
+                    sm.CantidadSolicitada,
+                    ISNULL(sm.CantidadEntregada, 0) as CantidadAprobada,
+                    sm.EstadoId,
+                    (ISNULL(sm.CantidadEntregada, 0) - ISNULL((SELECT SUM(d.CantidadDevuelta) FROM Devoluciones d WHERE d.SolicitudId = sm.SolicitudId), 0)) as CantidadPuedeDevolver
+                FROM SolicitudesMaterial sm
+                WHERE sm.SolicitudId = ?
+            """, (solicitud_id,))
+        
+            row = cursor.fetchone()
+            if not row:
+                conn.rollback()
+                return False, "❌ Solicitud no encontrada"
+        
+            material_id = row[0]
+            cantidad_solicitada = row[1]
+            cantidad_aprobada = row[2]  # Esto es lo que realmente se aprobó/entregó
+            estado_id = row[3]
+            cantidad_puede_devolver = row[4] or 0
+        
+            # Validar estado - permitir devoluciones en estados Aprobada (2) y Entregada (4)
+            if estado_id not in [2, 4]:
+                conn.rollback()
+                return False, "❌ Solo se pueden devolver solicitudes aprobadas o entregadas"
+        
+            # Validar cantidad usando la cantidad APROBADA, no la solicitada
+            if cantidad_devuelta <= 0:
+                conn.rollback()
+                return False, "❌ La cantidad a devolver debe ser mayor a 0"
+        
+            if cantidad_devuelta > cantidad_puede_devolver:
+                conn.rollback()
+                return False, f"❌ No puede devolver más de {cantidad_puede_devolver} unidades (cantidad aprobada pendiente)"
+        
+            # Calcular nueva cantidad pendiente después de esta devolución
+            nueva_cantidad_pendiente = cantidad_puede_devolver - cantidad_devuelta
+        
+            # 1. REGISTRAR LA DEVOLUCIÓN
+            cursor.execute("""
+                INSERT INTO Devoluciones (
+                    SolicitudId, MaterialId, CantidadDevuelta, FechaDevolucion,
+                    UsuarioDevolucion, Observaciones, EstadoDevolucion, CondicionMaterial
+                )
+                VALUES (?, ?, ?, GETDATE(), ?, ?, 'COMPLETADA', 'BUENO')
+            """, (solicitud_id, material_id, cantidad_devuelta, usuario_nombre, observacion or ''))
+        
+            # 2. ACTUALIZAR STOCK (devolver al inventario)
+            cursor.execute("""
+                UPDATE Materiales 
+                SET CantidadDisponible = CantidadDisponible + ?
+                WHERE MaterialId = ?
+            """, (cantidad_devuelta, material_id))
+        
+            # 3. ACTUALIZAR ESTADO DE LA SOLICITUD
+            if nueva_cantidad_pendiente <= 0:
+                # Si no queda nada por devolver, cambiar estado a "Devuelta" (5)
+                cursor.execute("""
+                    UPDATE SolicitudesMaterial 
+                    SET EstadoId = 5,  -- Estado Devuelta
+                        FechaUltimaEntrega = GETDATE()
+                    WHERE SolicitudId = ?
+                """, (solicitud_id,))
+                estado_final = "Devuelta"
+            else:
+                # Si aún queda por devolver, mantener estado "Aprobada" (2) o "Entregada" (4)
+                cursor.execute("""
+                    UPDATE SolicitudesMaterial 
+                    SET FechaUltimaEntrega = GETDATE()
+                    WHERE SolicitudId = ?
+                """, (solicitud_id,))
+                estado_final = "Parcialmente Devuelta"
+        
+            conn.commit()
+            return True, f"✅ Devolución registrada exitosamente. Estado: {estado_final}"
     
-        cursor = conn.cursor()
-        try:
-            # Verificar que la solicitud existe y está aprobada
-            cursor.execute("""
-                SELECT EstadoId, MaterialId, CantidadSolicitada, CantidadEntregada
-                FROM dbo.SolicitudesMaterial 
-                WHERE SolicitudId = ?
-            """, (solicitud_id,))
-        
-            solicitud = cursor.fetchone()
-            if not solicitud:
-                return False, "Solicitud no encontrada"
-        
-            estado_id, material_id, cantidad_solicitada, cantidad_entregada = solicitud
-        
-            if estado_id != 2:  # 2 = Aprobada
-                return False, "Solo se pueden devolver solicitudes en estado Aprobada"
-        
-            # Validar cantidad devuelta
-            if cantidad_devuelta <= 0:
-                return False, "La cantidad devuelta debe ser mayor a 0"
-        
-            # ✅ CORRECCIÓN: Usar cantidad_solicitada en lugar de cantidad_entregada
-            if cantidad_devuelta > cantidad_solicitada:
-                return False, f"No se pueden devolver más de {cantidad_solicitada} unidades"
-        
-            # Registrar la devolución - EstadoId 5 = Devuelta
-            cursor.execute("""
-                UPDATE dbo.SolicitudesMaterial 
-                SET CantidadEntregada = ?,
-                    EstadoId = 5  -- Estado: Devuelta
-                WHERE SolicitudId = ?
-            """, (cantidad_devuelta, solicitud_id))
-        
-            # Actualizar stock del material
-            cursor.execute("""
-                UPDATE dbo.Materiales 
-                SET CantidadDisponible = CantidadDisponible + ?
-                WHERE MaterialId = ?
-            """, (cantidad_devuelta, material_id))
-        
-            # Registrar en historial
-            cursor.execute("""
-                INSERT INTO dbo.HistorialEntregas 
-                (SolicitudId, CantidadEntregada, UsuarioEntrega, Observaciones, TipoMovimiento)
-                VALUES (?, ?, ?, ?, 'DEVOLUCION')
-            """, (solicitud_id, cantidad_devuelta, usuario_id, observacion))
-        
-            conn.commit()
-            return True, f"✅ Devolución de {cantidad_devuelta} unidades registrada exitosamente"
-        
         except Exception as e:
             conn.rollback()
-            return False, f"❌ Error al registrar devolución: {str(e)}"
-        finally:
-            cursor.close()
-            conn.close()
-        """Registra la devolución de una solicitud aprobada"""
-        conn = get_database_connection()
-        if conn is None:
-            return False, "Error de conexión"
-        
-        cursor = conn.cursor()
-        try:
-            # Verificar que la solicitud existe y está aprobada
-            cursor.execute("""
-                SELECT EstadoId, MaterialId, CantidadSolicitada, CantidadEntregada
-                FROM dbo.SolicitudesMaterial 
-                WHERE SolicitudId = ?
-            """, (solicitud_id,))
-            
-            solicitud = cursor.fetchone()
-            if not solicitud:
-                return False, "Solicitud no encontrada"
-            
-            estado_id, material_id, cantidad_solicitada, cantidad_entregada = solicitud
-            
-            if estado_id != 2:  # 2 = Aprobada
-                return False, "Solo se pueden devolver solicitudes en estado Aprobada"
-            
-            # Validar cantidad devuelta
-            if cantidad_devuelta <= 0:
-                return False, "La cantidad devuelta debe ser mayor a 0"
-            
-            if cantidad_devuelta > cantidad_entregada:
-                return False, f"No se pueden devolver más de {cantidad_entregada} unidades"
-            
-            # Registrar la devolución
-            cursor.execute("""
-                UPDATE dbo.SolicitudesMaterial 
-                SET CantidadEntregada = CantidadEntregada - ?,
-                    EstadoId = 4  -- Estado: Devuelta
-                WHERE SolicitudId = ?
-            """, (cantidad_devuelta, solicitud_id))
-            
-            # Actualizar stock del material
-            cursor.execute("""
-                UPDATE dbo.Materiales 
-                SET CantidadDisponible = CantidadDisponible + ?
-                WHERE MaterialId = ?
-            """, (cantidad_devuelta, material_id))
-            
-            # Registrar en historial
-            cursor.execute("""
-                INSERT INTO dbo.HistorialEntregas 
-                (SolicitudId, CantidadEntregada, UsuarioEntrega, Observaciones, TipoMovimiento)
-                VALUES (?, ?, ?, ?, 'DEVOLUCION')
-            """, (solicitud_id, -cantidad_devuelta, usuario_id, observacion))
-            
-            conn.commit()
-            return True, f"✅ Devolución de {cantidad_devuelta} unidades registrada exitosamente"
-            
-        except Exception as e:
-            conn.rollback()
-            return False, f"❌ Error al registrar devolución: {str(e)}"
+            return False, f"❌ Error al procesar devolución: {str(e)}"
         finally:
             cursor.close()
             conn.close()
 
-    # ✅ MODIFICADO: Ahora acepta oficina_id opcional
+    # ========== MÉTODOS DE CONSULTA ==========
+
     @staticmethod
     def obtener_todas(oficina_id=None):
+        """Obtiene todas las solicitudes (alias para mantener compatibilidad)"""
         return SolicitudModel.obtener_todas_ordenadas(oficina_id)
 
-    # ✅ MODIFICADO: Consulta filtrada por oficina
-    @staticmethod
-    def obtener_para_aprobador(oficina_id=None):
-        conn = get_database_connection()
-        if conn is None:
-            return []
-        cursor = conn.cursor()
-        try:
-            sql = """
-                SELECT 
-                    sm.SolicitudId,
-                    m.NombreElemento,
-                    sm.UsuarioSolicitante,
-                    o.NombreOficina,
-                    sm.OficinaSolicitanteId,
-                    sm.CantidadSolicitada,
-                    es.NombreEstado,
-                    sm.FechaSolicitud,
-                    sm.Observacion,
-                    sm.MaterialId,
-                    sm.PorcentajeOficina,
-                    sm.ValorTotalSolicitado,
-                    sm.ValorOficina,
-                    sm.ValorSedePrincipal,
-                    m.ValorUnitario,
-                    m.CantidadDisponible,
-                    sm.FechaAprobacion
-                FROM dbo.SolicitudesMaterial sm
-                INNER JOIN dbo.Materiales m ON sm.MaterialId = m.MaterialId
-                INNER JOIN dbo.Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
-                INNER JOIN dbo.EstadosSolicitud es ON sm.EstadoId = es.EstadoId
-                WHERE sm.EstadoId = 1
-            """
-            if oficina_id:
-                sql += " AND sm.OficinaSolicitanteId = ?"
-                cursor.execute(sql, (oficina_id,))
-            else:
-                cursor.execute(sql)
-            return SolicitudModel._mapear_solicitudes(cursor.fetchall())
-        except Exception as e:
-            print(f"Error en obtener_para_aprobador: {e}")
-            return []
-        finally:
-            cursor.close()
-            conn.close()
-
-    # ✅ MODIFICADO: Consulta con orden y filtro opcional por oficina
     @staticmethod
     def obtener_todas_ordenadas(oficina_id=None):
+        """Obtiene todas las solicitudes ordenadas por estado y fecha"""
         conn = get_database_connection()
         if conn is None:
             return []
@@ -316,7 +240,8 @@ class SolicitudModel:
                     sm.ValorSedePrincipal,
                     m.ValorUnitario,
                     m.CantidadDisponible,
-                    sm.FechaAprobacion
+                    sm.FechaAprobacion,
+                    sm.CantidadEntregada  -- AGREGAR ESTA COLUMNA
                 FROM dbo.SolicitudesMaterial sm
                 INNER JOIN dbo.Materiales m ON sm.MaterialId = m.MaterialId
                 INNER JOIN dbo.Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
@@ -348,33 +273,55 @@ class SolicitudModel:
             conn.close()
 
     @staticmethod
-    def _mapear_solicitudes(rows):
-        solicitudes = []
-        for row in rows:
-            solicitud = {
-                'id': row[0],
-                'material_nombre': row[1],
-                'usuario_solicitante': row[2],
-                'oficina_nombre': row[3],
-                'oficina_id': row[4],
-                'cantidad_solicitada': row[5],
-                'estado': row[6],
-                'fecha_solicitud': row[7],
-                'observacion': row[8] or '',
-                'material_id': row[9],
-                'porcentaje_oficina': float(row[10]) if row[10] else 0,
-                'valor_total_solicitado': float(row[11]) if row[11] else 0,
-                'valor_oficina': float(row[12]) if row[12] else 0,
-                'valor_sede': float(row[13]) if row[13] else 0,
-                'valor_unitario': float(row[14]) if row[14] else 0,
-                'stock_disponible': row[15] if row[15] else 0,
-                'fecha_aprobacion': row[16]
-            }
-            solicitudes.append(solicitud)
-        return solicitudes
+    def obtener_para_aprobador(oficina_id=None):
+        """Obtiene solicitudes pendientes para aprobación"""
+        conn = get_database_connection()
+        if conn is None:
+            return []
+        cursor = conn.cursor()
+        try:
+            sql = """
+                SELECT 
+                    sm.SolicitudId,
+                    m.NombreElemento,
+                    sm.UsuarioSolicitante,
+                    o.NombreOficina,
+                    sm.OficinaSolicitanteId,
+                    sm.CantidadSolicitada,
+                    es.NombreEstado,
+                    sm.FechaSolicitud,
+                    sm.Observacion,
+                    sm.MaterialId,
+                    sm.PorcentajeOficina,
+                    sm.ValorTotalSolicitado,
+                    sm.ValorOficina,
+                    sm.ValorSedePrincipal,
+                    m.ValorUnitario,
+                    m.CantidadDisponible,
+                    sm.FechaAprobacion,
+                    sm.CantidadEntregada  -- AGREGAR ESTA COLUMNA
+                FROM dbo.SolicitudesMaterial sm
+                INNER JOIN dbo.Materiales m ON sm.MaterialId = m.MaterialId
+                INNER JOIN dbo.Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
+                INNER JOIN dbo.EstadosSolicitud es ON sm.EstadoId = es.EstadoId
+                WHERE sm.EstadoId = 1
+            """
+            if oficina_id:
+                sql += " AND sm.OficinaSolicitanteId = ?"
+                cursor.execute(sql, (oficina_id,))
+            else:
+                cursor.execute(sql)
+            return SolicitudModel._mapear_solicitudes(cursor.fetchall())
+        except Exception as e:
+            print(f"Error en obtener_para_aprobador: {e}")
+            return []
+        finally:
+            cursor.close()
+            conn.close()
 
     @staticmethod
     def obtener_por_id(solicitud_id):
+        """Obtiene una solicitud específica por ID"""
         conn = get_database_connection()
         if conn is None:
             return None
@@ -398,7 +345,8 @@ class SolicitudModel:
                     sm.ValorSedePrincipal,
                     m.ValorUnitario,
                     m.CantidadDisponible,
-                    sm.FechaAprobacion
+                    sm.FechaAprobacion,
+                    sm.CantidadEntregada  -- AGREGAR ESTA COLUMNA
                 FROM dbo.SolicitudesMaterial sm
                 INNER JOIN dbo.Materiales m ON sm.MaterialId = m.MaterialId
                 INNER JOIN dbo.Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
@@ -415,3 +363,198 @@ class SolicitudModel:
         finally:
             cursor.close()
             conn.close()
+
+    # ========== MÉTODOS DE DEVOLUCIÓN ==========
+
+    @staticmethod
+    def obtener_info_devolucion(solicitud_id):
+        """Obtiene información actualizada para devoluciones"""
+        conn = get_database_connection()
+        if conn is None:
+            return None
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT 
+                    sm.SolicitudId,
+                    sm.EstadoId,
+                    es.NombreEstado as Estado,
+                    sm.CantidadSolicitada,
+                    ISNULL(sm.CantidadEntregada, 0) as CantidadEntregada,
+                    ISNULL((SELECT SUM(d.CantidadDevuelta) FROM Devoluciones d WHERE d.SolicitudId = sm.SolicitudId), 0) as CantidadYaDevuelta,
+                    (ISNULL(sm.CantidadEntregada, 0) - ISNULL((SELECT SUM(d.CantidadDevuelta) FROM Devoluciones d WHERE d.SolicitudId = sm.SolicitudId), 0)) as CantidadPuedeDevolver,
+                    m.NombreElemento,
+                    o.NombreOficina
+                FROM dbo.SolicitudesMaterial sm
+                INNER JOIN dbo.EstadosSolicitud es ON sm.EstadoId = es.EstadoId
+                INNER JOIN dbo.Materiales m ON sm.MaterialId = m.MaterialId
+                INNER JOIN dbo.Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
+                WHERE sm.SolicitudId = ?
+            """, (solicitud_id,))
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'solicitud_id': row[0],
+                    'estado_id': row[1],
+                    'estado': row[2],
+                    'cantidad_solicitada': row[3],
+                    'cantidad_entregada': row[4],
+                    'cantidad_ya_devuelta': row[5],
+                    'cantidad_puede_devolver': row[6],
+                    'material_nombre': row[7],
+                    'oficina_nombre': row[8]
+                }
+            return None
+        except Exception as e:
+            print(f"Error en obtener_info_devolucion: {e}")
+            return None
+        finally:
+            cursor.close()
+            conn.close()
+
+    @staticmethod
+    def obtener_info_devolucion_actualizada(solicitud_id):
+        """Obtiene información actualizada para devoluciones incluyendo cantidad aprobada"""
+        conn = get_database_connection()
+        if conn is None:
+            return None
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT 
+                    sm.SolicitudId,
+                    sm.EstadoId,
+                    es.NombreEstado as Estado,
+                    sm.CantidadSolicitada,
+                    ISNULL(sm.CantidadEntregada, 0) as CantidadAprobada,
+                    ISNULL((SELECT SUM(d.CantidadDevuelta) FROM Devoluciones d WHERE d.SolicitudId = sm.SolicitudId), 0) as CantidadYaDevuelta,
+                    (ISNULL(sm.CantidadEntregada, 0) - ISNULL((SELECT SUM(d.CantidadDevuelta) FROM Devoluciones d WHERE d.SolicitudId = sm.SolicitudId), 0)) as CantidadPuedeDevolver,
+                    m.NombreElemento,
+                    o.NombreOficina,
+                    sm.UsuarioSolicitante
+                FROM dbo.SolicitudesMaterial sm
+                INNER JOIN dbo.EstadosSolicitud es ON sm.EstadoId = es.EstadoId
+                INNER JOIN dbo.Materiales m ON sm.MaterialId = m.MaterialId
+                INNER JOIN dbo.Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
+                WHERE sm.SolicitudId = ?
+            """, (solicitud_id,))
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'solicitud_id': row[0],
+                    'estado_id': row[1],
+                    'estado': row[2],
+                    'cantidad_solicitada': row[3],
+                    'cantidad_aprobada': row[4],
+                    'cantidad_ya_devuelta': row[5],
+                    'cantidad_puede_devolver': row[6],
+                    'material_nombre': row[7],
+                    'oficina_nombre': row[8],
+                    'solicitante_nombre': row[9]
+                }
+            return None
+        except Exception as e:
+            print(f"Error en obtener_info_devolucion_actualizada: {e}")
+            return None
+        finally:
+            cursor.close()
+            conn.close()
+
+    @staticmethod
+    def obtener_devoluciones(solicitud_id):
+        """Obtiene el historial de devoluciones para una solicitud específica"""
+        conn = get_database_connection()
+        if conn is None:
+            return []
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT 
+                    d.DevolucionId,
+                    d.SolicitudId,
+                    d.UsuarioDevolucion,
+                    d.CantidadDevuelta,
+                    d.FechaDevolucion,
+                    d.Observaciones
+                FROM dbo.Devoluciones d
+                WHERE d.SolicitudId = ?
+                ORDER BY d.FechaDevolucion DESC
+            """, (solicitud_id,))
+            
+            devoluciones = []
+            for row in cursor.fetchall():
+                devolucion = {
+                    'devolucion_id': row[0],
+                    'solicitud_id': row[1],
+                    'usuario_nombre': row[2],
+                    'cantidad_devuelta': row[3],
+                    'fecha_devolucion': row[4],
+                    'observacion': row[5] or ''
+                }
+                devoluciones.append(devolucion)
+            return devoluciones
+        except Exception as e:
+            print(f"Error en obtener_devoluciones: {e}")
+            return []
+        finally:
+            cursor.close()
+            conn.close()
+
+    @staticmethod
+    def puede_devolver(solicitud_id):
+        """Verifica si una solicitud puede ser devuelta"""
+        info = SolicitudModel.obtener_info_devolucion(solicitud_id)
+        if not info:
+            return False, "Solicitud no encontrada", None
+        
+        # Permitir devoluciones en estados Aprobada (2) y Entregada (4)
+        if info['estado_id'] not in [2, 4]:
+            return False, "Solo se pueden devolver solicitudes aprobadas o entregadas", info
+        
+        if info['cantidad_puede_devolver'] <= 0:
+            return False, "No hay cantidad disponible para devolver", info
+        
+        return True, "Puede devolver", info
+
+    # ========== MÉTODOS PRIVADOS ==========
+
+    @staticmethod
+    def _obtener_aprobador_id(usuario_id):
+        """Obtiene el ID del aprobador para un usuario"""
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT AprobadorId FROM Usuarios WHERE UsuarioId = ?", (usuario_id,))
+            row = cursor.fetchone()
+            return row[0] if row and row[0] else 1
+        finally:
+            cursor.close()
+            conn.close()
+
+    @staticmethod
+    def _mapear_solicitudes(rows):
+        """Mapea los resultados de la base de datos a diccionarios"""
+        solicitudes = []
+        for row in rows:
+            solicitud = {
+                'id': row[0],
+                'material_nombre': row[1],
+                'usuario_solicitante': row[2],
+                'oficina_nombre': row[3],
+                'oficina_id': row[4],
+                'cantidad_solicitada': row[5],
+                'estado': row[6],
+                'fecha_solicitud': row[7],
+                'observacion': row[8] or '',
+                'material_id': row[9],
+                'porcentaje_oficina': float(row[10]) if row[10] else 0,
+                'valor_total_solicitado': float(row[11]) if row[11] else 0,
+                'valor_oficina': float(row[12]) if row[12] else 0,
+                'valor_sede': float(row[13]) if row[13] else 0,
+                'valor_unitario': float(row[14]) if row[14] else 0,
+                'stock_disponible': row[15] if row[15] else 0,
+                'fecha_aprobacion': row[16],
+                'cantidad_entregada': row[17] if row[17] else 0  # AGREGAR ESTA LÍNEA
+            }
+            solicitudes.append(solicitud)
+        return solicitudes

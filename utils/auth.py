@@ -3,7 +3,8 @@ from functools import wraps
 
 def require_login():
     """Verifica si el usuario está logueado"""
-    return 'usuario_id' in session
+    # CORREGIDO: Verificar ambas posibles variables de sesión
+    return 'user_id' in session or 'usuario_id' in session
 
 def has_role(*roles):
     """Verifica si el usuario tiene alguno de los roles especificados"""
@@ -31,7 +32,7 @@ def role_required(*roles):
             
             if not has_role(*roles):
                 flash('No tiene permisos para acceder a esta sección.', 'danger')
-                return redirect(url_for('dashboard'))
+                return redirect(url_for('auth_bp.dashboard'))
                 
             return f(*args, **kwargs)
         return decorated_function
@@ -41,8 +42,8 @@ def get_current_user():
     """Obtener información del usuario actual"""
     if require_login():
         return {
-            'id': session.get('usuario_id'),
-            'nombre': session.get('usuario'),
+            'id': session.get('user_id') or session.get('usuario_id'),  # CORREGIDO: ambas opciones
+            'nombre': session.get('user_name') or session.get('usuario_nombre'),
             'rol': session.get('rol'),
             'oficina_id': session.get('oficina_id'),
             'oficina_nombre': session.get('oficina_nombre')
@@ -54,4 +55,4 @@ def can_access_module(module_name):
     from config.config import Config
     user_role = (session.get('rol', '') or '').strip().lower()
     allowed_modules = Config.ROLES.get(user_role, [])
-    return module_name in allowed_modulesq
+    return module_name in allowed_modules

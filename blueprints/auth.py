@@ -2,8 +2,8 @@
 from flask import Blueprint, render_template, request, redirect, session, flash
 from models.usuarios_model import UsuarioModel
 
-# ✅ CAMBIO CRÍTICO: Agregar url_prefix para mantener URLs originales
-auth_bp = Blueprint('auth', __name__, url_prefix='')
+# ✅ CORRECCIÓN: Cambiar el nombre del blueprint para que coincida
+auth_bp = Blueprint('auth_bp', __name__, url_prefix='')
 
 # ✅ Nueva función: Asignar rol según la oficina
 def assign_role_by_office(office_name):

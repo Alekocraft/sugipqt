@@ -35,6 +35,7 @@ from blueprints.reportes import reportes_bp
 from blueprints.aprobacion import aprobacion_bp
 from blueprints.api import api_bp
 
+
 # SOLUCIÓN: Solo importar UN blueprint de inventario corporativo
 try:
     from blueprints.inventario_corporativo import inventario_corporativo_bp
@@ -101,15 +102,13 @@ def inject_permissions():
 
 
 # ===============================
-# 🔗 Registro de Blueprints
+# 🔗 Registro de Blueprints - CORREGIDO
 # ===============================
 # Rutas adicionales
 app.register_blueprint(bp_prestamos)
-
-# Blueprints principales
 app.register_blueprint(auth_bp)
 app.register_blueprint(materiales_bp)
-app.register_blueprint(solicitudes_bp)
+app.register_blueprint(solicitudes_bp, url_prefix='/solicitudes')  # CORREGIDO: agregado url_prefix
 app.register_blueprint(oficinas_bp)
 app.register_blueprint(aprobadores_bp)
 app.register_blueprint(reportes_bp)
@@ -126,9 +125,23 @@ app.register_blueprint(inventario_corporativo_bp)   # No usar url_prefix, ya vie
 # ✅ Verificación de Registro
 # ===============================
 print("✅ Blueprints registrados:")
-for name in app.blueprints:
-    print(f"   - {name}")
+for name, blueprint in app.blueprints.items():
+    print(f"   - {name}: {blueprint.url_prefix}")
 
+# ===============================
+# 🏠 Ruta Principal
+# ===============================
+@app.route('/')
+def index():
+    if 'user_id' in session:
+        return redirect('/dashboard')
+    return redirect('/auth/login')
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect('/auth/login')
+    return render_template('dashboard.html')
 
 # ============================================================================
 # 🔥 ERROR HANDLERS
@@ -151,18 +164,22 @@ def archivo_demasiado_grande(error):
 # ============================================================================
 # 🏁 INICIALIZACIÓN
 # ============================================================================
+ 
 if __name__ == '__main__':
     print("🚀 Iniciando servidor Flask...")
     print(f"📁 Directorio de trabajo: {os.getcwd()}")
-    print(f"📁 Directorio de templates: {os.path.abspath('templates')}")
-    print(f"📁 Directorio de uploads: {os.path.abspath(UPLOAD_FOLDER)}")
-
-    if not os.path.exists(UPLOAD_FOLDER):
-        os.makedirs(UPLOAD_FOLDER)
-        print(f"✅ Creado directorio de uploads: {UPLOAD_FOLDER}")
-
-    # Inicializar Sede Principal usando la función importada
+    
+    # Inicializar Sede Principal
     inicializar_oficina_principal()
-
-    # Ejecutar aplicación
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    
+    # Puerto configurable por entorno
+    port = int(os.environ.get('PORT', 8000))
+    
+    print(f"🌐 Servidor ejecutándose en: http://0.0.0.0:{port}")
+    print("📍 Presiona Ctrl+C para detener el servidor")
+    
+    app.run(
+        debug=os.environ.get('FLASK_DEBUG', 'True').lower() == 'true',
+        host='0.0.0.0', 
+        port=port
+    )
