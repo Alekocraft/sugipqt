@@ -103,7 +103,8 @@
             <div class="modal-body" style="background-color: #F8F9FA;">
 
                 <div class="row g-4 mb-4">
-                    <!-- Materiales -->
+                    <!-- Materiales - Solo mostrar si tiene permisos -->
+                    {% if can_access('materiales', 'view') %}
                     <div class="col-xl-3 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
                             <h6 class="fw-semibold">
@@ -113,8 +114,10 @@
                             <a href="/materiales" class="btn btn-primary btn-sm">Gestionar</a>
                         </div>
                     </div>
+                    {% endif %}
 
-                    <!-- Oficinas -->
+                    <!-- Oficinas - Solo mostrar si tiene permisos -->
+                    {% if can_access('oficinas', 'view') %}
                     <div class="col-xl-3 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
                             <h6 class="fw-semibold">
@@ -124,8 +127,10 @@
                             <a href="/oficinas" class="btn btn-primary btn-sm">Ver</a>
                         </div>
                     </div>
+                    {% endif %}
 
-                    <!-- Solicitudes -->
+                    <!-- Solicitudes - Solo mostrar si tiene permisos -->
+                    {% if can_access('solicitudes', 'view') %}
                     <div class="col-xl-3 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
                             <h6 class="fw-semibold">
@@ -135,8 +140,10 @@
                             <a href="/solicitudes" class="btn btn-primary btn-sm">Gestionar</a>
                         </div>
                     </div>
+                    {% endif %}
 
-                    <!-- Aprobadores -->
+                    <!-- Aprobadores - Solo mostrar si tiene permisos -->
+                    {% if can_access('aprobadores', 'view') %}
                     <div class="col-xl-3 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
                             <h6 class="fw-semibold">
@@ -146,6 +153,7 @@
                             <a href="/aprobadores" class="btn btn-primary btn-sm">Ver</a>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
 
                 <!-- Acciones Rápidas -->
@@ -156,21 +164,25 @@
                         </h6>
 
                         <div class="d-flex flex-wrap gap-2">
-                            {% if session.rol in ['administrador', 'lider_inventario'] %}
+                            {% if can_access('materiales', 'create') %}
                             <a href="/materiales/crear" class="btn btn-primary">
                                 <i class="fas fa-plus"></i> Crear Material
                             </a>
                             {% endif %}
 
+                            {% if can_access('solicitudes', 'create') %}
                             <a href="/solicitudes/crear" class="btn btn-success">
                                 <i class="fas fa-edit"></i> Nueva Solicitud
                             </a>
+                            {% endif %}
 
+                            {% if can_access('reportes') %}
                             <a href="/reportes" class="btn btn-info">
                                 <i class="fas fa-chart-bar"></i> Ver Reportes
                             </a>
+                            {% endif %}
 
-                            {% if session.rol in ['aprobador', 'administrador', 'lider_inventario'] %}
+                            {% if can_access('solicitudes', 'approve') %}
                             <a href="/solicitudes" class="btn btn-warning">
                                 <i class="fas fa-clipboard-check"></i> Revisar Pendientes
                             </a>
@@ -300,7 +312,8 @@
 
         <div class="row g-3">
 
-          <!-- Crear Material -->
+          <!-- Crear Material - Solo mostrar si tiene permisos -->
+          {% if can_access('prestamos', 'manage_materials') %}
           <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm">
               <div class="card-body">
@@ -319,8 +332,10 @@
               </div>
             </div>
           </div>
+          {% endif %}
 
-          <!-- Nuevo Préstamo -->
+          <!-- Nuevo Préstamo - Solo mostrar si tiene permisos -->
+          {% if can_access('prestamos', 'create') %}
           <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm">
               <div class="card-body">
@@ -339,8 +354,10 @@
               </div>
             </div>
           </div>
+          {% endif %}
 
-          <!-- Ver Préstamos -->
+          <!-- Ver Préstamos - Solo mostrar si tiene permisos -->
+          {% if can_access('prestamos', 'view') or can_access('prestamos', 'view_own') %}
           <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm">
               <div class="card-body">
@@ -359,6 +376,7 @@
               </div>
             </div>
           </div>
+          {% endif %}
 
         </div>
 
