@@ -1,11 +1,19 @@
-{% extends "base.html" %}
+{% extends "base.html" %} 
 {% block title %}Gestión de Solicitudes{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <h1>📋 Solicitudes de Materiales</h1>
 
-    <!-- Filtros y búsqueda -->
+    <!-- =============================
+         LÓGICA DE PERMISOS CORREGIDA
+    ============================== -->
+    {% set rol_usuario = session.get('rol','')|lower %}
+    {% set puede_crear_novedad = can_create_novedad() %}
+    {% set puede_gestionar_novedad = can_manage_novedad() %}
+    {% set tiene_permisos_aprobacion = rol_usuario in ['administrador', 'aprobador', 'lider_inventario', 'oficina_coq'] %}
+
+    <!-- Filtros -->
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="card">
@@ -47,7 +55,7 @@
         </div>
     </div>
 
-    <!-- Resumen de estados -->
+    <!-- Resumen -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -106,20 +114,11 @@
         </div>
     </div>
 
-    <!-- Flash Messages -->
+    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
                 <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {% if category == 'success' %}
-                        <i class="fas fa-check-circle me-2"></i>
-                    {% elif category == 'danger' %}
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                    {% elif category == 'warning' %}
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                    {% else %}
-                        <i class="fas fa-info-circle me-2"></i>
-                    {% endif %}
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -127,7 +126,7 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Tabla -->
+    <!-- TABLA -->
     <div class="row">
         <div class="col-md-12">
             <div class="card">
@@ -158,24 +157,23 @@
                                 <tbody>
                                     {% for solicitud in solicitudes %}
                                         {% set material_nombre = solicitud.material_nombre or 'Material no encontrado' %}
-                                        {# CORREGIDO: Usar stock_disponible directamente de la solicitud #}
                                         {% set stock_actual = solicitud.stock_disponible or 0 %}
                                         {% set material_imagen = materiales_dict[solicitud.material_id].ruta_imagen if materiales_dict.get(solicitud.material_id) else None %}
                                         {% set solicitante_nombre = solicitud.usuario_solicitante or 'N/A' %}
                                         {% set oficina_nombre = solicitud.oficina_nombre or 'N/A' %}
                                         {% set fecha_solicitud = solicitud.fecha_solicitud %}
                                         {% set estado_normalizado = (solicitud.estado or 'pendiente')|lower %}
-
-                                        {% set tiene_permisos = session.get('rol','usuario')|lower in ['administrador','aprobador'] %}
                                         {% set esta_pendiente = estado_normalizado == 'pendiente' %}
                                         {% set esta_aprobada = estado_normalizado == 'aprobada' %}
+                                        {% set esta_aprobada_parcial = estado_normalizado == 'aprobada_parcial' %}
+                                        {% set esta_entregada = estado_normalizado == 'entregada' %}
 
                                         <tr>
                                             <td><strong>#{{ solicitud.id }}</strong></td>
 
                                             <td>
-                                                <strong>{{ material_nombre }}</strong><br>
-                                                <small class="text-muted">Stock: {{ stock_actual }}</small>
+                                                <strong>{{ material_nombre }}</strong>
+                                                <br><small class="text-muted">Stock: {{ stock_actual }}</small>
                                             </td>
 
                                             <td>
@@ -191,9 +189,7 @@
                                             <td>
                                                 {% if fecha_solicitud %}
                                                     {{ fecha_solicitud.strftime('%d/%m/%Y %H:%M') }}
-                                                {% else %}
-                                                    N/A
-                                                {% endif %}
+                                                {% else %}N/A{% endif %}
                                             </td>
 
                                             <td>
@@ -205,6 +201,14 @@
                                                     <span class="badge bg-danger">❌ Rechazada</span>
                                                 {% elif estado_normalizado == 'devuelta' %}
                                                     <span class="badge bg-info">🔄 Devuelta</span>
+                                                {% elif estado_normalizado == 'entregada' %}
+                                                    <span class="badge bg-primary">📦 Entregada</span>
+                                                {% elif estado_normalizado == 'novedad_registrada' %}
+                                                    <span class="badge bg-secondary">📝 Novedad Registrada</span>
+                                                {% elif estado_normalizado == 'novedad_aceptada' %}
+                                                    <span class="badge bg-success">✅ Novedad Aceptada</span>
+                                                {% elif estado_normalizado == 'novedad_rechazada' %}
+                                                    <span class="badge bg-danger">❌ Novedad Rechazada</span>
                                                 {% else %}
                                                     <span class="badge bg-secondary">{{ solicitud.estado }}</span>
                                                 {% endif %}
@@ -212,59 +216,63 @@
 
                                             <td>
                                                 <div class="btn-group">
-                                                    <!-- Botón Ver - CORREGIDO -->
+
+                                                    <!-- Ver -->
                                                     <button class="btn btn-info btn-sm"
                                                         onclick='verDetallesSolicitud({{ solicitud|tojson }})'>
                                                         👁️ Ver
                                                     </button>
 
-                                                    {% if tiene_permisos and esta_pendiente %}
-                                                        <!-- Aprobar completamente -->
+                                                    {% if tiene_permisos_aprobacion and esta_pendiente %}
                                                         <form action="/solicitudes/aprobar/{{ solicitud.id }}" method="POST" style="display:inline;">
-                                                            <button class="btn btn-success btn-sm"
-                                                                onclick="return confirm('¿Aprobar completamente esta solicitud?')">
-                                                                ✅ Aprobar
-                                                            </button>
+                                                            <button class="btn btn-success btn-sm" onclick="return confirm('¿Aprobar completamente esta solicitud?')">✅ Aprobar</button>
                                                         </form>
 
-                                                        <!-- Aprobar parcialmente -->
                                                         <button class="btn btn-warning btn-sm"
-                                                            onclick='mostrarModalAprobacionParcial(
-                                                                {{ solicitud.id }},
-                                                                {{ solicitud.cantidad_solicitada }},
-                                                                {{ material_nombre|tojson }},
-                                                                {{ solicitante_nombre|tojson }}
-                                                            )'>
+                                                            onclick='mostrarModalAprobacionParcial({{ solicitud.id }},{{ solicitud.cantidad_solicitada }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }})'>
                                                             ⚠️ Parcial
                                                         </button>
 
-                                                        <!-- Rechazar -->
                                                         <button class="btn btn-danger btn-sm"
-                                                            onclick='mostrarModalRechazar(
-                                                                {{ solicitud.id }},
-                                                                {{ material_nombre|tojson }},
-                                                                {{ solicitante_nombre|tojson }}
-                                                            )'>
+                                                            onclick='mostrarModalRechazar({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }})'>
                                                             ❌ Rechazar
                                                         </button>
                                                     {% endif %}
 
-                                                    {% if tiene_permisos and (esta_aprobada or estado_normalizado == 'entregada') %}
-                                                        <!-- Devolución -->
+                                                    {% if tiene_permisos_aprobacion and (esta_aprobada or esta_entregada) %}
                                                         <button class="btn btn-info btn-sm"
-                                                            onclick='mostrarModalDevolucion(
-                                                                {{ solicitud.id }},
-                                                                {{ material_nombre|tojson }},
-                                                                {{ solicitante_nombre|tojson }}
-                                                            )'>
+                                                            onclick='mostrarModalDevolucion({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }})'>
                                                             🔄 Devolución
                                                         </button>
                                                     {% endif %}
+
+                                                    {% if puede_crear_novedad and (esta_aprobada or esta_aprobada_parcial or esta_entregada) %}
+                                                        <button class="btn btn-secondary btn-sm"
+                                                            onclick='mostrarModalNovedad({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }},{{ solicitud.cantidad_entregada or solicitud.cantidad_solicitada }})'
+                                                            title="Registrar Novedad">
+                                                            📝 Novedad
+                                                        </button>
+                                                    {% endif %}
+
+                                                    {% if puede_gestionar_novedad and estado_normalizado == 'novedad_registrada' %}
+                                                        <button class="btn btn-success btn-sm"
+                                                            onclick='gestionarNovedad({{ solicitud.id }}, "aceptar", {{ material_nombre|tojson }})'
+                                                            title="Aprobar Novedad">
+                                                            ✅ Aprobar Novedad
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm"
+                                                            onclick='gestionarNovedad({{ solicitud.id }}, "rechazar", {{ material_nombre|tojson }})'
+                                                            title="Rechazar Novedad">
+                                                            ❌ Rechazar Novedad
+                                                        </button>
+                                                    {% endif %}
+
                                                 </div>
                                             </td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
+
                             </table>
                         </div>
                     {% else %}
@@ -279,12 +287,13 @@
     </div>
 </div>
 
-<!-- Modal para ver detalles de solicitud -->
+<!-- Modales -->
+<!-- Modal Detalles -->
 <div class="modal fade" id="modalDetalles" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Detalles de la Solicitud</h5>
+                <h5 class="modal-title">📋 Detalles de la Solicitud</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -297,12 +306,12 @@
     </div>
 </div>
 
-<!-- Modal para aprobación parcial -->
+<!-- Modal Aprobación Parcial -->
 <div class="modal fade" id="modalAprobacionParcial" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title">Aprobación Parcial</h5>
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">⚠️ Aprobación Parcial</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -312,31 +321,26 @@
                 
                 <form id="formAprobacionParcial" method="POST">
                     <div class="mb-3">
-                        <label for="cantidad_aprobada" class="form-label">Cantidad a Aprobar</label>
+                        <label for="cantidad_aprobada" class="form-label">Cantidad a Aprobar:</label>
                         <input type="number" class="form-control" id="cantidad_aprobada" name="cantidad_aprobada" min="1" required>
                         <div class="form-text" id="maximo_cantidad"></div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="observacion_parcial" class="form-label">Observación (Opcional)</label>
-                        <textarea class="form-control" id="observacion_parcial" name="observacion" rows="2"></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-warning" onclick="confirmarAprobacionParcial()">Aprobar Parcialmente</button>
+                <button type="button" class="btn btn-warning" onclick="confirmarAprobacionParcial()">✅ Aprobar Parcialmente</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal para rechazar solicitud -->
+<!-- Modal Rechazar -->
 <div class="modal fade" id="modalRechazar" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Rechazar Solicitud</h5>
+                <h5 class="modal-title">❌ Rechazar Solicitud</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -345,359 +349,569 @@
                 
                 <form id="formRechazar" method="POST">
                     <div class="mb-3">
-                        <label for="observacion" class="form-label">Motivo del Rechazo</label>
+                        <label for="observacion" class="form-label">Motivo del Rechazo:</label>
                         <textarea class="form-control" id="observacion" name="observacion" rows="3" required></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="confirmarRechazo()">Rechazar Solicitud</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarRechazo()">❌ Rechazar Solicitud</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal para devolución -->
+<!-- Modal Devolución -->
 <div class="modal fade" id="modalDevolucion" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">Registrar Devolución</h5>
+                <h5 class="modal-title">🔄 Registrar Devolución</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <p><strong>Material:</strong> <span id="infoMaterialDevolucion"></span></p>
                 <p><strong>Solicitante:</strong> <span id="infoSolicitanteDevolucion"></span></p>
-                <p><strong>Cantidad Máxima a Devolver:</strong> <span id="infoCantidadDevolucion"></span></p>
+                <p><strong>Cantidad Entregada:</strong> <span id="infoCantidadEntregada"></span></p>
+                <p><strong>Cantidad Ya Devuelta:</strong> <span id="infoCantidadYaDevuelta"></span></p>
+                <p><strong>Máximo a Devolver:</strong> <span id="infoCantidadMaxDevolucion"></span></p>
                 
                 <form id="formDevolucion" method="POST">
                     <div class="mb-3">
-                        <label for="cantidad_devuelta" class="form-label">Cantidad Devuelta</label>
+                        <label for="cantidad_devuelta" class="form-label">Cantidad a Devolver:</label>
                         <input type="number" class="form-control" id="cantidad_devuelta" name="cantidad_devuelta" min="1" required>
-                        <div class="form-text">Máximo: <span id="maximo_devolucion"></span></div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="observacion_devolucion" class="form-label">Observación (Opcional)</label>
-                        <textarea class="form-control" id="observacion_devolucion" name="observacion_devolucion" rows="2"></textarea>
+                        <div class="form-text">Máximo a devolver: <span id="maximo_devolucion"></span></div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-info" onclick="confirmarDevolucion()">Registrar Devolución</button>
+                <button type="button" class="btn btn-info" onclick="confirmarDevolucion()">🔄 Registrar Devolución</button>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
-<script>
-    /* ============================
-       FILTRAR POR ESTADO
-    ============================ */
-    function filtrarPorEstado(estado) {
-        const url = new URL(window.location.href);
-        if (estado && estado !== 'todos') url.searchParams.set('estado', estado);
-        else url.searchParams.delete('estado');
-        window.location.href = url.toString();
-    }
-
-    /* ============================
-       VER DETALLES DE SOLICITUD - VERSIÓN CORREGIDA
-    ============================ */
-    function verDetallesSolicitud(solicitudData) {
-        console.log('Datos completos de la solicitud:', solicitudData);
-        
-        // Extraer datos con valores por defecto para evitar errores
-        const solicitudId = solicitudData.id || 'N/A';
-        const materialNombre = solicitudData.material_nombre || 'Material no especificado';
-        const cantidadSolicitada = solicitudData.cantidad_solicitada || 0;
-        const stockActual = solicitudData.stock_disponible || 0;
-        const solicitanteNombre = solicitudData.usuario_solicitante || 'N/A';
-        const oficinaNombre = solicitudData.oficina_nombre || 'N/A';
-        const fechaSolicitud = solicitudData.fecha_solicitud ? 
-            (typeof solicitudData.fecha_solicitud === 'string' ? 
-             solicitudData.fecha_solicitud : 
-             new Date(solicitudData.fecha_solicitud).toLocaleString('es-CO')) : 'N/A';
-        const estado = solicitudData.estado || 'Desconocido';
-        const porcentajeOficina = solicitudData.porcentaje_oficina || 0;
-        const valorTotalSolicitado = solicitudData.valor_total_solicitado || 0;
-        const valorOficina = solicitudData.valor_oficina || 0;
-        const valorSede = solicitudData.valor_sede || 0;
-        const observacion = solicitudData.observacion || 'Sin observación';
-        const cantidadEntregada = solicitudData.cantidad_entregada || 0;
-
-        // Obtener material_imagen del contexto global o dejar vacío
-        const materialImagen = window.materialesDict && window.materialesDict[solicitudData.material_id] ? 
-            window.materialesDict[solicitudData.material_id].ruta_imagen : null;
-
-        let imagenHTML = "";
-
-        // Verificar si hay imagen
-        if (materialImagen && materialImagen !== "None" && materialImagen !== "null" && materialImagen !== "undefined") {
-            let ruta = "";
-            
-            if (materialImagen.includes("http")) {
-                ruta = materialImagen;
-            } else if (materialImagen.includes("uploads/")) {
-                ruta = `/static/${materialImagen}`;
-            } else if (materialImagen.includes("/")) {
-                ruta = materialImagen;
-            } else {
-                ruta = `/static/uploads/${materialImagen}`;
-            }
-
-            imagenHTML = `
-                <div class="row mt-3">
-                    <div class="col-md-12">
-                        <h6>🖼️ Imagen del Material</h6>
-                        <div class="text-center">
-                            <img src="${ruta}" class="img-fluid rounded"
-                                 style="max-height: 200px; object-fit: cover;"
-                                 alt="${materialNombre}"
-                                 onerror="this.style.display='none'; console.log('Error cargando imagen:', this.src)" />
+<!-- Modal Novedad -->
+<div class="modal fade" id="modalNovedad" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title">📝 Registrar Novedad</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Material:</strong> <span id="infoMaterialNovedad"></span></p>
+                <p><strong>Solicitante:</strong> <span id="infoSolicitanteNovedad"></span></p>
+                <p><strong>Cantidad Entregada:</strong> <span id="infoCantidadNovedad"></span></p>
+                
+                <form id="formNovedad">
+                    <input type="hidden" id="solicitudIdNovedad" name="solicitud_id">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tipoNovedad" class="form-label">Tipo de Novedad:</label>
+                                <select class="form-select" id="tipoNovedad" name="tipo_novedad" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="daño">Daño o Rotura</option>
+                                    <option value="perdida">Pérdida</option>
+                                    <option value="defectuoso">Material Defectuoso</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="cantidadAfectada" class="form-label">Cantidad Afectada:</label>
+                                <input type="number" class="form-control" id="cantidadAfectada" name="cantidad_afectada" min="1" required>
+                                <div class="form-text">Máximo: <span id="maximoNovedad"></span></div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
-        }
-
-        // Formatear valores monetarios
-        const formatoMoneda = (valor) => {
-            if (isNaN(valor) || valor === null || valor === undefined) {
-                return '$0.00';
-            }
-            return `$${parseFloat(valor).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        };
-
-        // Determinar badge de estado
-        let estadoBadge = '';
-        const estadoLower = estado.toLowerCase();
-        if (estadoLower.includes('pendiente')) {
-            estadoBadge = '<span class="badge bg-warning">⏳ ' + estado + '</span>';
-        } else if (estadoLower.includes('aprobada')) {
-            estadoBadge = '<span class="badge bg-success">✅ ' + estado + '</span>';
-        } else if (estadoLower.includes('rechazada')) {
-            estadoBadge = '<span class="badge bg-danger">❌ ' + estado + '</span>';
-        } else if (estadoLower.includes('devuelta')) {
-            estadoBadge = '<span class="badge bg-info">🔄 ' + estado + '</span>';
-        } else {
-            estadoBadge = '<span class="badge bg-secondary">' + estado + '</span>';
-        }
-
-        const detallesHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>📋 Información Básica</h6>
-                    <p><strong>ID Solicitud:</strong> #${solicitudId}</p>
-                    <p><strong>Estado:</strong> ${estadoBadge}</p>
-                    <p><strong>Fecha Solicitud:</strong> ${fechaSolicitud}</p>
-                    <p><strong>Observación:</strong> ${observacion}</p>
-                </div>
-
-                <div class="col-md-6">
-                    <h6>📦 Detalles del Material</h6>
-                    <p><strong>Material:</strong> ${materialNombre}</p>
-                    <p><strong>Cantidad Solicitada:</strong> <span class="badge bg-info">${cantidadSolicitada}</span></p>
-                    <p><strong>Cantidad Entregada:</strong> <span class="badge bg-success">${cantidadEntregada}</span></p>
-                    <p><strong>Stock Disponible:</strong> <span class="badge bg-secondary">${stockActual}</span></p>
-                    <p><strong>Porcentaje Oficina:</strong> <span class="badge bg-warning">${porcentajeOficina}%</span></p>
-                </div>
-            </div>
-
-            <div class="row mt-3">
-                <div class="col-md-12">
-                    <h6>💰 Valores Financieros</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Concepto</th>
-                                    <th>Valor</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Valor Total Solicitado</strong></td>
-                                    <td class="text-success fw-bold">${formatoMoneda(valorTotalSolicitado)}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Valor a Cargo de la Oficina (${porcentajeOficina}%)</strong></td>
-                                    <td class="text-primary">${formatoMoneda(valorOficina)}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Valor a Cargo de Sede Principal</strong></td>
-                                    <td class="text-info">${formatoMoneda(valorSede)}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    
+                    <div class="mb-3">
+                        <label for="descripcionNovedad" class="form-label">Descripción:</label>
+                        <textarea class="form-control" id="descripcionNovedad" name="descripcion" rows="3" placeholder="Describa la novedad en detalle..." required></textarea>
                     </div>
-                </div>
+                    
+                    <div class="mb-3">
+                        <label for="imagenNovedad" class="form-label">Imagen de la Novedad (Obligatoria):</label>
+                        <input type="file" class="form-control" id="imagenNovedad" name="imagen_novedad" accept="image/*" onchange="mostrarVistaPrevia(this)" required>
+                        <div class="form-text">Formatos permitidos: JPG, PNG, GIF. Tamaño máximo: 5MB</div>
+                    </div>
+                    
+                    <!-- Vista previa de imagen -->
+                    <div id="vistaPreviaImagen" class="text-center mt-3" style="display: none;">
+                        <h6>Vista Previa:</h6>
+                        <img id="previewImg" src="#" class="img-fluid rounded" style="max-height: 200px; object-fit: cover;" alt="Vista previa">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarRegistroNovedad()">📝 Registrar Novedad</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ super() }}
+
+{% endblock %}
+
+ {% block scripts %}
+<script>
+/* ============================
+   FILTRAR POR ESTADO
+============================ */
+function filtrarPorEstado(estado) {
+    const url = new URL(window.location.href);
+    if (estado && estado !== 'todos') url.searchParams.set('estado', estado);
+    else url.searchParams.delete('estado');
+    window.location.href = url.toString();
+}
+
+/* ============================
+   VER DETALLES DE SOLICITUD
+============================ */
+function verDetallesSolicitud(solicitudData) {
+    const solicitudId = solicitudData.id || 'N/A';
+    const materialNombre = solicitudData.material_nombre || 'Material no especificado';
+    const cantidadSolicitada = solicitudData.cantidad_solicitada || 0;
+    const stockActual = solicitudData.stock_disponible || 0;
+    const solicitanteNombre = solicitudData.usuario_solicitante || 'N/A';
+    const oficinaNombre = solicitudData.oficina_nombre || 'N/A';
+    const fechaSolicitud = solicitudData.fecha_solicitud ? 
+        (typeof solicitudData.fecha_solicitud === 'string' ? 
+         solicitudData.fecha_solicitud : 
+         new Date(solicitudData.fecha_solicitud).toLocaleString('es-CO')) : 'N/A';
+    const estado = solicitudData.estado || 'Desconocido';
+    const porcentajeOficina = solicitudData.porcentaje_oficina || 0;
+    const valorTotalSolicitado = solicitudData.valor_total_solicitado || 0;
+    const valorOficina = solicitudData.valor_oficina || 0;
+    const valorSede = solicitudData.valor_sede || 0;
+    const observacion = solicitudData.observacion || 'Sin observación';
+    const cantidadEntregada = solicitudData.cantidad_entregada || 0;
+
+    let estadoBadge = '';
+    const estadoLower = estado.toLowerCase();
+    if (estadoLower.includes('pendiente')) {
+        estadoBadge = '<span class="badge bg-warning">⏳ ' + estado + '</span>';
+    } else if (estadoLower.includes('aprobada')) {
+        estadoBadge = '<span class="badge bg-success">✅ ' + estado + '</span>';
+    } else if (estadoLower.includes('rechazada')) {
+        estadoBadge = '<span class="badge bg-danger">❌ ' + estado + '</span>';
+    } else if (estadoLower.includes('devuelta')) {
+        estadoBadge = '<span class="badge bg-info">🔄 ' + estado + '</span>';
+    } else if (estadoLower.includes('novedad_registrada')) {
+        estadoBadge = '<span class="badge bg-secondary">📝 ' + estado + '</span>';
+    } else if (estadoLower.includes('novedad_aceptada')) {
+        estadoBadge = '<span class="badge bg-success">✅ ' + estado + '</span>';
+    } else if (estadoLower.includes('novedad_rechazada')) {
+        estadoBadge = '<span class="badge bg-danger">❌ ' + estado + '</span>';
+    } else {
+        estadoBadge = '<span class="badge bg-secondary">' + estado + '</span>';
+    }
+
+    const detallesHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>📋 Información Básica</h6>
+                <p><strong>ID Solicitud:</strong> #${solicitudId}</p>
+                <p><strong>Estado:</strong> ${estadoBadge}</p>
+                <p><strong>Fecha Solicitud:</strong> ${fechaSolicitud}</p>
+                <p><strong>Observación:</strong> ${observacion}</p>
             </div>
 
-            ${imagenHTML}
+            <div class="col-md-6">
+                <h6>📦 Detalles del Material</h6>
+                <p><strong>Material:</strong> ${materialNombre}</p>
+                <p><strong>Cantidad Solicitada:</strong> <span class="badge bg-info">${cantidadSolicitada}</span></p>
+                <p><strong>Cantidad Entregada:</strong> <span class="badge bg-success">${cantidadEntregada}</span></p>
+                <p><strong>Stock Disponible:</strong> <span class="badge bg-secondary">${stockActual}</span></p>
+                <p><strong>Porcentaje Oficina:</strong> <span class="badge bg-warning">${porcentajeOficina}%</span></p>
+            </div>
+        </div>
 
-            <div class="row mt-3">
-                <div class="col-md-12">
-                    <h6>👥 Información del Solicitante</h6>
-                    <p><strong>Solicitante:</strong> ${solicitanteNombre}</p>
-                    <p><strong>Oficina:</strong> ${oficinaNombre}</p>
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <h6>💰 Valores Financieros</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Concepto</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Valor Total Solicitado</strong></td>
+                                <td class="text-success fw-bold">${formatoMoneda(valorTotalSolicitado)}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Valor a Cargo de la Oficina (${porcentajeOficina}%)</strong></td>
+                                <td class="text-primary">${formatoMoneda(valorOficina)}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Valor a Cargo de Sede Principal</strong></td>
+                                <td class="text-info">${formatoMoneda(valorSede)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        `;
+        </div>
 
-        document.getElementById("detallesSolicitud").innerHTML = detallesHTML;
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <h6>👥 Información del Solicitante</h6>
+                <p><strong>Solicitante:</strong> ${solicitanteNombre}</p>
+                <p><strong>Oficina:</strong> ${oficinaNombre}</p>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("detallesSolicitud").innerHTML = detallesHTML;
+    new bootstrap.Modal(document.getElementById("modalDetalles")).show();
+}
+
+// Función auxiliar para formato de moneda
+function formatoMoneda(valor) {
+    if (isNaN(valor) || valor === null || valor === undefined) {
+        return '$0.00';
+    }
+    return `$${parseFloat(valor).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/* ============================
+   APROBACIÓN PARCIAL
+============================ */
+let solicitudIdParcial = null;
+
+function mostrarModalAprobacionParcial(id, cantidad, materialNombre, solicitanteNombre) {
+    solicitudIdParcial = id;
+    
+    document.getElementById("infoMaterialParcial").textContent = materialNombre;
+    document.getElementById("infoSolicitanteParcial").textContent = solicitanteNombre;
+    document.getElementById("infoCantidadParcial").textContent = cantidad;
+
+    const input = document.getElementById("cantidad_aprobada");
+    input.max = cantidad;
+    input.value = "";
+    input.placeholder = `Máximo: ${cantidad}`;
+    document.getElementById("maximo_cantidad").textContent = `Cantidad máxima permitida: ${cantidad}`;
+
+    new bootstrap.Modal(document.getElementById("modalAprobacionParcial")).show();
+}
+
+function confirmarAprobacionParcial() {
+    const cantidad = parseInt(document.getElementById("cantidad_aprobada").value);
+    const maximo = parseInt(document.getElementById("cantidad_aprobada").max);
+
+    if (!cantidad || cantidad < 1) {
+        alert("Ingrese una cantidad válida");
+        return;
+    }
+    if (cantidad > maximo) {
+        alert(`La cantidad no puede superar ${maximo}`);
+        return;
+    }
+
+    const form = document.getElementById("formAprobacionParcial");
+    form.action = `/solicitudes/aprobar_parcial/${solicitudIdParcial}`;
+    form.submit();
+}
+
+/* ============================
+   RECHAZAR SOLICITUD
+============================ */
+let solicitudIdRechazar = null;
+
+function mostrarModalRechazar(id, materialNombre, solicitanteNombre) {
+    solicitudIdRechazar = id;
+    
+    document.getElementById("infoMaterialRechazar").textContent = materialNombre;
+    document.getElementById("infoSolicitanteRechazar").textContent = solicitanteNombre;
+    document.getElementById("observacion").value = "";
+
+    new bootstrap.Modal(document.getElementById("modalRechazar")).show();
+}
+
+function confirmarRechazo() {
+    const motivo = document.getElementById("observacion").value.trim();
+    if (!motivo) {
+        alert("Debe ingresar un motivo");
+        return;
+    }
+
+    const form = document.getElementById("formRechazar");
+    form.action = `/solicitudes/rechazar/${solicitudIdRechazar}`;
+    form.submit();
+}
+
+/* ============================
+   DEVOLUCIÓN
+============================ */
+let solicitudIdDevolucion = null;
+let cantidadMaximaDevolucion = 0;
+
+function mostrarModalDevolucion(id, materialNombre, solicitanteNombre) {
+    solicitudIdDevolucion = id;
+
+    fetch(`/solicitudes/api/${id}/info-devolucion`)
+        .then(r => {
+            if (!r.ok) throw new Error('Error en la respuesta del servidor');
+            return r.json();
+        })
+        .then(data => {
+            if (data.error) {
+                alert("ERROR: " + data.error);
+                return;
+            }
+
+            const cantidadEntregada = data.cantidad_entregada || 0;
+            const cantidadYaDevuelta = data.cantidad_ya_devuelta || 0;
+            const maxDevolver = cantidadEntregada - cantidadYaDevuelta;
+
+            if (cantidadEntregada <= 0) {
+                alert("No hay cantidad entregada para devolver.");
+                return;
+            }
+
+            if (maxDevolver <= 0) {
+                alert("Esta solicitud ya está totalmente devuelta.");
+                return;
+            }
+
+            document.getElementById("infoMaterialDevolucion").textContent = data.material_nombre || materialNombre;
+            document.getElementById("infoSolicitanteDevolucion").textContent = data.solicitante_nombre || solicitanteNombre;
+            document.getElementById("infoCantidadEntregada").textContent = cantidadEntregada;
+            document.getElementById("infoCantidadYaDevuelta").textContent = cantidadYaDevuelta;
+            document.getElementById("infoCantidadMaxDevolucion").textContent = maxDevolver;
+
+            const input = document.getElementById("cantidad_devuelta");
+            input.value = "";
+            input.max = maxDevolver;
+            input.placeholder = `Máximo: ${maxDevolver}`;
+            document.getElementById("maximo_devolucion").textContent = maxDevolver;
+            
+            cantidadMaximaDevolucion = maxDevolver;
+            new bootstrap.Modal(document.getElementById("modalDevolucion")).show();
+        })
+        .catch(err => {
+            alert("Error al cargar información de devolución");
+        });
+}
+
+function confirmarDevolucion() {
+    const cantidad = parseInt(document.getElementById("cantidad_devuelta").value);
+    const maximo = cantidadMaximaDevolucion;
+
+    if (!cantidad || cantidad < 1) {
+        alert("Ingrese una cantidad válida");
+        return;
+    }
+
+    if (cantidad > maximo) {
+        alert(`La cantidad no puede superar ${maximo}`);
+        return;
+    }
+
+    const form = document.getElementById("formDevolucion");
+    form.action = `/solicitudes/devolucion/${solicitudIdDevolucion}`;
+    form.submit();
+}
+
+/* ============================
+   FUNCIONES PARA NOVEDADES
+============================ */
+let solicitudIdNovedad = null;
+let cantidadMaximaNovedad = 0;
+
+function mostrarModalNovedad(id, materialNombre, solicitanteNombre, cantidadEntregada) {
+    solicitudIdNovedad = id;
+    cantidadMaximaNovedad = cantidadEntregada;
+
+    document.getElementById("infoMaterialNovedad").textContent = materialNombre;
+    document.getElementById("infoSolicitanteNovedad").textContent = solicitanteNombre;
+    document.getElementById("infoCantidadNovedad").textContent = cantidadEntregada;
+    document.getElementById("maximoNovedad").textContent = cantidadEntregada;
+
+    // Limpiar formulario
+    document.getElementById("tipoNovedad").value = "";
+    document.getElementById("cantidadAfectada").value = "";
+    document.getElementById("descripcionNovedad").value = "";
+    document.getElementById("solicitudIdNovedad").value = id;
+    document.getElementById("imagenNovedad").value = "";
+    document.getElementById("vistaPreviaImagen").style.display = "none";
+
+    const inputCantidad = document.getElementById("cantidadAfectada");
+    inputCantidad.max = cantidadEntregada;
+    inputCantidad.placeholder = `Máximo: ${cantidadEntregada}`;
+
+    new bootstrap.Modal(document.getElementById("modalNovedad")).show();
+}
+
+function mostrarVistaPrevia(input) {
+    const vistaPrevia = document.getElementById("vistaPreviaImagen");
+    const previewImg = document.getElementById("previewImg");
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
         
-        // Mostrar el modal
-        const modal = new bootstrap.Modal(document.getElementById("modalDetalles"));
-        modal.show();
-    }
-
-    /* ============================
-       APROBACIÓN PARCIAL
-    ============================ */
-    let solicitudIdParcial = null;
-
-    function mostrarModalAprobacionParcial(id, cantidad, materialNombre, solicitanteNombre) {
-        solicitudIdParcial = id;
+        const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!tiposPermitidos.includes(file.type)) {
+            alert('Solo se permiten archivos de imagen (JPG, PNG, GIF)');
+            input.value = '';
+            vistaPrevia.style.display = "none";
+            return;
+        }
         
-        document.getElementById("infoMaterialParcial").textContent = materialNombre;
-        document.getElementById("infoSolicitanteParcial").textContent = solicitanteNombre;
-        document.getElementById("infoCantidadParcial").textContent = cantidad;
-
-        const input = document.getElementById("cantidad_aprobada");
-        input.max = cantidad;
-        input.value = "";
-        input.placeholder = `Máximo: ${cantidad}`;
-
-        document.getElementById("maximo_cantidad").textContent = `Cantidad máxima permitida: ${cantidad}`;
-
-        new bootstrap.Modal(document.getElementById("modalAprobacionParcial")).show();
-    }
-
-    function confirmarAprobacionParcial() {
-        const cantidad = parseInt(document.getElementById("cantidad_aprobada").value);
-        const maximo = parseInt(document.getElementById("cantidad_aprobada").max);
-
-        if (!cantidad || cantidad < 1) {
-            alert("Ingrese una cantidad válida");
+        if (file.size > 5 * 1024 * 1024) {
+            alert('La imagen no puede superar los 5MB');
+            input.value = '';
+            vistaPrevia.style.display = "none";
             return;
         }
-        if (cantidad > maximo) {
-            alert(`La cantidad no puede superar ${maximo}`);
-            return;
-        }
-
-        // Enviar el formulario
-        const form = document.getElementById("formAprobacionParcial");
-        form.action = `/solicitudes/aprobar_parcial/${solicitudIdParcial}`;
-        form.submit();
-    }
-
-    /* ============================
-       RECHAZAR SOLICITUD
-    ============================ */
-    let solicitudIdRechazar = null;
-
-    function mostrarModalRechazar(id, materialNombre, solicitanteNombre) {
-        solicitudIdRechazar = id;
         
-        document.getElementById("infoMaterialRechazar").textContent = materialNombre;
-        document.getElementById("infoSolicitanteRechazar").textContent = solicitanteNombre;
-        document.getElementById("observacion").value = "";
-
-        new bootstrap.Modal(document.getElementById("modalRechazar")).show();
-    }
-
-    function confirmarRechazo() {
-        const motivo = document.getElementById("observacion").value.trim();
-        if (!motivo) {
-            alert("Debe ingresar un motivo");
-            return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            vistaPrevia.style.display = "block";
         }
+        reader.readAsDataURL(file);
+    } else {
+        vistaPrevia.style.display = "none";
+    }
+}
 
-        // Enviar el formulario
-        const form = document.getElementById("formRechazar");
-        form.action = `/solicitudes/rechazar/${solicitudIdRechazar}`;
-        form.submit();
+function confirmarRegistroNovedad() {
+    const tipoNovedad = document.getElementById("tipoNovedad").value;
+    const cantidadAfectada = parseInt(document.getElementById("cantidadAfectada").value);
+    const descripcion = document.getElementById("descripcionNovedad").value.trim();
+    const imagenInput = document.getElementById("imagenNovedad");
+    const imagenArchivo = imagenInput.files[0];
+
+    // Validaciones
+    if (!tipoNovedad) {
+        alert("❌ Seleccione el tipo de novedad");
+        return;
     }
 
-    /* ============================
-       DEVOLUCIÓN (ACTUALIZADO)
-    ============================ */
-    let solicitudIdDevolucion = null;
-
-    function mostrarModalDevolucion(id, materialNombre, solicitanteNombre) {
-        solicitudIdDevolucion = id;
-
-        fetch(`/solicitudes/api/${id}/info-devolucion`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) {
-                    alert("ERROR: " + data.error);
-                    return;
-                }
-
-                const aprobada = data.cantidad_aprobada || 0;
-                const yaDevuelta = data.cantidad_ya_devuelta || 0;
-                const maxDevolver = aprobada - yaDevuelta;
-
-                if (aprobada <= 0) {
-                    alert("No hay cantidad aprobada para devolver.");
-                    return;
-                }
-
-                if (maxDevolver <= 0) {
-                    alert("Esta solicitud ya está totalmente devuelta.");
-                    return;
-                }
-
-                document.getElementById("infoMaterialDevolucion").textContent = data.material_nombre || materialNombre;
-                document.getElementById("infoSolicitanteDevolucion").textContent = data.solicitante_nombre || solicitanteNombre;
-                document.getElementById("infoCantidadDevolucion").textContent = maxDevolver;
-
-                const input = document.getElementById("cantidad_devuelta");
-                input.value = "";
-                input.max = maxDevolver;
-                input.placeholder = `Máximo: ${maxDevolver}`;
-                document.getElementById("maximo_devolucion").textContent = maxDevolver;
-
-                new bootstrap.Modal(document.getElementById("modalDevolucion")).show();
-            })
-            .catch(err => {
-                console.error(err);
-                alert("Error al cargar información de devolución");
-            });
+    if (!cantidadAfectada || cantidadAfectada < 1) {
+        alert("❌ Ingrese una cantidad válida");
+        return;
     }
 
-    function confirmarDevolucion() {
-        const cantidad = parseInt(document.getElementById("cantidad_devuelta").value);
-        const maximo = parseInt(document.getElementById("cantidad_devuelta").max);
+    if (cantidadAfectada > cantidadMaximaNovedad) {
+        alert(`❌ La cantidad no puede superar ${cantidadMaximaNovedad}`);
+        return;
+    }
 
-        if (!cantidad || cantidad < 1) {
-            alert("Ingrese una cantidad válida");
-            return;
+    if (!descripcion || descripcion.length < 10) {
+        alert("❌ La descripción es obligatoria y debe tener al menos 10 caracteres");
+        return;
+    }
+
+    if (!imagenArchivo) {
+        alert("❌ Debe adjuntar una imagen de la novedad");
+        return;
+    }
+
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!tiposPermitidos.includes(imagenArchivo.type)) {
+        alert('❌ Solo se permiten archivos de imagen (JPG, PNG, GIF)');
+        return;
+    }
+
+    if (imagenArchivo.size > 5 * 1024 * 1024) {
+        alert('❌ La imagen no puede superar los 5MB');
+        return;
+    }
+
+    // Mostrar loading
+    const btn = document.querySelector('#modalNovedad .btn.btn-primary');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Registrando...';
+    btn.disabled = true;
+
+    // Crear FormData
+    const formData = new FormData();
+    formData.append('solicitud_id', solicitudIdNovedad);
+    formData.append('tipo_novedad', tipoNovedad);
+    formData.append('cantidad_afectada', cantidadAfectada);
+    formData.append('descripcion', descripcion);
+    formData.append('imagen_novedad', imagenArchivo);
+
+    fetch('/solicitudes/registrar-novedad', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + (data.message || 'Novedad registrada exitosamente'));
+            bootstrap.Modal.getInstance(document.getElementById('modalNovedad')).hide();
+            location.reload();
+        } else {
+            alert('❌ ' + (data.message || 'Error al registrar la novedad'));
         }
-
-        if (cantidad > maximo) {
-            alert(`La cantidad no puede superar ${maximo}`);
-            return;
-        }
-
-        // Enviar el formulario
-        const form = document.getElementById("formDevolucion");
-        form.action = `/solicitudes/devolucion/${solicitudIdDevolucion}`;
-        form.submit();
-    }
-
-    // Inicializar materialesDict en el contexto global
-    document.addEventListener('DOMContentLoaded', function() {
-        // Pasar materiales_dict desde Flask al contexto JavaScript
-        window.materialesDict = {{ materiales_dict|tojson|safe }} || {};
-        console.log('MaterialesDict inicializado:', window.materialesDict);
+    })
+    .catch(error => {
+        alert('❌ Error al registrar la novedad');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     });
+}
+
+function gestionarNovedad(solicitudId, accion, materialNombre) {
+    if (!confirm(`¿Está seguro que desea ${accion === 'aceptar' ? 'ACEPTAR' : 'RECHAZAR'} la novedad del material "${materialNombre}"?`)) {
+        return;
+    }
+    
+    const observaciones = prompt('Ingrese observaciones (opcional):', '');
+
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Procesando...';
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('solicitud_id', solicitudId);
+    formData.append('accion', accion);
+    formData.append('observaciones', observaciones || '');
+
+    fetch('/solicitudes/gestionar-novedad', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(`✅ Novedad ${accion === 'aceptar' ? 'aceptada' : 'rechazada'} exitosamente`);
+            location.reload();
+        } else {
+            alert('❌ Error: ' + (data.message || 'Error desconocido'));
+        }
+    })
+    .catch(error => {
+        alert('❌ Error al procesar la novedad');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
 </script>
 {% endblock %}

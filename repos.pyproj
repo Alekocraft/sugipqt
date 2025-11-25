@@ -68,6 +68,7 @@
     <Compile Include="database.py" />
     <Compile Include="models\generar_hash.py" />
     <Compile Include="models\materiales_model.py" />
+    <Compile Include="models\novedades_model.py" />
     <Compile Include="models\oficinas_model.py" />
     <Compile Include="models\solicitudes_model.py" />
     <Compile Include="models\usuarios_model.py" />

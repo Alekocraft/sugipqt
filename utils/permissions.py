@@ -42,10 +42,9 @@ class PermissionManager:
     def can_view_actions() -> bool:
         """Verifica si puede ver columnas de acciones en préstamos"""
         role = session.get('rol', '').lower()
-        roles_con_acciones = {'administrador', 'aprobador'}
+        roles_con_acciones = {'administrador', 'aprobador', 'lider_inventario'}
         return role in roles_con_acciones
 
-    # ⬇️ ESTA ES LA PARTE QUE QUERÍAS CAMBIAR (NUEVA LÓGICA)
     @staticmethod
     def can_manage_inventario_corporativo() -> bool:
         """Verifica si puede gestionar inventario corporativo usando acciones del rol"""
@@ -59,6 +58,18 @@ class PermissionManager:
     def can_view_inventario_actions() -> bool:
         """Verifica si puede ver acciones en inventario corporativo"""
         return PermissionManager.can_manage_inventario_corporativo()
+
+    # ⬇️ MÉTODOS PARA NOVEDADES - ESTOS SON LOS QUE FALTABAN
+    @staticmethod
+    def can_create_novedad() -> bool:
+        """Verifica si puede crear novedades"""
+        return PermissionManager.has_action_permission('novedades', 'create')
+
+    @staticmethod
+    def can_manage_novedad() -> bool:
+        """Verifica si puede gestionar (aprobar/rechazar) novedades"""
+        return (PermissionManager.has_action_permission('novedades', 'approve') or 
+                PermissionManager.has_action_permission('novedades', 'reject'))
 
     @staticmethod
     def get_office_filter():
@@ -90,6 +101,15 @@ def can_manage_inventario_corporativo() -> bool:
 
 def can_view_inventario_actions() -> bool:
     return PermissionManager.can_view_inventario_actions()
+
+
+# ⬇️ NUEVAS FUNCIONES DE CONVENIENCIA PARA NOVEDADES - ESTAS SON LAS QUE FALTABAN
+def can_create_novedad() -> bool:
+    return PermissionManager.can_create_novedad()
+
+
+def can_manage_novedad() -> bool:
+    return PermissionManager.can_manage_novedad()
 
 
 def get_accessible_modules():
