@@ -21,7 +21,8 @@ class MaterialModel:
                     Activo, 
                     FechaCreacion,
                     UsuarioCreador, 
-                    RutaImagen
+                    RutaImagen,
+                    CantidadMinima
                 FROM Materiales 
                 WHERE Activo = 1
             """
@@ -48,7 +49,7 @@ class MaterialModel:
                     'fecha_creacion': row[7],
                     'usuario_creador': row[8],
                     'ruta_imagen': row[9],
-                    'cantidad_minima': 10  # Valor por defecto
+                    'cantidad_minima': row[10] if row[10] is not None else 0
                 }
                 materiales.append(material)
             return materiales
@@ -77,7 +78,8 @@ class MaterialModel:
                     Activo, 
                     FechaCreacion,
                     UsuarioCreador, 
-                    RutaImagen
+                    RutaImagen,
+                    CantidadMinima
                 FROM Materiales
                 WHERE MaterialId = ? AND Activo = 1
             """, (material_id,))
@@ -100,7 +102,7 @@ class MaterialModel:
                     'fecha_creacion': row[7],
                     'usuario_creador': row[8],
                     'ruta_imagen': ruta_imagen if ruta_imagen and ruta_imagen != 'None' else None,
-                    'cantidad_minima': 10
+                    'cantidad_minima': row[10] if row[10] is not None else 0
                 }
             return None
         except Exception as e:
@@ -111,7 +113,7 @@ class MaterialModel:
             conn.close()
 
     @staticmethod
-    def crear(nombre, valor_unitario, cantidad, oficina_id, ruta_imagen=None, usuario_creador="Sistema"):
+    def crear(nombre, valor_unitario, cantidad, oficina_id, usuario_creador="Sistema", ruta_imagen=None, cantidad_minima=None):
         conn = get_database_connection()
         if conn is None:
             print("ERROR: No hay conexion a la BD")
@@ -136,6 +138,10 @@ class MaterialModel:
                 print("La oficina no existe")
                 return None
         
+            # Asegurar que cantidad_minima tenga un valor por defecto si es None
+            if cantidad_minima is None:
+                cantidad_minima = 0
+                
             sql = """
                 INSERT INTO Materiales (
                     NombreElemento, 
@@ -145,9 +151,10 @@ class MaterialModel:
                     Activo, 
                     FechaCreacion, 
                     UsuarioCreador, 
-                    RutaImagen
+                    RutaImagen,
+                    CantidadMinima
                 ) 
-                VALUES (?, ?, ?, ?, 1, GETDATE(), ?, ?)
+                VALUES (?, ?, ?, ?, 1, GETDATE(), ?, ?, ?)
             """
             params = (
                 str(nombre), 
@@ -155,7 +162,8 @@ class MaterialModel:
                 int(cantidad), 
                 int(oficina_id), 
                 str(usuario_creador), 
-                ruta_imagen_final
+                ruta_imagen_final,
+                int(cantidad_minima)
             )
             
             cursor.execute(sql, params)
@@ -180,7 +188,7 @@ class MaterialModel:
             conn.close()
 
     @staticmethod
-    def actualizar(material_id, nombre, valor_unitario, cantidad, oficina_id, ruta_imagen=None):
+    def actualizar(material_id, nombre, valor_unitario, cantidad, oficina_id, ruta_imagen=None, cantidad_minima=None):
         conn = get_database_connection()
         if conn is None:
             print("No se pudo establecer conexion a la base de datos")
@@ -189,19 +197,25 @@ class MaterialModel:
         try:
             if valor_unitario <= 0:
                 return False
+            
+            # Asegurar que cantidad_minima tenga un valor por defecto si es None
+            if cantidad_minima is None:
+                cantidad_minima = 0
                 
             if ruta_imagen is None:
                 cursor.execute("""
                     UPDATE Materiales 
-                    SET NombreElemento = ?, ValorUnitario = ?, CantidadDisponible = ?, OficinaCreadoraId = ?
+                    SET NombreElemento = ?, ValorUnitario = ?, CantidadDisponible = ?, 
+                        OficinaCreadoraId = ?, CantidadMinima = ?
                     WHERE MaterialId = ?
-                """, (nombre, valor_unitario, cantidad, oficina_id, material_id))
+                """, (nombre, valor_unitario, cantidad, oficina_id, cantidad_minima, material_id))
             else:
                 cursor.execute("""
                     UPDATE Materiales 
-                    SET NombreElemento = ?, ValorUnitario = ?, CantidadDisponible = ?, OficinaCreadoraId = ?, RutaImagen = ?
+                    SET NombreElemento = ?, ValorUnitario = ?, CantidadDisponible = ?, 
+                        OficinaCreadoraId = ?, RutaImagen = ?, CantidadMinima = ?
                     WHERE MaterialId = ?
-                """, (nombre, valor_unitario, cantidad, oficina_id, ruta_imagen, material_id))
+                """, (nombre, valor_unitario, cantidad, oficina_id, ruta_imagen, cantidad_minima, material_id))
                 
             conn.commit()
             return cursor.rowcount > 0

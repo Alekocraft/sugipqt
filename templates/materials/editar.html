@@ -57,6 +57,12 @@
                                        value="{{ material.cantidad }}" min="0" required>
                             </div>
                             <div class="mb-3">
+                                <label for="cantidad_minima" class="form-label">Cantidad Mínima:</label>
+                                <input type="number" class="form-control" id="cantidad_minima" name="cantidad_minima"
+                                       value="{{ material.cantidad_minima }}" min="0" required>
+                                <div class="form-text">Cantidad mínima de stock para alertas.</div>
+                            </div>
+                            <div class="mb-3">
                                 <label for="imagen" class="form-label">Nueva Imagen (opcional):</label>
                                 <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*" onchange="previewImage(this)">
                                 

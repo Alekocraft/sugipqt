@@ -23,17 +23,21 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Nombre del Material *</label>
                         <input type="text" name="nombre_0" class="form-control" required>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Valor Unitario ($)*</label>
                         <input type="number" step="0.01" name="valor_unitario_0" class="form-control" required min="0.01">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Cantidad *</label>
                         <input type="number" name="cantidad_0" class="form-control" required min="1">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Cantidad Mínima *</label>
+                        <input type="number" name="cantidad_minima_0" class="form-control" required min="0">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Foto *</label>
@@ -86,17 +90,21 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Nombre del Material *</label>
                             <input type="text" name="nombre_${newIndex}" class="form-control" required>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">Valor Unitario ($)*</label>
                             <input type="number" step="0.01" name="valor_unitario_${newIndex}" class="form-control" required min="0.01">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">Cantidad *</label>
                             <input type="number" name="cantidad_${newIndex}" class="form-control" required min="1">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Cantidad Mínima *</label>
+                            <input type="number" name="cantidad_minima_${newIndex}" class="form-control" required min="0">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Foto *</label>
@@ -129,11 +137,9 @@
         border-left: 4px solid #007bff;
         background-color: #f8f9fa;
     }
-
-        .material-entry:nth-child(even) {
-            border-left-color: #28a745;
-        }
-
+    .material-entry:nth-child(even) {
+        border-left-color: #28a745;
+    }
     .preview-img {
         display: block;
         margin-top: 8px;

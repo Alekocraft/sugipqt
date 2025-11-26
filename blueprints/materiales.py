@@ -42,107 +42,115 @@ def listar_materiales():
         return render_template('materials/listar.html', materiales=[])
 
 
-@materiales_bp.route('/crear', methods=['GET', 'POST'])
-def crear_material():
+# RUTA GET PARA MOSTRAR EL FORMULARIO DE CREACIÓN
+@materiales_bp.route('/crear', methods=['GET'])
+def mostrar_formulario_creacion():
+    """Mostrar el formulario para crear materiales"""
     if not _require_login():
         return redirect('/login')
 
-    if not can_access('materiales', 'view'):
-        flash('No tiene permisos para acceder a esta sección', 'danger')
-        return redirect('/dashboard')
+    if not can_access('materiales', 'create'):
+        flash('❌ No tienes permisos para crear materiales', 'danger')
+        return redirect('/materiales')
 
-    if request.method == 'GET':
-        return render_template('materials/crear.html')
+    # CORRECCIÓN: El template está en templates/materials/crear.html
+    return render_template('materials/crear.html')
 
-    # PROCESAMIENTO DEL MÉTODO POST
+
+# RUTA POST PARA PROCESAR LA CREACIÓN DE MATERIALES
+@materiales_bp.route('/crear', methods=['POST'])
+def crear_materiales():
+    """Procesar la creación de materiales"""
+    if not _require_login():
+        return redirect('/login')
+
+    if not can_access('materiales', 'create'):
+        flash('❌ No tienes permisos para crear materiales', 'danger')
+        return redirect('/materiales')
+
     try:
-        # Obtener la oficina del usuario actual
-        oficina_id = session.get('oficina_id')
-        if not oficina_id:
-            flash('No se pudo determinar su oficina', 'danger')
-            return render_template('materials/crear.html')
-
-        # Obtener la lista de materiales del formulario
-        materiales_creados = 0
-        errores = 0
-
-        # Contar cuántos materiales se enviaron
-        indices = set()
-        for key in request.form:
-            if key.startswith('nombre_'):
-                indices.add(key.split('_')[1])
-
-        for idx in indices:
-            nombre = request.form.get(f'nombre_{idx}')
-            valor_unitario = request.form.get(f'valor_unitario_{idx}')
-            cantidad = request.form.get(f'cantidad_{idx}')
-            imagen = request.files.get(f'imagen_{idx}')
-
-            # Validaciones básicas
-            if not nombre or not valor_unitario or not cantidad:
-                flash(f'Material {int(idx)+1}: Faltan campos obligatorios', 'danger')
-                errores += 1
+        # Obtener datos del formulario
+        materiales_data = []
+        
+        # Iterar sobre los materiales (hasta 10)
+        for i in range(10):
+            nombre = request.form.get(f'nombre_{i}')
+            if not nombre:  # Si no hay nombre, asumir que no hay más materiales
                 continue
-
-            try:
-                valor_unitario_float = float(valor_unitario)
-                cantidad_int = int(cantidad)
-            except ValueError:
-                flash(f'Material {int(idx)+1}: Valor unitario o cantidad no válidos', 'danger')
-                errores += 1
+                
+            valor_unitario = request.form.get(f'valor_unitario_{i}')
+            cantidad = request.form.get(f'cantidad_{i}')
+            cantidad_minima = request.form.get(f'cantidad_minima_{i}')
+            imagen = request.files.get(f'imagen_{i}')
+            
+            # Validar que todos los campos requeridos estén presentes
+            if not all([nombre, valor_unitario, cantidad, cantidad_minima]):
+                flash(f'Faltan campos requeridos en el material {i+1}', 'danger')
                 continue
-
-            # Procesar la imagen - CORRECCIÓN: Guardar en static/uploads
+            
+            # Procesar imagen y guardar ruta
             ruta_imagen = None
             if imagen and imagen.filename:
                 filename = secure_filename(imagen.filename)
-                # Guardar con un nombre único para evitar colisiones
+                # Crear nombre único para evitar colisiones
                 unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
                 
                 # Asegurar que el directorio de uploads existe
-                upload_folder = current_app.config['UPLOAD_FOLDER']
+                upload_folder = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
                 os.makedirs(upload_folder, exist_ok=True)
                 
                 filepath = os.path.join(upload_folder, unique_filename)
                 imagen.save(filepath)
-                
-                # Guardar solo el nombre del archivo, no la ruta completa
                 ruta_imagen = unique_filename
                 print(f"✅ Imagen guardada en: {filepath}")
-
-            # Crear el material
+            
+            materiales_data.append({
+                'nombre': nombre,
+                'valor_unitario': float(valor_unitario),
+                'cantidad': int(cantidad),
+                'cantidad_minima': int(cantidad_minima),
+                'ruta_imagen': ruta_imagen
+            })
+        
+        # Crear materiales en la base de datos
+        oficina_id = session.get('oficina_id')
+        usuario_creador = session.get('username', 'Sistema')
+        
+        materiales_creados = 0
+        for material in materiales_data:
             material_id = MaterialModel.crear(
-                nombre=nombre,
-                valor_unitario=valor_unitario_float,
-                cantidad=cantidad_int,
+                nombre=material['nombre'],
+                valor_unitario=material['valor_unitario'],
+                cantidad=material['cantidad'],
                 oficina_id=oficina_id,
-                ruta_imagen=ruta_imagen,
-                usuario_creador=session.get('usuario_nombre', 'Sistema')
+                usuario_creador=usuario_creador,
+                ruta_imagen=material['ruta_imagen'],
+                cantidad_minima=material['cantidad_minima']
             )
-
+            
             if material_id:
                 materiales_creados += 1
-                print(f"✅ Material creado con ID: {material_id}")
+                print(f"✅ Material creado: {material['nombre']} (ID: {material_id})")
             else:
-                flash(f'Material {int(idx)+1}: Error al guardar en la base de datos', 'danger')
-                errores += 1
-
+                flash(f'❌ Error al crear el material: {material["nombre"]}', 'danger')
+        
         if materiales_creados > 0:
-            flash(f'✅ Se crearon {materiales_creados} materiales correctamente', 'success')
-        if errores > 0:
-            flash(f'❌ No se pudieron crear {errores} materiales', 'danger')
-
+            flash(f'✅ {materiales_creados} materiales creados exitosamente', 'success')
+        else:
+            flash('❌ No se pudo crear ningún material', 'danger')
+        
         return redirect('/materiales')
-
+        
     except Exception as e:
-        print(f"❌ Error creando materiales: {e}")
+        print(f"❌ Error al crear materiales: {e}")
         import traceback
         print(traceback.format_exc())
-        flash('Error interno al crear los materiales', 'danger')
-        return render_template('materials/crear.html')
+        flash('Error al crear los materiales', 'danger')
+        # CORRECCIÓN: Redirigir al formulario de creación en la carpeta correcta
+        return redirect('/materiales/crear')
 
 
-# NUEVAS RUTAS PARA EDITAR Y ELIMINAR
+# RUTAS PARA EDITAR Y ELIMINAR
 @materiales_bp.route('/editar/<int:material_id>', methods=['GET', 'POST'])
 def editar_material(material_id):
     """Editar un material existente"""
@@ -183,16 +191,18 @@ def editar_material(material_id):
         nombre = request.form.get('nombre')
         valor_unitario = request.form.get('valor_unitario')
         cantidad = request.form.get('cantidad')
+        cantidad_minima = request.form.get('cantidad_minima')
         imagen = request.files.get('imagen')
 
         # Validaciones
-        if not nombre or not valor_unitario or not cantidad:
-            flash('Todos los campos excepto la imagen son obligatorios', 'danger')
+        if not nombre or not valor_unitario or not cantidad or not cantidad_minima:
+            flash('Todos los campos son obligatorios', 'danger')
             return render_template('materials/editar.html', material=material_existente)
 
         try:
             valor_unitario_float = float(valor_unitario)
             cantidad_int = int(cantidad)
+            cantidad_minima_int = int(cantidad_minima)
         except ValueError:
             flash('Valor unitario o cantidad no válidos', 'danger')
             return render_template('materials/editar.html', material=material_existente)
@@ -219,7 +229,8 @@ def editar_material(material_id):
             valor_unitario=valor_unitario_float,
             cantidad=cantidad_int,
             oficina_id=material_existente.get('oficina_id'),
-            ruta_imagen=ruta_imagen
+            ruta_imagen=ruta_imagen,
+            cantidad_minima=cantidad_minima_int
         )
 
         if actualizado:
