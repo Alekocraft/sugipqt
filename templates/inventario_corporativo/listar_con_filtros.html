@@ -5,19 +5,10 @@ Inventario Corporativo - Sistema de Gestión
 {% endblock %}
 
 {% block content %}
-{# Rol solo informativo, permisos reales vienen del backend #}
-{% set rol_raw = session.get('rol', '') %}
-{% set rol = (rol_raw or 'usuario')|lower|trim %}
-{% set puede_gestionar = puede_gestionar_inventario
-                          if puede_gestionar_inventario is defined
-                          else rol in ['administrador', 'lider_inventario', 'admin'] %}
-{% set mostrar_acciones = mostrar_acciones_inventario
-                          if mostrar_acciones_inventario is defined
-                          else puede_gestionar %}
 
 <div class="container-fluid fade-in">
 
-    <!-- ⬇️ NUEVO ENCABEZADO (tomado del primer archivo) -->
+    <!-- listar con filtros.html -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="fw-bold" style="color: #0098B1;">
@@ -29,7 +20,7 @@ Inventario Corporativo - Sistema de Gestión
             <a href="/inventario-corporativo" class="btn btn-outline-primary">
                 <i class="fas fa-arrow-left"></i> Volver al Inventario General
             </a>
-            {% if puede_gestionar %}
+            {% if puede_gestionar_inventario %}
             <a href="/inventario-corporativo/crear" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Nuevo Producto
             </a>
@@ -37,7 +28,7 @@ Inventario Corporativo - Sistema de Gestión
         </div>
     </div>
 
-    <!-- ⬇️ ESTADÍSTICAS SIMPLIFICADAS (del primer archivo) -->
+    <!-- ⬇️ ESTADÍSTICAS SIMPLIFICADAS -->
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="card border-0 bg-primary text-white shadow-sm">
@@ -66,19 +57,54 @@ Inventario Corporativo - Sistema de Gestión
         <div class="col-md-3">
             <div class="card border-0 bg-info text-white shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="card-title">Estado</h6>
-                    <h5 class="fw-bold">
-                        {% if tipo == 'sede' %} Sede Principal {% else %} Oficinas Servicio {% endif %}
-                    </h5>
+                    <h6 class="card-title">Oficinas</h6>
+                    <h3 class="fw-bold">{{ total_oficinas }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filtros (SE MANTIENEN IGUAL) -->
+    <!-- Filtros -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            ...
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Filtrar por Oficina</label>
+                    <select name="oficina" class="form-select">
+                        <option value="">Todas las oficinas</option>
+                        {% for oficina in oficinas_filtradas %}
+                        <option value="{{ oficina.nombre }}" {% if filtro_oficina==oficina.nombre %}selected{% endif %}>
+                            {{ oficina.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Filtrar por Categoría</label>
+                    <select name="categoria" class="form-select">
+                        <option value="">Todas las categorías</option>
+                        {% for categoria in categorias %}
+                        <option value="{{ categoria.nombre }}" {% if filtro_categoria==categoria.nombre %}selected{% endif %}>
+                            {{ categoria.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Filtrar por Stock</label>
+                    <select name="stock" class="form-select">
+                        <option value="">Todo el stock</option>
+                        <option value="bajo" {% if filtro_stock=='bajo' %}selected{% endif %}>Stock Bajo</option>
+                        <option value="sin" {% if filtro_stock=='sin' %}selected{% endif %}>Sin Stock</option>
+                        <option value="normal" {% if filtro_stock=='normal' %}selected{% endif %}>Stock Normal</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Aplicar Filtros
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -95,10 +121,64 @@ Inventario Corporativo - Sistema de Gestión
         </div>
     </div>
 
-    <!-- Tabla de productos (SE MANTIENE IGUAL) -->
+    <!-- Tabla de productos -->
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            ...
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th>Oficina</th>
+                            <th>Valor</th>
+                            <th>Stock</th>
+                            {% if puede_ver_acciones_inventario %}
+                            <th>Acciones</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for producto in productos %}
+                        <tr>
+                            <td><strong>{{ producto.codigo_unico }}</strong></td>
+                            <td>{{ producto.nombre }}</td>
+                            <td>{{ producto.categoria }}</td>
+                            <td>{{ producto.oficina or 'Sede Principal' }}</td>
+                            <td>${{ "{:,.0f}".format(producto.valor_unitario) }}</td>
+                            <td>
+                                <span class="badge {% if producto.cantidad <= (producto.cantidad_minima or 5) %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ producto.cantidad }} u
+                                </span>
+                            </td>
+                            {% if puede_ver_acciones_inventario %}
+                            <td>
+                                <a href="/inventario-corporativo/{{ producto.id }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if puede_gestionar_inventario %}
+                                <a href="/inventario-corporativo/editar/{{ producto.id }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="{% if puede_ver_acciones_inventario %}7{% else %}6{% endif %}" class="text-center text-muted py-4">
+                                {% if tipo == 'sede' %}
+                                No hay productos en la sede principal
+                                {% else %}
+                                No hay productos en oficinas de servicio
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

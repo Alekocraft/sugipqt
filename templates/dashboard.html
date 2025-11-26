@@ -225,7 +225,7 @@
                                 <i class="fas fa-boxes" style="color: #0098B1;"></i> Productos Totales
                             </h6>
                             <p class="display-6 fw-bold text-dark" id="total-productos">0</p>
-                            <a href="{{ url_for('inventario_corporativo.listar_inventario_corporativo') }}" class="btn btn-primary btn-sm">Ver Todos</a>
+                            <a href="/inventario-corporativo" class="btn btn-primary btn-sm">Ver Todos</a>
                         </div>
                     </div>
 
@@ -236,7 +236,8 @@
                                 <i class="fas fa-building" style="color: #A73493;"></i> Sede Principal
                             </h6>
                             <p class="display-6 fw-bold text-dark" id="productos-sede">0</p>
-                            <a href="{{ url_for('inventario_corporativo.listar_sede_principal') }}" class="btn btn-primary btn-sm">Ver</a>
+                            <!-- 🔁 URL directa en lugar de url_for -->
+                            <a href="/inventario-corporativo/sede-principal" class="btn btn-primary btn-sm">Ver</a>
                         </div>
                     </div>
 
@@ -247,7 +248,8 @@
                                 <i class="fas fa-map-marker-alt" style="color: #28a745;"></i> Oficinas de Servicio
                             </h6>
                             <p class="display-6 fw-bold text-dark" id="productos-oficinas">0</p>
-                            <a href="{{ url_for('inventario_corporativo.listar_oficinas_servicio') }}" class="btn btn-primary btn-sm">Ver</a>
+                            <!-- 🔁 URL directa en lugar de url_for -->
+                            <a href="/inventario-corporativo/oficinas-servicio" class="btn btn-primary btn-sm">Ver</a>
                         </div>
                     </div>
 
@@ -262,12 +264,13 @@
 
                         <div class="d-flex flex-wrap gap-2">
                             {% if can_access('inventario_corporativo', 'create') %}
-                            <a href="{{ url_for('inventario_corporativo.crear_inventario_corporativo') }}" class="btn btn-primary">
+                            <!-- MISMA LÓGICA QUE /materiales/crear: ruta directa -->
+                            <a href="/inventario-corporativo/crear" class="btn btn-primary">
                                 <i class="fas fa-plus"></i> Nuevo Producto
                             </a>
                             {% endif %}
 
-                            <a href="{{ url_for('inventario_corporativo.listar_inventario_corporativo') }}" class="btn btn-success">
+                            <a href="/inventario-corporativo" class="btn btn-success">
                                 <i class="fas fa-list"></i> Ver Inventario
                             </a>
 
@@ -277,11 +280,7 @@
                             </a>
                             {% endif %}
 
-                            {% if can_access('inventario_corporativo', 'manage') %}
-                            <a href="{{ url_for('inventario_corporativo.gestionar_stock') }}" class="btn btn-warning">
-                                <i class="fas fa-edit"></i> Gestionar Stock
-                            </a>
-                            {% endif %}
+                            {# Eliminado botón gestionar_stock porque no existe ese endpoint #}
                         </div>
                     </div>
                 </div>
@@ -391,7 +390,7 @@
         </div>
       </div>
 
-      <div class="modal-footer" style="background-color:#D9D9D9;">
+      <div class="modal-footer" style="background-color:#D9D9D9%;">
         <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cerrar</button>
       </div>
 
@@ -409,26 +408,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (invModal) {
         invModal.addEventListener('show.bs.modal', function () {
+            console.log('Modal de inventario corporativo abierto, cargando estadísticas...');
 
-            fetch('/api/inventario-corporativo/estadisticas')
+            // API definida en el blueprint inventario_corporativo_bp
+            fetch('{{ url_for("inventario_corporativo.api_estadisticas_dashboard") }}')
                 .then(response => {
-                    if (!response.ok) throw new Error('Error en la respuesta: ' + response.status);
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta: ' + response.status);
+                    }
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Estadísticas recibidas:', data);
+                    console.log('Estadísticas dashboard recibidas:', data);
 
                     document.getElementById('total-productos').textContent =
-                        data.total_productos ?? 0;
+                        data.total_productos || 0;
 
                     document.getElementById('productos-sede').textContent =
-                        data.productos_sede ?? 0;
+                        data.productos_sede || 0;
 
                     document.getElementById('productos-oficinas').textContent =
-                        data.productos_oficinas ?? 0;
+                        data.productos_oficinas || 0;
+
+                    console.log('Estadísticas actualizadas correctamente');
                 })
                 .catch(error => {
-                    console.error('Error cargando estadísticas:', error);
+                    console.error('Error cargando estadísticas dashboard:', error);
 
                     document.getElementById('total-productos').textContent = '0';
                     document.getElementById('productos-sede').textContent = '0';

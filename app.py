@@ -32,33 +32,35 @@ from utils.permissions import (
 # ===============================
 from blueprints.auth import auth_bp
 from blueprints.materiales import materiales_bp
-
-# 👇 ESTE ES EL ÚNICO ARCHIVO DE SOLICITUDES QUE DEBES USAR
 from blueprints.solicitudes import solicitudes_bp
-
 from blueprints.oficinas import oficinas_bp
 from blueprints.aprobadores import aprobadores_bp
 from blueprints.reportes import reportes_bp
 from blueprints.aprobacion import aprobacion_bp
 from blueprints.api import api_bp
 
-# Inventario corporativo
+# ===============================
+# 🔧 Configuración robusta para Inventario Corporativo
+# ===============================
 try:
     from blueprints.inventario_corporativo import inventario_corporativo_bp
-    HAS_INVENTARIO_BP = True
-    print("✅ Blueprint de inventario corporativo encontrado")
+    print("✅ Blueprint de inventario corporativo encontrado en blueprints")
 except ImportError as e:
-    HAS_INVENTARIO_BP = False
-    print(f"⚠️ Blueprint de inventario no encontrado: {e}")
-
-if not HAS_INVENTARIO_BP:
+    print(f"⚠️ No se encontró en blueprints: {e}")
     try:
         from routes_inventario_corporativo import bp_inv as inventario_corporativo_bp
-        print("✅ Usando blueprint de inventario desde routes_inventario_corporativo")
-    except ImportError:
-        print("❌ No se pudo importar ningún blueprint de inventario corporativo")
+        print("✅ Blueprint de inventario encontrado en routes_inventario_corporativo")
+    except ImportError as e2:
+        print(f"⚠️ No se encontró en routes_inventario_corporativo: {e2}")
+        print("🔧 Creando blueprint vacío para inventario...")
         from flask import Blueprint
         inventario_corporativo_bp = Blueprint('inventario_corporativo', __name__)
+        
+        # Añadir ruta básica al blueprint vacío para evitar errores
+        @inventario_corporativo_bp.route('/')
+        def inventario_vacio():
+            flash('Módulo de inventario corporativo no disponible', 'warning')
+            return redirect('/dashboard')
 
 # ===============================
 # 💾 Conexión a Base de Datos
@@ -115,14 +117,9 @@ app.register_blueprint(reportes_bp)
 app.register_blueprint(aprobacion_bp)
 app.register_blueprint(api_bp)
 
-if HAS_INVENTARIO_BP:
-    app.register_blueprint(inventario_corporativo_bp)
-else:
-    try:
-        from routes_inventario_corporativo import bp_inv as inventario_corporativo_bp
-        app.register_blueprint(inventario_corporativo_bp)
-    except ImportError:
-        print("❌ No se pudo importar ningún blueprint de inventario corporativo")
+# Registrar inventario de forma incondicional con prefijo
+app.register_blueprint(inventario_corporativo_bp, url_prefix='/inventario-corporativo')
+print("✅ Blueprint de inventario corporativo registrado exitosamente")
 
 # ===============================
 # 📌 Verificación de Blueprints

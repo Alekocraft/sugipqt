@@ -46,6 +46,7 @@
             <div class="card">
                 <div class="card-body">
                     <h5>Valor Total</h5>
+                    <!-- valor_total_inventario viene ahora del controlador -->
                     <h3>${{ "{:,.0f}".format(valor_total_inventario) }}</h3>
                 </div>
             </div>
@@ -130,16 +131,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('modalInventarioCorporativo');
     if (modal) {
         modal.addEventListener('show.bs.modal', function () {
-            fetch('/api/inventario-corporativo/estadisticas')
+            fetch('{{ url_for("inventario_corporativo.api_estadisticas_inventario") }}')
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('total-productos').textContent = data.total_productos || 0;
                     document.getElementById('valor-total').textContent = '$' + (data.valor_total || 0).toLocaleString();
                     document.getElementById('stock-bajo').textContent = data.stock_bajo || 0;
+
+                    // Si en el modal tienes spans para sede/oficinas, los puedes llenar así:
+                    const sedeEl = document.getElementById('productos-sede');
+                    const oficinasEl = document.getElementById('productos-oficinas');
+                    if (sedeEl) sedeEl.textContent = data.productos_sede || 0;
+                    if (oficinasEl) oficinasEl.textContent = data.productos_oficinas || 0;
                 })
                 .catch(error => {
                     console.error('Error cargando estadísticas:', error);
-                    // Valores por defecto en caso de error
                     document.getElementById('total-productos').textContent = '0';
                     document.getElementById('valor-total').textContent = '$0';
                     document.getElementById('stock-bajo').textContent = '0';

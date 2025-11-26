@@ -7,18 +7,74 @@ from typing import Optional
 from config.permissions import ROLE_PERMISSIONS, OFFICE_MAPPING, get_office_key
 
 
+def normalize_role_key(role_raw: str) -> str:
+    """
+    Normaliza el string de rol que viene de sesión para que coincida
+    con las llaves definidas en ROLE_PERMISSIONS.
+
+    Ejemplos:
+    - "Administrador"           -> "administrador"
+    - "Líder Inventario"        -> "lider_inventario"
+    - "OFICINA COQ"             -> "oficina_coq"
+    """
+    if not role_raw:
+        return ''
+
+    r = role_raw.strip().lower()
+
+    # Quitar tildes básicas
+    reemplazos = {
+        'á': 'a',
+        'é': 'e',
+        'í': 'i',
+        'ó': 'o',
+        'ú': 'u',
+        'ü': 'u',
+        'ñ': 'n'
+    }
+    for k, v in reemplazos.items():
+        r = r.replace(k, v)
+
+    # Reemplazar espacios por guiones bajos
+    r_norm = r.replace(' ', '_')
+
+    # 1) Intento directo
+    if r_norm in ROLE_PERMISSIONS:
+        return r_norm
+
+    # 2) Comparar ignorando guiones bajos
+    r_flat = r_norm.replace('_', '')
+    for key in ROLE_PERMISSIONS.keys():
+        k_flat = key.replace('_', '')
+        if r_flat == k_flat:
+            return key
+
+    # 3) Reglas simples por contenido (por si llega "administrador sistema", etc.)
+    if 'admin' in r_norm:
+        return 'administrador'
+    if 'lider' in r_norm and 'invent' in r_norm:
+        return 'lider_inventario'
+    if 'coq' in r_norm:
+        return 'oficina_coq'
+
+    # Último recurso: devolver lo normalizado (aunque no tenga permisos definidos)
+    return r_norm
+
+
 class PermissionManager:
     @staticmethod
     def get_user_permissions():
         """Obtiene todos los permisos del usuario actual"""
-        role = session.get('rol', '').lower()
+        role_raw = session.get('rol', '')
+        role_key = normalize_role_key(role_raw)
+
         office_name = session.get('oficina_nombre', '')
         office_key = get_office_key(office_name)
 
-        # Permisos base del rol
-        role_perms = ROLE_PERMISSIONS.get(role, {})
+        role_perms = ROLE_PERMISSIONS.get(role_key, {})
 
         return {
+            'role_key': role_key,
             'role': role_perms,
             'office_key': office_key,
             'office_filter': role_perms.get('office_filter', 'own'),
@@ -41,9 +97,9 @@ class PermissionManager:
     @staticmethod
     def can_view_actions() -> bool:
         """Verifica si puede ver columnas de acciones en préstamos"""
-        role = session.get('rol', '').lower()
+        role_key = PermissionManager.get_user_permissions().get('role_key', '')
         roles_con_acciones = {'administrador', 'aprobador', 'lider_inventario'}
-        return role in roles_con_acciones
+        return role_key in roles_con_acciones
 
     @staticmethod
     def can_manage_inventario_corporativo() -> bool:
@@ -59,7 +115,7 @@ class PermissionManager:
         """Verifica si puede ver acciones en inventario corporativo"""
         return PermissionManager.can_manage_inventario_corporativo()
 
-    # ⬇️ MÉTODOS PARA NOVEDADES - ESTOS SON LOS QUE FALTABAN
+    # ⬇️ MÉTODOS PARA NOVEDADES
     @staticmethod
     def can_create_novedad() -> bool:
         """Verifica si puede crear novedades"""
@@ -103,7 +159,7 @@ def can_view_inventario_actions() -> bool:
     return PermissionManager.can_view_inventario_actions()
 
 
-# ⬇️ NUEVAS FUNCIONES DE CONVENIENCIA PARA NOVEDADES - ESTAS SON LAS QUE FALTABAN
+# ⬇️ NUEVAS FUNCIONES DE CONVENIENCIA PARA NOVEDADES
 def can_create_novedad() -> bool:
     return PermissionManager.can_create_novedad()
 

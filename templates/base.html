@@ -1,3 +1,5 @@
+    <!-- templates/base.html -->
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -66,14 +68,15 @@
                         </a>
                     </li>
 
-                    {% if can_access is defined and can_access('inventario', 'create') %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if current_path.startswith('/inventario-corporativo/crear') %}active{% endif %}" 
-                           href="/inventario-corporativo/crear">
-                            <i class="fas fa-plus-circle"></i> Nuevo Producto
-                        </a>
-                    </li>
+                    {% if can_access is defined and can_access('inventario_corporativo', 'create') %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if current_path.startswith('/inventario-corporativo/crear') %}active{% endif %}" 
+                               href="/inventario-corporativo/crear">
+                                <i class="fas fa-plus-circle"></i> Nuevo Producto
+                            </a>
+                        </li>
                     {% endif %}
+
                 </ul>
 
                 {% elif current_path.startswith('/prestamos') %}

@@ -12,6 +12,16 @@ def generar_codigo_unico():
 
 
 class InventarioCorporativoModel:
+    # ================== UTILIDADES ==================
+    @staticmethod
+    def generar_codigo_unico():
+        """
+        Proxy estático para generar códigos únicos desde el modelo.
+        Permite usar InventarioCorporativoModel.generar_codigo_unico()
+        manteniendo también la función de módulo.
+        """
+        return generar_codigo_unico()
+
     # ================== LISTADO / LECTURA ==================
     @staticmethod
     def obtener_todos():
@@ -660,7 +670,7 @@ class InventarioCorporativoModel:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT 
+                SELECT TOP (?) 
                     h.HistorialId,
                     p.NombreProducto,
                     o.NombreOficina AS oficina,
@@ -672,7 +682,6 @@ class InventarioCorporativoModel:
                 INNER JOIN ProductosCorporativos p ON h.ProductoId = p.ProductoId
                 LEFT JOIN Oficinas o ON h.OficinaId = o.OficinaId
                 ORDER BY h.Fecha DESC
-                LIMIT ?
             """, (limite,))
             cols = [c[0] for c in cursor.description]
             return [dict(zip(cols, r)) for r in cursor.fetchall()]
@@ -778,8 +787,9 @@ class InventarioCorporativoModel:
                 INNER JOIN CategoriasProductos c ON p.CategoriaId = c.CategoriaId
                 INNER JOIN Proveedores pr        ON p.ProveedorId = pr.ProveedorId
                 WHERE p.Activo = 1
-                AND p.ProductoId NOT IN (
-                    SELECT ProductoId FROM Asignaciones WHERE Activo = 1
+                AND NOT EXISTS (
+                    SELECT 1 FROM Asignaciones a 
+                    WHERE a.ProductoId = p.ProductoId AND a.Activo = 1
                 )
                 ORDER BY p.NombreProducto
             """)
@@ -802,7 +812,7 @@ class InventarioCorporativoModel:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT 
+                SELECT DISTINCT
                     p.ProductoId           AS id,
                     p.CodigoUnico          AS codigo_unico,
                     p.NombreProducto       AS nombre,
@@ -821,9 +831,9 @@ class InventarioCorporativoModel:
                 FROM ProductosCorporativos p
                 INNER JOIN CategoriasProductos c ON p.CategoriaId = c.CategoriaId
                 INNER JOIN Proveedores pr        ON p.ProveedorId = pr.ProveedorId
-                INNER JOIN Asignaciones a        ON p.ProductoId = a.ProductoId
+                INNER JOIN Asignaciones a        ON p.ProductoId = a.ProductoId AND a.Activo = 1
                 INNER JOIN Oficinas o            ON a.OficinaId = o.OficinaId
-                WHERE p.Activo = 1 AND a.Activo = 1
+                WHERE p.Activo = 1
                 ORDER BY o.NombreOficina, p.NombreProducto
             """)
             cols = [c[0] for c in cursor.description]

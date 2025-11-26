@@ -32,7 +32,6 @@ ROLE_PERMISSIONS = {
         },
         'office_filter': 'all'
     },
-
     
     'aprobador': {
         'modules': ['dashboard', 'material_pop', 'inventario_corporativo', 'prestamo_material', 'reportes'],
@@ -49,10 +48,15 @@ ROLE_PERMISSIONS = {
         'office_filter': 'all'
     },
 
+    # 🔽 AQUÍ VIENE EL AJUSTE IMPORTANTE
     'oficina_coq': {
-        'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'solicitudes'],   
+        # 👉 Agregamos 'inventario_corporativo' a los módulos
+        'modules': ['dashboard', 'material_pop', 'inventario_corporativo', 'prestamo_material', 'reportes', 'solicitudes'],   
         'actions': {
+            # Materiales ya podía crear
             'materiales': ['view', 'create'],
+            # 👉 Damos los mismos permisos a inventario corporativo:
+            'inventario_corporativo': ['view', 'create'],
             'solicitudes': ['view', 'create'],   
             'prestamos': ['view', 'create'],
             'reportes': ['view_own'],
