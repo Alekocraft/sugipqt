@@ -430,7 +430,6 @@ def gestionar_novedad():
         return jsonify({'success': False, 'message': 'Error interno del servidor'}), 500
 
 
-
 @solicitudes_bp.route('/api/novedades/pendientes')
 @login_required
 def obtener_novedades_pendientes():
@@ -442,3 +441,40 @@ def obtener_novedades_pendientes():
         return jsonify({'success': True, 'novedades': novedades})
     except Exception:
         return jsonify({'success': False, 'message': 'Error interno'}), 500
+
+
+@solicitudes_bp.route('/api/<int:solicitud_id>/novedad', methods=['GET'])
+def api_novedad_solicitud(solicitud_id):
+    """
+    Devuelve la última novedad de la solicitud (normalmente la REGISTRADA)
+    para mostrarla en el modal de gestión de novedad.
+    """
+    if not can_manage_novedad():
+        return jsonify({'success': False, 'error': 'Sin permisos para gestionar novedades'}), 403
+
+    nov = NovedadModel.obtener_ultima_por_solicitud(solicitud_id)
+    if not nov:
+        return jsonify({'success': False, 'error': 'No hay novedades para esta solicitud'}), 404
+
+    imagen_url = None
+    ruta = nov.get('RutaImagen')
+    if ruta:
+        # Si en BD guardas sólo 'images/novedades/archivo.jpg'
+        imagen_url = url_for('static', filename=ruta, _external=False)
+
+    data = {
+        'novedad_id':        nov.get('NovedadId'),
+        'solicitud_id':      nov.get('SolicitudId'),
+        'tipo_novedad':      nov.get('TipoNovedad'),
+        'descripcion':       nov.get('Descripcion'),
+        'cantidad_afectada': nov.get('CantidadAfectada'),
+        'estado_novedad':    nov.get('EstadoNovedad'),
+        'usuario_registra':  nov.get('UsuarioRegistra'),
+        'fecha_registro':    nov.get('FechaRegistro').strftime('%d/%m/%Y %H:%M') if nov.get('FechaRegistro') else None,
+        'usuario_resuelve':  nov.get('UsuarioResuelve'),
+        'fecha_resolucion':  nov.get('FechaResolucion').strftime('%d/%m/%Y %H:%M') if nov.get('FechaResolucion') else None,
+        'observaciones_resolucion': nov.get('ObservacionesResolucion'),
+        'imagen_url':        imagen_url,
+    }
+
+    return jsonify({'success': True, 'novedad': data})

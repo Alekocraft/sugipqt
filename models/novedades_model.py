@@ -180,3 +180,39 @@ class NovedadModel:
         finally:
             cursor.close()
             conn.close()
+
+    @staticmethod
+    def obtener_ultima_por_solicitud(solicitud_id: int):
+        """
+        Retorna la última novedad registrada para una solicitud
+        como dict, o None si no hay.
+        """
+        conn = get_database_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT TOP 1
+                    NovedadId,
+                    SolicitudId,
+                    TipoNovedad,
+                    Descripcion,
+                    CantidadAfectada,
+                    EstadoNovedad,
+                    UsuarioRegistra,
+                    FechaRegistro,
+                    UsuarioResuelve,
+                    FechaResolucion,
+                    ObservacionesResolucion,
+                    RutaImagen
+                FROM NovedadesSolicitudes
+                WHERE SolicitudId = ?
+                ORDER BY FechaRegistro DESC
+            """, (solicitud_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+
+            cols = [c[0] for c in cursor.description]
+            return dict(zip(cols, row))
+        finally:
+            conn.close()

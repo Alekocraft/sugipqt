@@ -13,6 +13,121 @@
     {% set puede_gestionar_novedad = can_manage_novedad() %}
     {% set tiene_permisos_aprobacion = rol_usuario in ['administrador', 'aprobador', 'lider_inventario', 'oficina_coq'] %}
 
+    {# =============== 
+       MACRO FILA (permite ordenar por estado)
+    =============== #}
+    {% macro render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) %}
+        {% set material_nombre = solicitud.material_nombre or 'Material no encontrado' %}
+        {% set stock_actual = solicitud.stock_disponible or 0 %}
+        {% set material_imagen = materiales_dict[solicitud.material_id].ruta_imagen if materiales_dict.get(solicitud.material_id) else None %}
+        {% set solicitante_nombre = solicitud.usuario_solicitante or 'N/A' %}
+        {% set oficina_nombre = solicitud.oficina_nombre or 'N/A' %}
+        {% set fecha_solicitud = solicitud.fecha_solicitud %}
+        {% set estado_normalizado = (solicitud.estado or 'pendiente')|lower %}
+        {% set esta_pendiente = estado_normalizado == 'pendiente' %}
+        {% set esta_aprobada = estado_normalizado == 'aprobada' %}
+        {% set esta_aprobada_parcial = estado_normalizado == 'aprobada_parcial' %}
+        {% set esta_entregada = estado_normalizado == 'entregada' %}
+
+        <tr>
+            <td><strong>#{{ solicitud.id }}</strong></td>
+
+            <td>
+                <strong>{{ material_nombre }}</strong>
+                <br><small class="text-muted">Stock: {{ stock_actual }}</small>
+            </td>
+
+            <td>
+                <span class="badge bg-primary">{{ solicitud.cantidad_solicitada }}</span>
+                {% if solicitud.cantidad_entregada %}
+                    <br><small class="text-success">Entregada: {{ solicitud.cantidad_entregada }}</small>
+                {% endif %}
+            </td>
+
+            <td>{{ solicitante_nombre }}</td>
+            <td>{{ oficina_nombre }}</td>
+
+            <td>
+                {% if fecha_solicitud %}
+                    {{ fecha_solicitud.strftime('%d/%m/%Y %H:%M') }}
+                {% else %}N/A{% endif %}
+            </td>
+
+            <td>
+                {% if estado_normalizado == 'pendiente' %}
+                    <span class="badge bg-warning">⏳ Pendiente</span>
+                {% elif estado_normalizado == 'aprobada' %}
+                    <span class="badge bg-success">✅ Aprobada</span>
+                {% elif estado_normalizado == 'rechazada' %}
+                    <span class="badge bg-danger">❌ Rechazada</span>
+                {% elif estado_normalizado == 'devuelta' %}
+                    <span class="badge bg-info">🔄 Devuelta</span>
+                {% elif estado_normalizado == 'entregada' %}
+                    <span class="badge bg-primary">📦 Entregada</span>
+                {% elif estado_normalizado == 'novedad_registrada' %}
+                    <span class="badge bg-secondary">📝 Novedad Registrada</span>
+                {% elif estado_normalizado == 'novedad_aceptada' %}
+                    <span class="badge bg-success">✅ Novedad Aceptada</span>
+                {% elif estado_normalizado == 'novedad_rechazada' %}
+                    <span class="badge bg-danger">❌ Novedad Rechazada</span>
+                {% else %}
+                    <span class="badge bg-secondary">{{ solicitud.estado }}</span>
+                {% endif %}
+            </td>
+
+            <td>
+                <div class="btn-group">
+
+                    <!-- Ver -->
+                    <button class="btn btn-info btn-sm"
+                        onclick='verDetallesSolicitud({{ solicitud|tojson }})'>
+                        👁️ Ver
+                    </button>
+
+                    {% if tiene_permisos_aprobacion and esta_pendiente %}
+                        <form action="/solicitudes/aprobar/{{ solicitud.id }}" method="POST" style="display:inline;">
+                            <button class="btn btn-success btn-sm" onclick="return confirm('¿Aprobar completamente esta solicitud?')">✅ Aprobar</button>
+                        </form>
+
+                        <button class="btn btn-warning btn-sm"
+                            onclick='mostrarModalAprobacionParcial({{ solicitud.id }},{{ solicitud.cantidad_solicitada }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }})'>
+                            ⚠️ Parcial
+                        </button>
+
+                        <button class="btn btn-danger btn-sm"
+                            onclick='mostrarModalRechazar({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }})'>
+                            ❌ Rechazar
+                        </button>
+                    {% endif %}
+
+                    {% if tiene_permisos_aprobacion and (esta_aprobada or esta_entregada) %}
+                        <button class="btn btn-info btn-sm"
+                            onclick='mostrarModalDevolucion({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }})'>
+                            🔄 Devolución
+                        </button>
+                    {% endif %}
+
+                    {% if puede_crear_novedad and (esta_aprobada or esta_aprobada_parcial or esta_entregada) %}
+                        <button class="btn btn-secondary btn-sm"
+                            onclick='mostrarModalNovedad({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }},{{ solicitud.cantidad_entregada or solicitud.cantidad_solicitada }})'
+                            title="Registrar Novedad">
+                            📝 Novedad
+                        </button>
+                    {% endif %}
+
+                    {% if puede_gestionar_novedad and estado_normalizado == 'novedad_registrada' %}
+                        <button class="btn btn-warning btn-sm"
+                            onclick='mostrarModalGestionNovedad({{ solicitud.id }})'
+                            title="Gestionar Novedad">
+                            ⚙️ Gestión Novedad
+                        </button>
+                    {% endif %}
+
+                </div>
+            </td>
+        </tr>
+    {% endmacro %}
+
     <!-- Filtros -->
     <div class="row mb-3">
         <div class="col-md-12">
@@ -155,121 +270,43 @@
                                 </thead>
 
                                 <tbody>
-                                    {% for solicitud in solicitudes %}
-                                        {% set material_nombre = solicitud.material_nombre or 'Material no encontrado' %}
-                                        {% set stock_actual = solicitud.stock_disponible or 0 %}
-                                        {% set material_imagen = materiales_dict[solicitud.material_id].ruta_imagen if materiales_dict.get(solicitud.material_id) else None %}
-                                        {% set solicitante_nombre = solicitud.usuario_solicitante or 'N/A' %}
-                                        {% set oficina_nombre = solicitud.oficina_nombre or 'N/A' %}
-                                        {% set fecha_solicitud = solicitud.fecha_solicitud %}
-                                        {% set estado_normalizado = (solicitud.estado or 'pendiente')|lower %}
-                                        {% set esta_pendiente = estado_normalizado == 'pendiente' %}
-                                        {% set esta_aprobada = estado_normalizado == 'aprobada' %}
-                                        {% set esta_aprobada_parcial = estado_normalizado == 'aprobada_parcial' %}
-                                        {% set esta_entregada = estado_normalizado == 'entregada' %}
+                                    {# 1) PENDIENTES PRIMERO #}
+                                    {% for solicitud in solicitudes if (solicitud.estado or 'pendiente')|lower == 'pendiente' %}
+                                        {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
+                                    {% endfor %}
 
-                                        <tr>
-                                            <td><strong>#{{ solicitud.id }}</strong></td>
+                                    {# 2) APROBADAS #}
+                                    {% for solicitud in solicitudes if (solicitud.estado or 'pendiente')|lower == 'aprobada' %}
+                                        {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
+                                    {% endfor %}
 
-                                            <td>
-                                                <strong>{{ material_nombre }}</strong>
-                                                <br><small class="text-muted">Stock: {{ stock_actual }}</small>
-                                            </td>
+                                    {# 3) ENTREGADAS #}
+                                    {% for solicitud in solicitudes if (solicitud.estado or 'pendiente')|lower == 'entregada' %}
+                                        {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
+                                    {% endfor %}
 
-                                            <td>
-                                                <span class="badge bg-primary">{{ solicitud.cantidad_solicitada }}</span>
-                                                {% if solicitud.cantidad_entregada %}
-                                                    <br><small class="text-success">Entregada: {{ solicitud.cantidad_entregada }}</small>
-                                                {% endif %}
-                                            </td>
+                                    {# 4) DEVUELTAS #}
+                                    {% for solicitud in solicitudes if (solicitud.estado or 'pendiente')|lower == 'devuelta' %}
+                                        {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
+                                    {% endfor %}
 
-                                            <td>{{ solicitante_nombre }}</td>
-                                            <td>{{ oficina_nombre }}</td>
+                                    {# 5) RECHAZADAS #}
+                                    {% for solicitud in solicitudes if (solicitud.estado or 'pendiente')|lower == 'rechazada' %}
+                                        {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
+                                    {% endfor %}
 
-                                            <td>
-                                                {% if fecha_solicitud %}
-                                                    {{ fecha_solicitud.strftime('%d/%m/%Y %H:%M') }}
-                                                {% else %}N/A{% endif %}
-                                            </td>
+                                    {# 6) NOVEDADES Y OTROS ESTADOS ESPECIALES #}
+                                    {% for solicitud in solicitudes 
+                                           if (solicitud.estado or 'pendiente')|lower in ['novedad_registrada','novedad_aceptada','novedad_rechazada'] %}
+                                        {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
+                                    {% endfor %}
 
-                                            <td>
-                                                {% if estado_normalizado == 'pendiente' %}
-                                                    <span class="badge bg-warning">⏳ Pendiente</span>
-                                                {% elif estado_normalizado == 'aprobada' %}
-                                                    <span class="badge bg-success">✅ Aprobada</span>
-                                                {% elif estado_normalizado == 'rechazada' %}
-                                                    <span class="badge bg-danger">❌ Rechazada</span>
-                                                {% elif estado_normalizado == 'devuelta' %}
-                                                    <span class="badge bg-info">🔄 Devuelta</span>
-                                                {% elif estado_normalizado == 'entregada' %}
-                                                    <span class="badge bg-primary">📦 Entregada</span>
-                                                {% elif estado_normalizado == 'novedad_registrada' %}
-                                                    <span class="badge bg-secondary">📝 Novedad Registrada</span>
-                                                {% elif estado_normalizado == 'novedad_aceptada' %}
-                                                    <span class="badge bg-success">✅ Novedad Aceptada</span>
-                                                {% elif estado_normalizado == 'novedad_rechazada' %}
-                                                    <span class="badge bg-danger">❌ Novedad Rechazada</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">{{ solicitud.estado }}</span>
-                                                {% endif %}
-                                            </td>
-
-                                            <td>
-                                                <div class="btn-group">
-
-                                                    <!-- Ver -->
-                                                    <button class="btn btn-info btn-sm"
-                                                        onclick='verDetallesSolicitud({{ solicitud|tojson }})'>
-                                                        👁️ Ver
-                                                    </button>
-
-                                                    {% if tiene_permisos_aprobacion and esta_pendiente %}
-                                                        <form action="/solicitudes/aprobar/{{ solicitud.id }}" method="POST" style="display:inline;">
-                                                            <button class="btn btn-success btn-sm" onclick="return confirm('¿Aprobar completamente esta solicitud?')">✅ Aprobar</button>
-                                                        </form>
-
-                                                        <button class="btn btn-warning btn-sm"
-                                                            onclick='mostrarModalAprobacionParcial({{ solicitud.id }},{{ solicitud.cantidad_solicitada }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }})'>
-                                                            ⚠️ Parcial
-                                                        </button>
-
-                                                        <button class="btn btn-danger btn-sm"
-                                                            onclick='mostrarModalRechazar({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }})'>
-                                                            ❌ Rechazar
-                                                        </button>
-                                                    {% endif %}
-
-                                                    {% if tiene_permisos_aprobacion and (esta_aprobada or esta_entregada) %}
-                                                        <button class="btn btn-info btn-sm"
-                                                            onclick='mostrarModalDevolucion({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }})'>
-                                                            🔄 Devolución
-                                                        </button>
-                                                    {% endif %}
-
-                                                    {% if puede_crear_novedad and (esta_aprobada or esta_aprobada_parcial or esta_entregada) %}
-                                                        <button class="btn btn-secondary btn-sm"
-                                                            onclick='mostrarModalNovedad({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }},{{ solicitud.cantidad_entregada or solicitud.cantidad_solicitada }})'
-                                                            title="Registrar Novedad">
-                                                            📝 Novedad
-                                                        </button>
-                                                    {% endif %}
-
-                                                    {% if puede_gestionar_novedad and estado_normalizado == 'novedad_registrada' %}
-                                                        <button class="btn btn-success btn-sm"
-                                                            onclick='gestionarNovedad({{ solicitud.id }}, "aceptar", {{ material_nombre|tojson }})'
-                                                            title="Aprobar Novedad">
-                                                            ✅ Aprobar Novedad
-                                                        </button>
-                                                        <button class="btn btn-danger btn-sm"
-                                                            onclick='gestionarNovedad({{ solicitud.id }}, "rechazar", {{ material_nombre|tojson }})'
-                                                            title="Rechazar Novedad">
-                                                            ❌ Rechazar Novedad
-                                                        </button>
-                                                    {% endif %}
-
-                                                </div>
-                                            </td>
-                                        </tr>
+                                    {# 7) CUALQUIER OTRO ESTADO NO CONSIDERADO ARRIBA #}
+                                    {% for solicitud in solicitudes 
+                                           if (solicitud.estado or 'pendiente')|lower not in 
+                                              ['pendiente','aprobada','entregada','devuelta','rechazada',
+                                               'novedad_registrada','novedad_aceptada','novedad_rechazada'] %}
+                                        {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
                                     {% endfor %}
                                 </tbody>
 
@@ -457,11 +494,56 @@
     </div>
 </div>
 
+<!-- Modal Gestión de Novedad -->
+<div class="modal fade" id="modalGestionNovedad" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title">⚙️ Gestión de Novedad</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6>📄 Información de la novedad</h6>
+                        <p><strong>ID Solicitud:</strong> <span id="gn_solicitud"></span></p>
+                        <p><strong>ID Novedad:</strong> <span id="gn_novedad_id"></span></p>
+                        <p><strong>Tipo:</strong> <span id="gn_tipo"></span></p>
+                        <p><strong>Cantidad Afectada:</strong> <span id="gn_cantidad"></span></p>
+                        <p><strong>Estado:</strong> <span id="gn_estado"></span></p>
+                        <p><strong>Registrada por:</strong> <span id="gn_usuario_registra"></span></p>
+                        <p><strong>Fecha Registro:</strong> <span id="gn_fecha_registro"></span></p>
+                        <p><strong>Descripción:</strong></p>
+                        <p id="gn_descripcion" class="border rounded p-2 bg-light" style="min-height: 60px;"></p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>🖼 Imagen</h6>
+                        <div id="gn_contenedor_imagen" class="border rounded text-center p-2 bg-light" style="min-height: 220px;">
+                            <img id="gn_imagen" src="" alt="Imagen Novedad" class="img-fluid rounded" style="max-height: 200px; display:none;">
+                            <p id="gn_sin_imagen" class="text-muted mt-2" style="display:none;">Sin imagen asociada</p>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <label for="gn_observaciones" class="form-label">Observaciones de resolución (opcional):</label>
+                    <textarea id="gn_observaciones" class="form-control" rows="3" placeholder="Observaciones al aceptar o rechazar la novedad..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" id="btnRechazarNovedad" class="btn btn-danger" onclick="procesarGestionNovedad('rechazar')">❌ Rechazar Novedad</button>
+                <button type="button" id="btnAceptarNovedad" class="btn btn-success" onclick="procesarGestionNovedad('aceptar')">✅ Aceptar Novedad</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{ super() }}
 
 {% endblock %}
 
- {% block scripts %}
+{% block scripts %}
 <script>
 /* ============================
    FILTRAR POR ESTADO
@@ -726,7 +808,7 @@ function confirmarDevolucion() {
 }
 
 /* ============================
-   FUNCIONES PARA NOVEDADES
+   REGISTRO DE NOVEDADES
 ============================ */
 let solicitudIdNovedad = null;
 let cantidadMaximaNovedad = 0;
@@ -872,40 +954,114 @@ function confirmarRegistroNovedad() {
     });
 }
 
-function gestionarNovedad(solicitudId, accion, materialNombre) {
-    if (!confirm(`¿Está seguro que desea ${accion === 'aceptar' ? 'ACEPTAR' : 'RECHAZAR'} la novedad del material "${materialNombre}"?`)) {
+/* ============================
+   GESTIÓN DE NOVEDADES (ACEPTAR / RECHAZAR)
+============================ */
+let solicitudIdGestionNovedad = null;
+
+function mostrarModalGestionNovedad(solicitudId) {
+    solicitudIdGestionNovedad = solicitudId;
+
+    // limpiar campos
+    document.getElementById("gn_solicitud").textContent = '';
+    document.getElementById("gn_novedad_id").textContent = '';
+    document.getElementById("gn_tipo").textContent = '';
+    document.getElementById("gn_cantidad").textContent = '';
+    document.getElementById("gn_estado").textContent = '';
+    document.getElementById("gn_usuario_registra").textContent = '';
+    document.getElementById("gn_fecha_registro").textContent = '';
+    document.getElementById("gn_descripcion").textContent = '';
+    document.getElementById("gn_observaciones").value = '';
+
+    const img = document.getElementById("gn_imagen");
+    const sinImg = document.getElementById("gn_sin_imagen");
+    img.style.display = "none";
+    sinImg.style.display = "none";
+
+    fetch(`/solicitudes/api/${solicitudId}/novedad`)
+        .then(r => {
+            if (!r.ok) throw new Error('Error HTTP ' + r.status);
+            return r.json();
+        })
+        .then(data => {
+            if (!data.success) {
+                alert('❌ ' + (data.error || 'No se pudo cargar la novedad'));
+                return;
+            }
+
+            const n = data.novedad;
+            document.getElementById("gn_solicitud").textContent = '#' + (n.solicitud_id || '');
+            document.getElementById("gn_novedad_id").textContent = n.novedad_id || '';
+            document.getElementById("gn_tipo").textContent = n.tipo_novedad || '';
+            document.getElementById("gn_cantidad").textContent = n.cantidad_afectada != null ? n.cantidad_afectada : '-';
+            document.getElementById("gn_estado").textContent = n.estado_novedad || '';
+            document.getElementById("gn_usuario_registra").textContent = n.usuario_registra || '';
+            document.getElementById("gn_fecha_registro").textContent = n.fecha_registro || '';
+            document.getElementById("gn_descripcion").textContent = n.descripcion || '';
+
+            if (n.imagen_url) {
+                img.src = n.imagen_url;
+                img.style.display = "block";
+                sinImg.style.display = "none";
+            } else {
+                img.style.display = "none";
+                sinImg.style.display = "block";
+            }
+
+            new bootstrap.Modal(document.getElementById("modalGestionNovedad")).show();
+        })
+        .catch(err => {
+            console.error(err);
+            alert('❌ Error al cargar la novedad');
+        });
+}
+
+function procesarGestionNovedad(accion) {
+    if (!solicitudIdGestionNovedad) {
+        alert('Solicitud no válida');
         return;
     }
-    
-    const observaciones = prompt('Ingrese observaciones (opcional):', '');
 
-    const btn = event.target;
+    const msg = accion === 'aceptar'
+        ? '¿Está seguro que desea ACEPTAR la novedad?'
+        : '¿Está seguro que desea RECHAZAR la novedad?';
+
+    if (!confirm(msg)) return;
+
+    const observaciones = document.getElementById("gn_observaciones").value.trim();
+
+    const btn = (accion === 'aceptar')
+        ? document.getElementById("btnAceptarNovedad")
+        : document.getElementById("btnRechazarNovedad");
+
     const originalText = btn.innerHTML;
     btn.innerHTML = '⏳ Procesando...';
     btn.disabled = true;
 
     const formData = new FormData();
-    formData.append('solicitud_id', solicitudId);
+    formData.append('solicitud_id', solicitudIdGestionNovedad);
     formData.append('accion', accion);
-    formData.append('observaciones', observaciones || '');
+    formData.append('observaciones', observaciones);
 
     fetch('/solicitudes/gestionar-novedad', {
         method: 'POST',
         body: formData
     })
-    .then(response => {
-        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-        return response.json();
+    .then(r => {
+        if (!r.ok) throw new Error('Error HTTP ' + r.status);
+        return r.json();
     })
     .then(data => {
         if (data.success) {
             alert(`✅ Novedad ${accion === 'aceptar' ? 'aceptada' : 'rechazada'} exitosamente`);
+            bootstrap.Modal.getInstance(document.getElementById("modalGestionNovedad")).hide();
             location.reload();
         } else {
-            alert('❌ Error: ' + (data.message || 'Error desconocido'));
+            alert('❌ ' + (data.message || 'Error al procesar la novedad'));
         }
     })
-    .catch(error => {
+    .catch(err => {
+        console.error(err);
         alert('❌ Error al procesar la novedad');
     })
     .finally(() => {
