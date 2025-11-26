@@ -4,42 +4,38 @@ Sistema centralizado de permisos basado en roles y oficinas config/permissions.p
 
 ROLE_PERMISSIONS = {
     'administrador': {
-        'modules': ['dashboard', 'material_pop', 'inventario_corporativo', 'prestamo_material'],
+        'modules': ['dashboard', 'material_pop', 'inventario_corporativo', 'prestamo_material', 'reportes'],  
         'actions': {
             'materiales': ['view', 'create', 'edit', 'delete'],
             'solicitudes': ['view', 'create', 'approve', 'reject', 'partial_approve'],
             'oficinas': ['view', 'manage'],
             'aprobadores': ['view', 'manage'],
-            'reportes': ['view_all'],
+            'reportes': ['view_all'],  
             'inventario_corporativo': ['view', 'create', 'edit', 'delete', 'assign', 'manage_sedes', 'manage_oficinas'],
             'prestamos': ['view', 'create', 'approve', 'reject', 'return', 'manage_materials'],
-
-            # ➕ Permisos de novedades
             'novedades': ['create', 'view', 'approve', 'reject']
         },
         'office_filter': 'all'
     },
 
     'lider_inventario': {
-        'modules': ['dashboard', 'material_pop', 'inventario_corporativo', 'prestamo_material'],
+        'modules': ['dashboard', 'material_pop', 'inventario_corporativo', 'prestamo_material', 'reportes'],  
         'actions': {
             'materiales': ['view', 'create', 'edit', 'delete'],
             'solicitudes': ['view', 'create', 'approve', 'reject', 'partial_approve'],
             'oficinas': ['view'],
             'aprobadores': ['view'],
-            'reportes': ['view_all'],
+            'reportes': ['view_all'],  
             'inventario_corporativo': ['view', 'create', 'edit', 'delete', 'assign', 'manage_sedes', 'manage_oficinas'],
-            'prestamos': ['view', 'create', 'approve', 'reject', 'return', 'manage_materials'],
-
-            # ➕ Permisos de novedades
+            'prestamos': ['view', 'create', 'approve', 'reject', 'return', 'manage_materials'],         
             'novedades': ['create', 'view', 'approve', 'reject']
         },
         'office_filter': 'all'
     },
 
-    # ➕➕➕ NUEVO ROL: APROBADOR ➕➕➕
+    
     'aprobador': {
-        'modules': ['dashboard', 'material_pop', 'inventario_corporativo', 'prestamo_material'],
+        'modules': ['dashboard', 'material_pop', 'inventario_corporativo', 'prestamo_material', 'reportes'],
         'actions': {
             'materiales': ['view'],
             'solicitudes': ['view', 'approve', 'reject', 'partial_approve'],
@@ -48,21 +44,18 @@ ROLE_PERMISSIONS = {
             'reportes': ['view_all'],
             'inventario_corporativo': ['view'],
             'prestamos': ['view', 'create', 'approve', 'reject', 'return'],
-
-            # ➕ Permisos de novedades
             'novedades': ['create', 'view', 'approve', 'reject']
         },
         'office_filter': 'all'
     },
 
     'oficina_coq': {
-        'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes'],
+        'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'solicitudes'],   
         'actions': {
             'materiales': ['view', 'create'],
-            'solicitudes': ['view', 'create'],
+            'solicitudes': ['view', 'create'],   
             'prestamos': ['view', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'COQ'
@@ -72,12 +65,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],   
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'CALI'
@@ -87,12 +79,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'PEREIRA'
@@ -102,12 +93,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],  
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'NEIVA'
@@ -117,12 +107,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],  
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'KENNEDY'
@@ -132,12 +121,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],  
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'BUCARAMANGA'
@@ -147,12 +135,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],  
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'POLO CLUB'
@@ -162,12 +149,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],  
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'NOGAL'
@@ -177,12 +163,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],  
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'TUNJA'
@@ -192,12 +177,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],  
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'CARTAGENA'
@@ -207,12 +191,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],  
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'MORATO'
@@ -222,12 +205,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],  
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'MEDELLÍN'
@@ -237,12 +219,11 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],   
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'CEDRITOS'
@@ -252,23 +233,22 @@ ROLE_PERMISSIONS = {
         'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
         'actions': {
             'materiales': [],
-            'solicitudes': ['create'],
+            'solicitudes': ['view', 'create'],  
             'oficinas': ['view'],
             'aprobadores': ['view'],
             'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
-
             'novedades': ['create']
         },
         'office_filter': 'LOURDES'
     },
 
     'oficina_regular': {
-        'modules': ['dashboard', 'reportes'],
+        'modules': ['dashboard', 'reportes', 'solicitudes'],   
         'actions': {
+            'solicitudes': ['view', 'create'],
             'reportes': ['view_own'],
-
-            'novedades': []
+            'novedades': ['create']
         },
         'office_filter': 'own'
     }
