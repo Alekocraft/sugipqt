@@ -271,13 +271,17 @@
                                 <i class="fas fa-list"></i> Ver Inventario
                             </a>
 
-                            <a href="{{ url_for('inventario_corporativo.listar_sede_principal') }}" class="btn btn-info">
-                                <i class="fas fa-building"></i> Sede Principal
+                            {% if can_access('reportes') %}
+                            <a href="/reportes" class="btn btn-info">
+                                <i class="fas fa-chart-bar"></i> Ver Reportes
                             </a>
+                            {% endif %}
 
-                            <a href="{{ url_for('inventario_corporativo.listar_oficinas_servicio') }}" class="btn btn-secondary">
-                                <i class="fas fa-map-marker-alt"></i> Oficinas Servicio
+                            {% if can_access('inventario_corporativo', 'manage') %}
+                            <a href="{{ url_for('inventario_corporativo.gestionar_stock') }}" class="btn btn-warning">
+                                <i class="fas fa-edit"></i> Gestionar Stock
                             </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
