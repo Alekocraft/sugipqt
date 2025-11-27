@@ -865,3 +865,14 @@ def api_elemento_info(elemento_id: int):
             if conn: conn.close()
         except: 
             pass
+@prestamos_bp.route('/prestamos/crearmaterial', methods=['GET'])
+def crear_material():
+    """Ruta simple para crear material - SOLO GET"""
+    if not _require_login():
+        return redirect('/login')
+    
+    if not can_access('prestamos', 'manage_materials'):
+        flash('No tienes permisos para crear materiales', 'danger')
+        return redirect('/prestamos')
+
+    return render_template('prestamos/elemento_crear.html')

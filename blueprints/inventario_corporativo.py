@@ -210,8 +210,7 @@ def crear_inventario_corporativo():
     if not _require_login():
         return redirect('/login')
 
-    # 👉 Aquí usamos el helper con fallback en lugar de can_access directo
-    if not _tiene_permiso_crear_inventario():
+    if not can_access('inventario_corporativo', 'create'):
         return _handle_unauthorized()
 
     categorias = InventarioCorporativoModel.obtener_categorias() or []
@@ -221,12 +220,20 @@ def crear_inventario_corporativo():
         try:
             form_data = _validate_product_form(categorias, proveedores)
             if not form_data:
-                return render_template('inventario_corporativo/crear.html', 
-                                    categorias=categorias, 
-                                    proveedores=proveedores)
+                return render_template('inventario_corporativo/crear.html',
+                                       categorias=categorias,
+                                       proveedores=proveedores)
+
+            # Imagen obligatoria
+            archivo = request.files.get('imagen')
+            if not archivo or archivo.filename == '':
+                flash('La imagen es obligatoria.', 'danger')
+                return render_template('inventario_corporativo/crear.html',
+                                       categorias=categorias,
+                                       proveedores=proveedores)
 
             codigo_unico = InventarioCorporativoModel.generar_codigo_unico()
-            ruta_imagen = _handle_image_upload(request.files.get('imagen'))
+            ruta_imagen = _handle_image_upload(archivo)
 
             nuevo_id = InventarioCorporativoModel.crear(
                 codigo_unico=codigo_unico,
@@ -239,20 +246,16 @@ def crear_inventario_corporativo():
                 flash('Producto creado correctamente.', 'success')
                 return redirect('/inventario-corporativo')
             else:
-                flash('No fue posible crear el producto. Verifique los datos.', 'danger')
+                flash('No fue posible crear el producto.', 'danger')
 
-        except ValueError as e:
-            print(f"[ERROR VALOR] {e}")
-            flash('Error en los datos numéricos. Verifique los valores.', 'danger')
         except Exception as e:
-            print(f"[ERROR CREAR] {e}")
             flash('Ocurrió un error al guardar el producto.', 'danger')
+            print(f"[ERROR CREAR] {e}")
 
-    return render_template(
-        'inventario_corporativo/crear.html',
-        categorias=categorias,
-        proveedores=proveedores
-    )
+    return render_template('inventario_corporativo/crear.html',
+                           categorias=categorias,
+                           proveedores=proveedores)
+
 
 @inventario_corporativo_bp.route('/editar/<int:producto_id>', methods=['GET', 'POST'])
 def editar_producto_corporativo(producto_id):

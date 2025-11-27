@@ -1,14 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Sistema de Gestión{% endblock %}
+{% block title %}Dashboard - Sistema Unificado de Gestión de Inventarios y Préstamos Quálitas - SUGIPQ{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+
+<style>
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .stats-card {
+        transition: transform 0.2s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .card-modulo {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .card-modulo:hover {
+        transform: scale(1.03);
+    }
+    
+    /* ESTILOS NUEVOS PARA LOS ICONOS */
+    .modal-header .fa-bullhorn,
+    .modal-header .fa-warehouse {
+        color: #fff !important; /* Fuerza el color blanco para los iconos en el header */
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container fade-in">
+<div class="container fade-in mt-4">
     <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -34,15 +68,12 @@
 
     <!-- Sección de módulos principales -->
     <div class="row g-4 mb-4">
-
         {% if can_access('material_pop') %}
         <!-- Material POP -->
         <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm text-white text-center p-4"
-                 style="background-color: #A73493; cursor: pointer; transition: transform 0.2s;"
-                 data-bs-toggle="modal" data-bs-target="#modalMaterialPOP"
-                 onmouseover="this.style.transform='scale(1.03)'"
-                 onmouseout="this.style.transform='scale(1)'">
+            <div class="card border-0 shadow-sm text-white text-center p-4 card-modulo"
+                 style="background-color: #A73493;"
+                 data-bs-toggle="modal" data-bs-target="#modalMaterialPOP">
                 <h5 class="fw-bold mb-2">
                     <i class="fas fa-bullhorn"></i> Material POP
                 </h5>
@@ -54,11 +85,9 @@
         {% if can_access('inventario_corporativo') %}
         <!-- Inventario Corporativo -->
         <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm text-white text-center p-4"
-                 style="background-color: #0098B1; cursor: pointer; transition: transform 0.2s;"
-                 data-bs-toggle="modal" data-bs-target="#modalInventarioCorporativo"
-                 onmouseover="this.style.transform='scale(1.03)'"
-                 onmouseout="this.style.transform='scale(1)'">
+            <div class="card border-0 shadow-sm text-white text-center p-4 card-modulo"
+                 style="background-color: #0098B1;"
+                 data-bs-toggle="modal" data-bs-target="#modalInventarioCorporativo">
                 <h5 class="fw-bold mb-2">
                     <i class="fas fa-warehouse"></i> Inventario Corporativo
                 </h5>
@@ -70,11 +99,9 @@
         {% if can_access('prestamo_material') %}
         <!-- Préstamo de Material -->
         <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm text-white text-center p-4"
-                 style="background-color: #D9D9D9; color: #212529; cursor: pointer; transition: transform 0.2s;"
-                 data-bs-toggle="modal" data-bs-target="#modalPrestamos"
-                 onmouseover="this.style.transform='scale(1.03)'"
-                 onmouseout="this.style.transform='scale(1)'">
+            <div class="card border-0 shadow-sm text-white text-center p-4 card-modulo"
+                 style="background-color: #D9D9D9; color: #212529;"
+                 data-bs-toggle="modal" data-bs-target="#modalPrestamos">
                 <h5 class="fw-bold mb-2">
                     <i class="fas fa-exchange-alt" style="color:#A73493;"></i> Préstamo de Material
                 </h5>
@@ -92,26 +119,27 @@
 <div class="modal fade" id="modalMaterialPOP" tabindex="-1" aria-labelledby="modalMaterialPOPLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-
             <div class="modal-header" style="background-color: #A73493; color: #fff;">
                 <h5 class="modal-title fw-bold" id="modalMaterialPOPLabel">
-                    <i class="fas fa-bullhorn"></i> Material POP
+                    <i class="fas fa-bullhorn" style="color: #fff !important;"></i> Material POP
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
 
-            <div class="modal-body" style="background-color: #F8F9FA;">
-
+            <div class="modal-body text-dark" style="background-color: #F8F9FA;">
+                <!-- Estadísticas mejoradas -->
                 <div class="row g-4 mb-4">
                     <!-- Materiales - Solo mostrar si tiene permisos -->
                     {% if can_access('materiales', 'view') %}
                     <div class="col-xl-3 col-md-6">
-                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
-                            <h6 class="fw-semibold">
-                                <i class="fas fa-box" style="color: #0098B1;"></i> Materiales
-                            </h6>
-                            <p class="display-6 fw-bold text-dark">{{ materiales|length }}</p>
-                            <a href="/materiales" class="btn btn-primary btn-sm">Gestionar</a>
+                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white h-100 text-dark">
+                            <div class="stats-icon mb-2" style="color: #A73493;">
+                                <i class="fas fa-box fa-2x"></i>
+                            </div>
+                            <h6 class="fw-semibold mb-1 text-dark">Materiales</h6>
+                            <p class="display-6 fw-bold mb-2" style="color: #A73493;">{{ materiales|length }}</p>
+                            <p class="text-muted small mb-3">Materiales registrados</p>
+                            <a href="/materiales" class="btn btn-primary btn-sm w-100">Gestionar</a>
                         </div>
                     </div>
                     {% endif %}
@@ -119,12 +147,14 @@
                     <!-- Oficinas - Solo mostrar si tiene permisos -->
                     {% if can_access('oficinas', 'view') %}
                     <div class="col-xl-3 col-md-6">
-                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
-                            <h6 class="fw-semibold">
-                                <i class="fas fa-building" style="color: #0098B1;"></i> Oficinas
-                            </h6>
-                            <p class="display-6 fw-bold text-dark">{{ oficinas|length }}</p>
-                            <a href="/oficinas" class="btn btn-primary btn-sm">Ver</a>
+                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white h-100 text-dark">
+                            <div class="stats-icon mb-2" style="color: #0098B1;">
+                                <i class="fas fa-building fa-2x"></i>
+                            </div>
+                            <h6 class="fw-semibold mb-1 text-dark">Oficinas</h6>
+                            <p class="display-6 fw-bold mb-2" style="color: #0098B1;">{{ oficinas|length }}</p>
+                            <p class="text-muted small mb-3">Oficinas registradas</p>
+                            <a href="/oficinas" class="btn btn-primary btn-sm w-100">Ver</a>
                         </div>
                     </div>
                     {% endif %}
@@ -132,12 +162,14 @@
                     <!-- Solicitudes - Solo mostrar si tiene permisos -->
                     {% if can_access('solicitudes', 'view') %}
                     <div class="col-xl-3 col-md-6">
-                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
-                            <h6 class="fw-semibold">
-                                <i class="fas fa-clipboard-list" style="color: #0098B1;"></i> Solicitudes
-                            </h6>
-                            <p class="display-6 fw-bold text-dark">{{ solicitudes|length }}</p>
-                            <a href="/solicitudes" class="btn btn-primary btn-sm">Gestionar</a>
+                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white h-100 text-dark">
+                            <div class="stats-icon mb-2" style="color: #28a745;">
+                                <i class="fas fa-clipboard-list fa-2x"></i>
+                            </div>
+                            <h6 class="fw-semibold mb-1 text-dark">Solicitudes</h6>
+                            <p class="display-6 fw-bold mb-2" style="color: #28a745;">{{ solicitudes|length }}</p>
+                            <p class="text-muted small mb-3">Solicitudes activas</p>
+                            <a href="/solicitudes" class="btn btn-primary btn-sm w-100">Gestionar</a>
                         </div>
                     </div>
                     {% endif %}
@@ -145,12 +177,14 @@
                     <!-- Aprobadores - Solo mostrar si tiene permisos -->
                     {% if can_access('aprobadores', 'view') %}
                     <div class="col-xl-3 col-md-6">
-                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
-                            <h6 class="fw-semibold">
-                                <i class="fas fa-user-check" style="color: #0098B1;"></i> Aprobadores
-                            </h6>
-                            <p class="display-6 fw-bold text-dark">{{ aprobadores|length }}</p>
-                            <a href="/aprobadores" class="btn btn-primary btn-sm">Ver</a>
+                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white h-100 text-dark">
+                            <div class="stats-icon mb-2" style="color: #ffc107;">
+                                <i class="fas fa-user-check fa-2x"></i>
+                            </div>
+                            <h6 class="fw-semibold mb-1 text-dark">Aprobadores</h6>
+                            <p class="display-6 fw-bold mb-2" style="color: #ffc107;">{{ aprobadores|length }}</p>
+                            <p class="text-muted small mb-3">Aprobadores activos</p>
+                            <a href="/aprobadores" class="btn btn-primary btn-sm w-100">Ver</a>
                         </div>
                     </div>
                     {% endif %}
@@ -158,7 +192,7 @@
 
                 <!-- Acciones Rápidas -->
                 <div class="card border-0 shadow-sm">
-                    <div class="card-body">
+                    <div class="card-body text-dark">
                         <h6 class="fw-semibold mb-3" style="color: #A73493;">
                             <i class="fas fa-bolt"></i> Acciones Rápidas
                         </h6>
@@ -195,7 +229,6 @@
             <div class="modal-footer" style="background-color: #D9D9D9;">
                 <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cerrar</button>
             </div>
-
         </div>
     </div>
 </div>
@@ -207,71 +240,72 @@
 <div class="modal fade" id="modalInventarioCorporativo" tabindex="-1" aria-labelledby="modalInventarioCorporativoLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-
             <div class="modal-header" style="background-color: #0098B1; color: #fff;">
                 <h5 class="modal-title fw-bold" id="modalInventarioCorporativoLabel">
-                    <i class="fas fa-warehouse"></i> Inventario Corporativo
+                    <i class="fas fa-warehouse" style="color: #fff !important;"></i> Inventario Corporativo
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
 
-            <div class="modal-body" style="background-color: #F8F9FA;">
+            <div class="modal-body text-dark" style="background-color: #F8F9FA;">
+                <!-- Estadísticas mejoradas -->
                 <div class="row g-4 mb-4">
-
                     <!-- Total Productos -->
                     <div class="col-xl-4 col-md-6">
-                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
-                            <h6 class="fw-semibold">
-                                <i class="fas fa-boxes" style="color: #0098B1;"></i> Productos Totales
-                            </h6>
-                            <p class="display-6 fw-bold text-dark" id="total-productos">0</p>
-                            <a href="/inventario-corporativo" class="btn btn-primary btn-sm">Ver Todos</a>
+                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white h-100 text-dark">
+                            <div class="stats-icon mb-2" style="color: #0098B1;">
+                                <i class="fas fa-boxes fa-2x"></i>
+                            </div>
+                            <h6 class="fw-semibold mb-1 text-dark">Productos Totales</h6>
+                            <p class="display-6 fw-bold mb-2" style="color: #0098B1;" id="total-productos">0</p>
+                            <p class="text-muted small mb-3">Total de productos en inventario</p>
+                            <a href="{{ url_for('inventario_corporativo.listar_inventario_corporativo') }}" class="btn btn-primary btn-sm w-100">Ver Todos</a>
                         </div>
                     </div>
 
                     <!-- Sede Principal -->
                     <div class="col-xl-4 col-md-6">
-                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
-                            <h6 class="fw-semibold">
-                                <i class="fas fa-building" style="color: #A73493;"></i> Sede Principal
-                            </h6>
-                            <p class="display-6 fw-bold text-dark" id="productos-sede">0</p>
-                            <!-- 🔁 URL directa en lugar de url_for -->
-                            <a href="/inventario-corporativo/sede-principal" class="btn btn-primary btn-sm">Ver</a>
+                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white h-100 text-dark">
+                            <div class="stats-icon mb-2" style="color: #A73493;">
+                                <i class="fas fa-building fa-2x"></i>
+                            </div>
+                            <h6 class="fw-semibold mb-1 text-dark">Sede Principal</h6>
+                            <p class="display-6 fw-bold mb-2" style="color: #A73493;" id="productos-sede">0</p>
+                            <p class="text-muted small mb-3">Productos en sede principal</p>
+                            <a href="{{ url_for('inventario_corporativo.listar_sede_principal') }}" class="btn btn-primary btn-sm w-100">Ver</a>
                         </div>
                     </div>
 
                     <!-- Oficinas de Servicio -->
                     <div class="col-xl-4 col-md-6">
-                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white">
-                            <h6 class="fw-semibold">
-                                <i class="fas fa-map-marker-alt" style="color: #28a745;"></i> Oficinas de Servicio
-                            </h6>
-                            <p class="display-6 fw-bold text-dark" id="productos-oficinas">0</p>
-                            <!-- 🔁 URL directa en lugar de url_for -->
-                            <a href="/inventario-corporativo/oficinas-servicio" class="btn btn-primary btn-sm">Ver</a>
+                        <div class="card stats-card border-0 shadow-sm text-center p-3 bg-white h-100 text-dark">
+                            <div class="stats-icon mb-2" style="color: #28a745;">
+                                <i class="fas fa-map-marker-alt fa-2x"></i>
+                            </div>
+                            <h6 class="fw-semibold mb-1 text-dark">Oficinas de Servicio</h6>
+                            <p class="display-6 fw-bold mb-2" style="color: #28a745;" id="productos-oficinas">0</p>
+                            <p class="text-muted small mb-3">Productos en oficinas de servicio</p>
+                            <a href="{{ url_for('inventario_corporativo.listar_oficinas_servicio') }}" class="btn btn-primary btn-sm w-100">Ver</a>
                         </div>
                     </div>
-
                 </div>
 
                 <!-- Acciones Rápidas -->
                 <div class="card border-0 shadow-sm">
-                    <div class="card-body">
+                    <div class="card-body text-dark">
                         <h6 class="fw-semibold mb-3" style="color: #0098B1;">
                             <i class="fas fa-bolt"></i> Acciones Rápidas
                         </h6>
 
                         <div class="d-flex flex-wrap gap-2">
                             {% if can_access('inventario_corporativo', 'create') %}
-                            <!-- MISMA LÓGICA QUE /materiales/crear: ruta directa -->
-                            <a href="/inventario-corporativo/crear" class="btn btn-primary">
+                            <a href="{{ url_for('inventario_corporativo.crear_inventario_corporativo') }}" class="btn btn-primary">
                                 <i class="fas fa-plus"></i> Nuevo Producto
                             </a>
                             {% endif %}
 
-                            <a href="/inventario-corporativo" class="btn btn-success">
-                                <i class="fas fa-list"></i> Ver Inventario
+                            <a href="{{ url_for('inventario_corporativo.listar_inventario_corporativo') }}" class="btn btn-success">
+                                <i class="fas fa-search"></i> Buscar Productos
                             </a>
 
                             {% if can_access('reportes') %}
@@ -279,18 +313,14 @@
                                 <i class="fas fa-chart-bar"></i> Ver Reportes
                             </a>
                             {% endif %}
-
-                            {# Eliminado botón gestionar_stock porque no existe ese endpoint #}
                         </div>
                     </div>
                 </div>
-
             </div>
 
             <div class="modal-footer" style="background-color: #D9D9D9;">
                 <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cerrar</button>
             </div>
-
         </div>
     </div>
 </div>
@@ -310,7 +340,7 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
 
-      <div class="modal-body" style="background-color:#F8F9FA;">
+      <div class="modal-body text-dark" style="background-color:#F8F9FA;">
         <p class="text-muted mb-3">Elige una acción para gestionar los préstamos.</p>
 
         <div class="row g-3">
@@ -319,15 +349,15 @@
           {% if can_access('prestamos', 'manage_materials') %}
           <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm">
-              <div class="card-body">
+              <div class="card-body text-dark">
                 <div class="d-flex align-items-start">
                   <div class="me-3 fs-3">
                       <i class="fas fa-plus-circle" style="color:#A73493;"></i>
                   </div>
                   <div>
-                    <h6 class="fw-semibold mb-1">Crear Material</h6>
+                    <h6 class="fw-semibold mb-1 text-dark">Crear Material</h6>
                     <p class="text-muted small mb-2">Registrar un material para préstamos.</p>
-                    <a href="/prestamos/elementos/crearmaterial" class="btn btn-outline-primary btn-sm">
+                    <a href="{{ url_for('prestamos.crear_material_prestamo') }}" class="btn btn-outline-primary btn-sm">
                       <i class="fas fa-plus-square"></i> Crear
                     </a>
                   </div>
@@ -341,15 +371,15 @@
           {% if can_access('prestamos', 'create') %}
           <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm">
-              <div class="card-body">
+              <div class="card-body text-dark">
                 <div class="d-flex align-items-start">
                   <div class="me-3 fs-3">
                       <i class="fas fa-clipboard-list" style="color:#0098B1;"></i>
                   </div>
                   <div>
-                    <h6 class="fw-semibold mb-1">Nuevo Préstamo</h6>
+                    <h6 class="fw-semibold mb-1 text-dark">Nuevo Préstamo</h6>
                     <p class="text-muted small mb-2">Entrega de material a oficina/usuario.</p>
-                    <a href="/prestamos/crear" class="btn btn-primary btn-sm">
+                    <a href="{{ url_for('prestamos.crear_prestamo') }}" class="btn btn-primary btn-sm">
                       <i class="fas fa-plus"></i> Nuevo Préstamo
                     </a>
                   </div>
@@ -363,15 +393,15 @@
           {% if can_access('prestamos', 'view') or can_access('prestamos', 'view_own') %}
           <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm">
-              <div class="card-body">
+              <div class="card-body text-dark">
                 <div class="d-flex align-items-start">
                   <div class="me-3 fs-3">
                       <i class="fas fa-box-open" style="color:#6f42c1;"></i>
                   </div>
                   <div>
-                    <h6 class="fw-semibold mb-1">Ver Préstamos</h6>
+                    <h6 class="fw-semibold mb-1 text-dark">Ver Préstamos</h6>
                     <p class="text-muted small mb-2">Historial, estados y devoluciones.</p>
-                    <a href="/prestamos" class="btn btn-outline-primary btn-sm">
+                    <a href="{{ url_for('prestamos.listar_prestamos') }}" class="btn btn-outline-primary btn-sm">
                       <i class="fas fa-list"></i> Ver Préstamos
                     </a>
                   </div>
@@ -383,21 +413,20 @@
 
         </div>
 
-        <div class="alert alert-light border mt-3 mb-0">
+        <div class="alert alert-light border mt-3 mb-0 text-dark">
           <i class="fas fa-info-circle me-1"></i>
           Consejo: al registrar un préstamo, verifica el
           <strong>stock disponible</strong> y la <strong>fecha de devolución prevista</strong>.
         </div>
       </div>
 
-      <div class="modal-footer" style="background-color:#D9D9D9%;">
+      <div class="modal-footer" style="background-color:#D9D9D9;">
         <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cerrar</button>
       </div>
 
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -410,7 +439,7 @@ document.addEventListener('DOMContentLoaded', function () {
         invModal.addEventListener('show.bs.modal', function () {
             console.log('Modal de inventario corporativo abierto, cargando estadísticas...');
 
-            // API definida en el blueprint inventario_corporativo_bp
+            // CORREGIDO: Usar la ruta correcta de la API
             fetch('{{ url_for("inventario_corporativo.api_estadisticas_dashboard") }}')
                 .then(response => {
                     if (!response.ok) {

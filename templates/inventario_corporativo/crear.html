@@ -3,64 +3,19 @@
 
 {% block styles %}
 <style>
-    /* 🔥 Overrides fuertes para asegurarnos de que TODO sea visible */
-
-    html, body {
-        background-color: #f8f9fa !important;
-        overflow: auto !important;
-    }
-
-    main {
-        display: block !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        position: relative !important;
-    }
-
-    .container-fluid,
-    .fade-in,
-    .card,
-    .card-inventario,
-    #formCrearProducto {
-        display: block !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        position: relative !important;
-        z-index: 10 !important;
-    }
-
-    /* Que nada tape el formulario */
-    [style*="z-index"],
-    .modal-backdrop,
-    .overlay,
-    .backdrop {
-        z-index: 1 !important;
-    }
-
     .card-inventario {
         border-radius: 0.75rem;
     }
-
     .card-inventario .card-header {
         border-top-left-radius: 0.75rem;
         border-top-right-radius: 0.75rem;
     }
-
     .preview-img {
         max-width: 150px;
         max-height: 150px;
         border: 1px solid #dee2e6;
         border-radius: 4px;
         object-fit: cover;
-    }
-
-    .fade-in {
-        animation: fadeIn .3s ease-in;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to   { opacity: 1; }
     }
 </style>
 {% endblock %}
@@ -70,7 +25,6 @@
     <div class="row justify-content-center mt-3">
         <div class="col-lg-8">
 
-            <!-- TÍTULO GRANDE PARA QUE LO VEAS SÍ O SÍ -->
             <h2 class="mb-3 fw-bold text-primary text-center">
                 <i class="fas fa-plus-circle"></i> Crear Producto Corporativo
             </h2>
@@ -98,37 +52,22 @@
                         {% endif %}
                     {% endwith %}
 
-                    <form method="POST"
-                          enctype="multipart/form-data"
-                          id="formCrearProducto"
-                          autocomplete="off">
-
+                    <form method="POST" enctype="multipart/form-data" id="formCrearProducto" autocomplete="off">
                         <div class="row">
                             <div class="col-md-6">
                                 <!-- Nombre -->
                                 <div class="mb-3">
                                     <label class="form-label">Nombre *</label>
-                                    <input
-                                        type="text"
-                                        name="nombre"
-                                        class="form-control"
-                                        required
-                                        autocomplete="off"
-                                        value="{{ request.form.nombre if request.form else '' }}">
+                                    <input type="text" name="nombre" class="form-control" required>
                                 </div>
 
                                 <!-- Categoría -->
                                 <div class="mb-3">
                                     <label class="form-label">Categoría *</label>
                                     <select name="categoria_id" class="form-select" required>
-                                        <option value="" disabled {% if not request.form.get('categoria_id') %}selected{% endif %}>
-                                            Seleccione
-                                        </option>
+                                        <option value="">Seleccione</option>
                                         {% for c in categorias %}
-                                            <option value="{{ c.id }}"
-                                                {% if request.form.get('categoria_id') == c.id|string %}selected{% endif %}>
-                                                {{ c.nombre }}
-                                            </option>
+                                            <option value="{{ c.id }}">{{ c.nombre }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
@@ -137,14 +76,9 @@
                                 <div class="mb-3">
                                     <label class="form-label">Proveedor *</label>
                                     <select name="proveedor_id" class="form-select" required>
-                                        <option value="" disabled {% if not request.form.get('proveedor_id') %}selected{% endif %}>
-                                            Seleccione
-                                        </option>
+                                        <option value="">Seleccione</option>
                                         {% for p in proveedores %}
-                                            <option value="{{ p.id }}"
-                                                {% if request.form.get('proveedor_id') == p.id|string %}selected{% endif %}>
-                                                {{ p.nombre }}
-                                            </option>
+                                            <option value="{{ p.id }}">{{ p.nombre }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
@@ -154,87 +88,49 @@
                                 <!-- Valor unitario -->
                                 <div class="mb-3">
                                     <label class="form-label">Valor Unitario *</label>
-                                    <input
-                                        type="number"
-                                        name="valor_unitario"
-                                        class="form-control"
-                                        min="0.01"
-                                        step="0.01"
-                                        required
-                                        value="{{ request.form.valor_unitario }}">
+                                    <input type="number" name="valor_unitario" class="form-control" min="0.01" step="0.01" required>
                                 </div>
 
                                 <!-- Cantidad -->
                                 <div class="mb-3">
                                     <label class="form-label">Cantidad *</label>
-                                    <input
-                                        type="number"
-                                        name="cantidad"
-                                        class="form-control"
-                                        min="0"
-                                        required
-                                        value="{{ request.form.cantidad }}">
+                                    <input type="number" name="cantidad" class="form-control" min="1" required>
                                 </div>
 
                                 <!-- Cantidad mínima -->
                                 <div class="mb-3">
-                                    <label class="form-label">Cantidad mínima</label>
-                                    <input
-                                        type="number"
-                                        name="cantidad_minima"
-                                        class="form-control"
-                                        min="0"
-                                        value="{{ request.form.cantidad_minima }}">
+                                    <label class="form-label">Cantidad mínima *</label>
+                                    <input type="number" name="cantidad_minima" class="form-control" min="1" required>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Descripción -->
                         <div class="mb-3">
-                            <label class="form-label">Descripción</label>
-                            <textarea
-                                name="descripcion"
-                                class="form-control"
-                                rows="3"
-                                maxlength="500">{{ request.form.descripcion }}</textarea>
+                            <label class="form-label">Descripción *</label>
+                            <textarea name="descripcion" class="form-control" rows="3" maxlength="500" required></textarea>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6">
                                 <!-- Ubicación -->
                                 <div class="mb-3">
-                                    <label class="form-label">Ubicación</label>
-                                    <input
-                                        type="text"
-                                        name="ubicacion"
-                                        class="form-control"
-                                        value="{% if request.form.ubicacion %}{{ request.form.ubicacion }}{% else %}COQ{% endif %}"
-                                        readonly>
+                                    <label class="form-label">Ubicación *</label>
+                                    <input type="text" name="ubicacion" class="form-control" value="COQ" readonly required>
                                 </div>
 
                                 <!-- Es asignable -->
                                 <div class="mb-3 form-check">
-                                    <input
-                                        type="checkbox"
-                                        class="form-check-input"
-                                        id="es_asignable"
-                                        name="es_asignable"
-                                        {% if request.form.get('es_asignable', 'on') == 'on' %}checked{% endif %}>
-                                    <label class="form-check-label" for="es_asignable">
-                                        Producto asignable
-                                    </label>
+                                    <input type="checkbox" class="form-check-input" id="es_asignable" name="es_asignable" checked>
+                                    <label class="form-check-label" for="es_asignable">Producto asignable</label>
                                 </div>
                             </div>
 
                             <div class="col-md-6">
                                 <!-- Imagen -->
                                 <div class="mb-3">
-                                    <label class="form-label">Imagen</label>
-                                    <input
-                                        type="file"
-                                        name="imagen"
-                                        class="form-control"
-                                        accept="image/*">
+                                    <label class="form-label">Imagen *</label>
+                                    <input type="file" name="imagen" class="form-control" accept="image/*" required>
                                     <img id="preview" class="preview-img d-none mt-2" alt="Vista previa">
                                 </div>
                             </div>
@@ -250,8 +146,8 @@
                                 <i class="fas fa-save"></i> Guardar
                             </button>
                         </div>
-
                     </form>
+
                 </div>
             </div>
 
@@ -266,22 +162,20 @@ document.addEventListener("DOMContentLoaded", function () {
     const img = document.getElementById("preview");
     const fileInput = document.querySelector("input[name=imagen]");
 
-    if (fileInput) {
-        fileInput.addEventListener("change", function (e) {
-            const f = e.target.files[0];
-            if (!f) {
-                img.classList.add("d-none");
-                img.src = "";
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = function (ev) {
-                img.src = ev.target.result;
-                img.classList.remove("d-none");
-            };
-            reader.readAsDataURL(f);
-        });
-    }
+    fileInput.addEventListener("change", function (e) {
+        const f = e.target.files[0];
+        if (!f) {
+            img.classList.add("d-none");
+            img.src = "";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+            img.src = ev.target.result;
+            img.classList.remove("d-none");
+        };
+        reader.readAsDataURL(f);
+    });
 });
 </script>
 {% endblock %}

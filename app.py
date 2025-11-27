@@ -40,6 +40,23 @@ from blueprints.aprobacion import aprobacion_bp
 from blueprints.api import api_bp
 
 # ===============================
+# 🔧 SOLO UN BLUEPRINT DE PRÉSTAMOS
+# ===============================
+try:
+    from blueprints.prestamos import prestamos_bp
+    print("✅ Blueprint de préstamos encontrado")
+except ImportError as e:
+    print(f"❌ Error importando blueprint de préstamos: {e}")
+    # Crear blueprint vacío como fallback
+    from flask import Blueprint
+    prestamos_bp = Blueprint('prestamos', __name__)
+    
+    @prestamos_bp.route('/')
+    def prestamos_vacio():
+        flash('Módulo de préstamos no disponible', 'warning')
+        return redirect('/dashboard')
+
+# ===============================
 # 🔧 Configuración robusta para Inventario Corporativo
 # ===============================
 try:
@@ -116,6 +133,12 @@ app.register_blueprint(aprobadores_bp)
 app.register_blueprint(reportes_bp)
 app.register_blueprint(aprobacion_bp)
 app.register_blueprint(api_bp)
+
+# ===============================
+# 📌 SOLO UN BLUEPRINT DE PRÉSTAMOS REGISTRADO
+# ===============================
+app.register_blueprint(prestamos_bp, url_prefix='/prestamos')
+print("✅ Blueprint de préstamos registrado exitosamente")
 
 # Registrar inventario de forma incondicional con prefijo
 app.register_blueprint(inventario_corporativo_bp, url_prefix='/inventario-corporativo')

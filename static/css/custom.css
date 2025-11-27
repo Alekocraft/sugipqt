@@ -1,60 +1,9 @@
-/* ===== Estilos Generales Personalizados ===== */
-h1, h2, h3, h4, h5, h6 {
-    color: #212529;
-    font-weight: 600;
-}
+/* ============================
+   ANIMACIONES Y EFECTOS
+============================ */
 
-.btn {
-    border-radius: 8px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-/* Botones con colores corporativos */
-.btn-primary {
-    background-color: #A73493;
-    border-color: #A73493;
-}
-
-    .btn-primary:hover {
-        background-color: #902d82;
-        border-color: #902d82;
-    }
-
-.btn-success {
-    background-color: #0098B1;
-    border-color: #0098B1;
-}
-
-    .btn-success:hover {
-        background-color: #007e93;
-        border-color: #007e93;
-    }
-
-.btn-info {
-    background-color: #5ac8fa;
-    border-color: #5ac8fa;
-    color: #fff;
-}
-
-.btn-warning {
-    background-color: #ffb84d;
-    border-color: #ffb84d;
-}
-
-.btn-outline-primary {
-    border-color: #A73493;
-    color: #A73493;
-}
-
-    .btn-outline-primary:hover {
-        background-color: #A73493;
-        color: #fff;
-    }
-
-/* ===== Animaciones ===== */
 .fade-in {
-    opacity: 0;
+    /* ANTES TENÍA opacity:0; — ESO OCULTABA TODA LA VISTA */
     animation: fadeIn 0.6s ease-in forwards;
 }
 
@@ -63,47 +12,253 @@ h1, h2, h3, h4, h5, h6 {
         opacity: 0;
         transform: translateY(8px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
-/* ===== Logo ===== */
-.logo {
-    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.2));
+/* ============================
+   ESTILOS GENERALES
+============================ */
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 152, 177, 0.05);
 }
 
-.modal-content {
+.table td, .table th {
+    vertical-align: middle !important;
+}
+
+.text-primary {
+    color: #0098B1 !important;
+}
+
+/* ============================
+   BOTONES
+============================ */
+
+.btn-primary {
+    background-color: #0098B1;
+    border-color: #0098B1;
+}
+
+.btn-primary:hover {
+    background-color: #007d91;
+    border-color: #007d91;
+}
+
+.btn-outline-primary {
+    color: #0098B1;
+    border-color: #0098B1;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0098B1;
+    color: white;
+}
+
+/* ============================
+   CARDS Y SOMBRAS
+============================ */
+
+.card {
+    border-radius: 0.75rem;
+}
+
+.card-header {
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
+}
+
+.shadow-sm {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+}
+
+/* ============================
+   BADGES
+============================ */
+
+.badge-success {
+    background-color: #28a745 !important;
+}
+
+.badge-warning {
+    background-color: #ffc107 !important;
+    color: black !important;
+}
+
+/* ============================
+   FORMULARIOS
+============================ */
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #0098B1;
+    box-shadow: 0 0 0 0.2rem rgba(0, 152, 177, 0.25);
+}
+
+/* ============================
+   TEXTO Y UTILIDADES
+============================ */
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+.pointer {
+    cursor: pointer;
+}
+
+/* ===== Mejoras para las tarjetas de estadísticas ===== */
+.stats-card {
+    transition: all 0.3s ease;
     border-radius: 12px;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1) !important;
+}
+
+.stats-icon {
+    transition: transform 0.3s ease;
+}
+
+.stats-card:hover .stats-icon {
+    transform: scale(1.1);
+}
+
+/* ===== Mejoras para botones ===== */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* ===== Mejoras para modales ===== */
+.modal-content {
+    border-radius: 16px;
     overflow: hidden;
 }
 
 .modal-header {
     background: linear-gradient(90deg, #A73493 0%, #0098B1 100%);
+    padding: 1.2rem 1.5rem;
 }
 
 .modal-body {
     background-color: #F8F9FA;
+    padding: 1.5rem;
 }
 
-.btn-cerrar {
-  --accent: #A73493;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  background: transparent;
-  transition: all .15s ease-in-out;
-
+/* ===== Animaciones mejoradas ===== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
-.btn-cerrar:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
 
-.btn-cerrar:hover,
-.btn-cerrar:focus {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 .2rem rgba(167, 52, 147, .2);
-
+.fade-in {
+    animation: fadeInUp 0.6s ease-out forwards;
 }
- 
+
+/* ===== Responsive improvements ===== */
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 1rem;
+    }
+    
+    .stats-card {
+        margin-bottom: 1rem;
+    }
+}
+/* ===== Corrección colores en modales ===== */
+.modal-body {
+    background-color: #F8F9FA;
+    color: #212529 !important; /* Forzar color oscuro */
+}
+.modal-body h1,
+.modal-body h2,
+.modal-body h3,
+.modal-body h4,
+.modal-body h5,
+.modal-body h6,
+.modal-body p,
+.modal-body span,
+.modal-body div:not(.modal-header *) {
+    color: #212529 !important;
+}
+
+/* Específico para las tarjetas de estadísticas */
+.stats-card h6,
+.stats-card .display-6,
+.stats-card p {
+    color: #212529 !important;
+}
+
+/* Asegurar que los textos en las acciones rápidas sean visibles */
+.card-body h6,
+.card-body p,
+.card-body a {
+    color: #212529 !important;
+}
+
+/* Los botones mantienen sus colores */
+.btn-primary,
+.btn-success,
+.btn-info,
+.btn-warning,
+.btn-outline-primary {
+    color: #fff !important;
+}
+
+.btn-outline-primary {
+    color: #A73493 !important;
+}
+
+.btn-outline-primary:hover {
+    color: #fff !important;
+}
+
+/* ===== Corrección colores en modales ===== */
+.modal-body {
+    background-color: #F8F9FA;
+    color: #212529 !important;
+}
+
+/* Asegurar que todo el texto sea oscuro excepto los iconos */
+.modal-body *:not(i):not(.btn) {
+    color: #212529 !important;
+}
+
+/* Iconos con colores corporativos */
+.modal-body .stats-icon i {
+    color: inherit !important;
+}
+
+/* Los botones mantienen sus colores */
+.btn-primary,
+.btn-success,
+.btn-info,
+.btn-warning {
+    color: #fff !important;
+}
+
+.btn-outline-primary {
+    color: #A73493 !important;
+}
+
+.btn-outline-primary:hover {
+    color: #fff !important;
+}

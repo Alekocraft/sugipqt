@@ -43,6 +43,33 @@
         background-color: #6C757D;
     }
 
+/* ===== Iconos en tarjetas de estadísticas ===== */
+/* Esta regla específica asegura que los iconos mantengan su color en las tarjetas de stats */
+.stats-card .stats-icon i {
+    color: inherit !important;
+}
+
+/* Reglas específicas para cada color de icono */
+.stats-card .stats-icon[style*="color: #A73493"] i,
+.stats-card .stats-icon i[style*="color: #A73493"] {
+    color: #A73493 !important;
+}
+
+.stats-card .stats-icon[style*="color: #0098B1"] i,
+.stats-card .stats-icon i[style*="color: #0098B1"] {
+    color: #0098B1 !important;
+}
+
+.stats-card .stats-icon[style*="color: #28a745"] i,
+.stats-card .stats-icon i[style*="color: #28a745"] {
+    color: #28a745 !important;
+}
+
+.stats-card .stats-icon[style*="color: #ffc107"] i,
+.stats-card .stats-icon i[style*="color: #ffc107"] {
+    color: #ffc107 !important;
+}
+
 /* ===== Acciones Rápidas ===== */
 .quick-actions {
     padding: 1.5rem;

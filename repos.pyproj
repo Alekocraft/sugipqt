@@ -75,7 +75,6 @@
     <Compile Include="models\verificar_imagenes.py" />
     <Compile Include="models\verificar_materiales.py" />
     <Compile Include="models\__init__.py" />
-    <Compile Include="routes_prestamos.py" />
     <Compile Include="templates\materials\__init__.py" />
     <Compile Include="templates\reportes\__init__.py" />
     <Compile Include="templates\solicitudes\__init__.py" />
