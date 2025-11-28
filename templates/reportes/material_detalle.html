@@ -1,179 +1,208 @@
 {% extends "base.html" %}
 {% block title %}Detalle de Material - {{ material.nombre }}{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="/reportes">Reportes</a></li>
-                    <li class="breadcrumb-item"><a href="/reportes/materiales">Materiales</a></li>
-                    <li class="breadcrumb-item active">Detalle</li>
-                </ol>
-            </nav>
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2 class="card-title mb-0">
-                        <i class="fas fa-box"></i> Detalle de Material: {{ material.nombre }}
-                    </h2>                     
+<div class="container-fluid fade-in">
+    <!-- Encabezado compacto -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1 text-primary">
+                <i class="fas fa-box me-2"></i>Detalle de Material
+            </h1>
+            <p class="text-muted small">Información completa y estadísticas</p>
+        </div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/reportes" class="small">Reportes</a></li>
+                <li class="breadcrumb-item"><a href="/reportes/materiales" class="small">Materiales</a></li>
+                <li class="breadcrumb-item active small">Detalle</li>
+            </ol>
+        </nav>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light py-2">
+            <h6 class="mb-0 fw-semibold">
+                <i class="fas fa-box me-1"></i> {{ material.nombre }}
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="fw-semibold mb-3">Información General</h6>
+                    <table class="table table-bordered table-sm">
+                        <tr>
+                            <th width="40%" class="small">Nombre:</th>
+                            <td class="small">{{ material.nombre }}</td>
+                        </tr>
+                        <tr>
+                            <th class="small">Descripción:</th>
+                            <td class="small">{{ material.descripcion|default('Sin descripción', true) }}</td>
+                        </tr>
+                        <tr>
+                            <th class="small">Oficina:</th>
+                            <td class="small">{{ material.oficina_nombre|default('Sede Principal', true) }}</td>
+                        </tr>
+                        <tr>
+                            <th class="small">Cantidad Actual:</th>
+                            <td>
+                                <span class="badge {% if material.cantidad|default(0) <= material.cantidad_minima|default(10) %}bg-warning{% else %}bg-success{% endif %} small">
+                                    {{ material.cantidad|default(0) }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="small">Cantidad Mínima:</th>
+                            <td class="small">{{ material.cantidad_minima|default(10) }}</td>
+                        </tr>
+                        <tr>
+                            <th class="small">Valor Unitario:</th>
+                            <td class="small">${{ "{:,.2f}".format(material.valor_unitario|default(0)|float) }}</td>
+                        </tr>
+                        <tr>
+                            <th class="small">Valor Total:</th>
+                            <td class="small fw-bold text-primary">${{ "{:,.2f}".format(material.valor_total|default(0)|float) }}</td>
+                        </tr>
+                        <tr>
+                            <th class="small">Estado:</th>
+                            <td>
+                                {% if material.cantidad|default(0) <= material.cantidad_minima|default(10) %}
+                                <span class="badge bg-warning small">Stock Bajo</span>
+                                {% else %}
+                                <span class="badge bg-success small">Stock Normal</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="small">Fecha Creación:</th>
+                            <td class="small">{{ material.fecha_creacion.strftime('%d/%m/%Y') if material.fecha_creacion else 'N/A' }}</td>
+                        </tr>
+                        <tr>
+                            <th class="small">Creado por:</th>
+                            <td class="small">{{ material.usuario_creador|default('Sistema') }}</td>
+                        </tr>
+                    </table>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h4>Información General</h4>
-                            <table class="table table-bordered">
-                                <tr>
-                                    <th width="40%">Nombre:</th>
-                                    <td>{{ material.nombre }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Descripción:</th>
-                                    <td>{{ material.descripcion|default('Sin descripción', true) }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Oficina:</th>
-                                    <td>{{ material.oficina_nombre|default('Sede Principal', true) }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Cantidad Actual:</th>
-                                    <td>
-                                        <span class="badge {% if material.cantidad|default(0) <= material.cantidad_minima|default(10) %}bg-warning{% else %}bg-success{% endif %}">
-                                            {{ material.cantidad|default(0) }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Cantidad Mínima:</th>
-                                    <td>{{ material.cantidad_minima|default(10) }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Valor Unitario:</th>
-                                    <td>${{ "{:,.2f}".format(material.valor_unitario|default(0)|float) }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Valor Total:</th>
-                                    <td><strong>${{ "{:,.2f}".format(material.valor_total|default(0)|float) }}</strong></td>
-                                </tr>
-                                <tr>
-                                    <th>Estado:</th>
-                                    <td>
-                                        {% if material.cantidad|default(0) <= material.cantidad_minima|default(10) %}
-                                        <span class="badge bg-warning">Stock Bajo</span>
-                                        {% else %}
-                                        <span class="badge bg-success">Stock Normal</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Fecha Creación:</th>
-                                    <td>{{ material.fecha_creacion.strftime('%d/%m/%Y') if material.fecha_creacion else 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Creado por:</th>
-                                    <td>{{ material.usuario_creador|default('Sistema') }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h4>Estadísticas</h4>
-                            <div class="card">
-                                <div class="card-body text-center">
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <div class="p-3 border rounded bg-light">
-                                                <h3 class="text-primary">{{ total_solicitudes|default(0) }}</h3>
-                                                <small class="text-muted">Total Solicitudes</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="p-3 border rounded bg-light">
-                                                <h3 class="text-success">{{ solicitudes_aprobadas|default(0) }}</h3>
-                                                <small class="text-muted">Aprobadas</small>
-                                            </div>
-                                        </div>
+                <div class="col-md-6">
+                    <h6 class="fw-semibold mb-3">Estadísticas</h6>
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body text-center">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="p-2 border rounded bg-light">
+                                        <h5 class="text-primary mb-1">{{ total_solicitudes|default(0) }}</h5>
+                                        <small class="text-muted">Total Solicitudes</small>
                                     </div>
-                                    {% if material.ruta_imagen %}
-                                    <div class="mt-3">
-                                        <h6>Imagen del Material</h6>
-                                        <!-- CORRECCIÓN: Agregar /uploads/ en la ruta -->
-                                        <img src="/static/uploads/{{ material.ruta_imagen }}"
-                                             alt="{{ material.nombre }}"
-                                             class="img-fluid rounded"
-                                             style="max-height: 200px; object-fit: cover;"
-                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                                        <div class="alert alert-warning mt-2" style="display: none;">
-                                            <small><i class="fas fa-exclamation-triangle"></i> La imagen no se pudo cargar</small>
-                                        </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 border rounded bg-light">
+                                        <h5 class="text-success mb-1">{{ solicitudes_aprobadas|default(0) }}</h5>
+                                        <small class="text-muted">Aprobadas</small>
                                     </div>
-                                    {% else %}
-                                    <div class="mt-3">
-                                        <h6>Imagen del Material</h6>
-                                        <div class="alert alert-info">
-                                            <small><i class="fas fa-info-circle"></i> No hay imagen disponible para este material</small>
-                                        </div>
-                                    </div>
-                                    {% endif %}
                                 </div>
                             </div>
+                            {% if material.ruta_imagen %}
+                            <div class="mt-3">
+                                <h6 class="small fw-semibold">Imagen del Material</h6>
+                                <img src="/static/uploads/{{ material.ruta_imagen }}"
+                                     alt="{{ material.nombre }}"
+                                     class="img-fluid rounded"
+                                     style="max-height: 150px; object-fit: cover;"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div class="alert alert-warning mt-2 small" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>La imagen no se pudo cargar
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="mt-3">
+                                <h6 class="small fw-semibold">Imagen del Material</h6>
+                                <div class="alert alert-info small">
+                                    <i class="fas fa-info-circle me-1"></i>No hay imagen disponible
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
-                    <hr>
-                    <h4>Historial de Solicitudes</h4>
-                    {% if solicitudes %}
-                    <div class="table-responsive mt-3">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Solicitante</th>
-                                    <th>Oficina</th>
-                                    <th>Cantidad</th>
-                                    <th>Estado</th>
-                                    <th>Fecha Solicitud</th>
-                                    <th>Fecha Aprobación</th>
-                                    <th>Observaciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for solicitud in solicitudes %}
-                                <tr>
-                                    <td>{{ solicitud.id|default('N/A') }}</td>
-                                    <td>{{ solicitud.usuario_nombre|default('N/A') }}</td>
-                                    <td>{{ solicitud.oficina_nombre|default('N/A') }}</td>
-                                    <td>{{ solicitud.cantidad_solicitada|default(0) }}</td>
-                                    <td>
-                                        {% if solicitud.estado|default('') == 'aprobada' %}
-                                        <span class="badge bg-success">Aprobada</span>
-                                        {% elif solicitud.estado|default('') == 'rechazada' %}
-                                        <span class="badge bg-danger">Rechazada</span>
-                                        {% else %}
-                                        <span class="badge bg-warning">Pendiente</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ solicitud.fecha_solicitud.strftime('%d/%m/%Y %H:%M') if solicitud.fecha_solicitud else 'N/A' }}</td>
-                                    <td>
-                                        {% if solicitud.fecha_aprobacion %}
-                                        {{ solicitud.fecha_aprobacion.strftime('%d/%m/%Y %H:%M') }}
-                                        {% else %}
-                                        <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ solicitud.observacion|default('Sin observaciones') }}</small>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info text-center">
-                        <i class="fas fa-info-circle"></i> No hay historial de solicitudes para este material.
-                    </div>
-                    {% endif %}
                 </div>
             </div>
+            
+            <hr class="my-4">
+            
+            <h6 class="fw-semibold mb-3">Historial de Solicitudes</h6>
+            {% if solicitudes %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="small">ID</th>
+                            <th class="small">Solicitante</th>
+                            <th class="small">Oficina</th>
+                            <th class="text-center small">Cantidad</th>
+                            <th class="text-center small">Estado</th>
+                            <th class="small">Fecha Solicitud</th>
+                            <th class="small">Fecha Aprobación</th>
+                            <th class="small">Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for solicitud in solicitudes %}
+                        <tr>
+                            <td class="small">{{ solicitud.id|default('N/A') }}</td>
+                            <td class="small">{{ solicitud.usuario_nombre|default('N/A') }}</td>
+                            <td class="small">{{ solicitud.oficina_nombre|default('N/A') }}</td>
+                            <td class="text-center small">{{ solicitud.cantidad_solicitada|default(0) }}</td>
+                            <td class="text-center">
+                                {% if solicitud.estado|default('') == 'aprobada' %}
+                                <span class="badge bg-success small">Aprobada</span>
+                                {% elif solicitud.estado|default('') == 'rechazada' %}
+                                <span class="badge bg-danger small">Rechazada</span>
+                                {% else %}
+                                <span class="badge bg-warning small">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">{{ solicitud.fecha_solicitud.strftime('%d/%m/%Y %H:%M') if solicitud.fecha_solicitud else 'N/A' }}</td>
+                            <td class="small">
+                                {% if solicitud.fecha_aprobacion %}
+                                {{ solicitud.fecha_aprobacion.strftime('%d/%m/%Y %H:%M') }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                <small class="text-muted">{{ solicitud.observacion|default('Sin observaciones') }}</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info text-center py-3">
+                <i class="fas fa-info-circle me-2"></i>No hay historial de solicitudes para este material.
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<style>
+    .table th {
+        white-space: nowrap;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+    
+    .table td {
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-size: 0.7rem;
+    }
+    
+    .breadcrumb {
+        font-size: 0.8rem;
+        margin-bottom: 0;
+    }
+</style>
 {% endblock %}

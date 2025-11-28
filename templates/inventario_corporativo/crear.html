@@ -154,6 +154,116 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Gestión de Novedad - INTEGRADO DEL CÓDIGO ANTERIOR -->
+<div class="modal fade" id="modalGestionNovedad" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title">⚙️ Gestión de Novedad</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6>📄 Información de la novedad</h6>
+                        <p><strong>ID Solicitud:</strong> <span id="gn_solicitud"></span></p>
+                        <p><strong>ID Novedad:</strong> <span id="gn_novedad_id"></span></p>
+                        <p><strong>Tipo:</strong> <span id="gn_tipo"></span></p>
+                        <p><strong>Cantidad Afectada:</strong> <span id="gn_cantidad"></span></p>
+                        <p><strong>Estado:</strong> <span id="gn_estado"></span></p>
+                        <p><strong>Registrada por:</strong> <span id="gn_usuario_registra"></span></p>
+                        <p><strong>Fecha Registro:</strong> <span id="gn_fecha_registro"></span></p>
+                        <p><strong>Descripción:</strong></p>
+                        <p id="gn_descripcion" class="border rounded p-2 bg-light" style="min-height: 60px;"></p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>🖼 Imagen</h6>
+                        <div id="gn_contenedor_imagen" class="border rounded text-center p-2 bg-light" style="min-height: 220px;">
+                            <img id="gn_imagen" src="" alt="Imagen Novedad" class="img-fluid rounded" style="max-height: 200px; display:none;">
+                            <p id="gn_sin_imagen" class="text-muted mt-2" style="display:none;">Sin imagen asociada</p>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <label for="gn_observaciones" class="form-label">Observaciones de resolución (opcional):</label>
+                    <textarea id="gn_observaciones" class="form-control" rows="3" placeholder="Observaciones al aceptar o rechazar la novedad..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" id="btnRechazarNovedad" class="btn btn-danger" onclick="procesarGestionNovedad('rechazar')">❌ Rechazar Novedad</button>
+                <button type="button" id="btnAceptarNovedad" class="btn btn-success" onclick="procesarGestionNovedad('aceptar')">✅ Aceptar Novedad</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novedad - PARA CONSISTENCIA -->
+<div class="modal fade" id="modalNovedad" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title">📝 Registrar Novedad</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Material:</strong> <span id="infoMaterialNovedad"></span></p>
+                <p><strong>Solicitante:</strong> <span id="infoSolicitanteNovedad"></span></p>
+                <p><strong>Cantidad Entregada:</strong> <span id="infoCantidadNovedad"></span></p>
+                
+                <form id="formNovedad">
+                    <input type="hidden" id="solicitudIdNovedad" name="solicitud_id">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tipoNovedad" class="form-label">Tipo de Novedad:</label>
+                                <select class="form-select" id="tipoNovedad" name="tipo_novedad" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="daño">Daño o Rotura</option>
+                                    <option value="perdida">Pérdida</option>
+                                    <option value="defectuoso">Material Defectuoso</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="cantidadAfectada" class="form-label">Cantidad Afectada:</label>
+                                <input type="number" class="form-control" id="cantidadAfectada" name="cantidad_afectada" min="1" required>
+                                <div class="form-text">Máximo: <span id="maximoNovedad"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descripcionNovedad" class="form-label">Descripción:</label>
+                        <textarea class="form-control" id="descripcionNovedad" name="descripcion" rows="3" placeholder="Describa la novedad en detalle..." required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="imagenNovedad" class="form-label">Imagen de la Novedad (Obligatoria):</label>
+                        <input type="file" class="form-control" id="imagenNovedad" name="imagen_novedad" accept="image/*" onchange="mostrarVistaPrevia(this)" required>
+                        <div class="form-text">Formatos permitidos: JPG, PNG, GIF. Tamaño máximo: 5MB</div>
+                    </div>
+                    
+                    <!-- Vista previa de imagen -->
+                    <div id="vistaPreviaImagen" class="text-center mt-3" style="display: none;">
+                        <h6>Vista Previa:</h6>
+                        <img id="previewImg" src="#" class="img-fluid rounded" style="max-height: 200px; object-fit: cover;" alt="Vista previa">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarRegistroNovedad()">📝 Registrar Novedad</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -177,5 +287,268 @@ document.addEventListener("DOMContentLoaded", function () {
         reader.readAsDataURL(f);
     });
 });
+
+/* ============================
+   FUNCIONES PARA NOVEDADES - INTEGRADAS
+============================ */
+let solicitudIdNovedad = null;
+let cantidadMaximaNovedad = 0;
+
+function mostrarModalNovedad(id, materialNombre, solicitanteNombre, cantidadEntregada) {
+    solicitudIdNovedad = id;
+    cantidadMaximaNovedad = cantidadEntregada;
+
+    document.getElementById("infoMaterialNovedad").textContent = materialNombre;
+    document.getElementById("infoSolicitanteNovedad").textContent = solicitanteNombre;
+    document.getElementById("infoCantidadNovedad").textContent = cantidadEntregada;
+    document.getElementById("maximoNovedad").textContent = cantidadEntregada;
+
+    // Limpiar formulario
+    document.getElementById("tipoNovedad").value = "";
+    document.getElementById("cantidadAfectada").value = "";
+    document.getElementById("descripcionNovedad").value = "";
+    document.getElementById("solicitudIdNovedad").value = id;
+    document.getElementById("imagenNovedad").value = "";
+    document.getElementById("vistaPreviaImagen").style.display = "none";
+
+    const inputCantidad = document.getElementById("cantidadAfectada");
+    inputCantidad.max = cantidadEntregada;
+    inputCantidad.placeholder = `Máximo: ${cantidadEntregada}`;
+
+    new bootstrap.Modal(document.getElementById("modalNovedad")).show();
+}
+
+function mostrarVistaPrevia(input) {
+    const vistaPrevia = document.getElementById("vistaPreviaImagen");
+    const previewImg = document.getElementById("previewImg");
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!tiposPermitidos.includes(file.type)) {
+            alert('Solo se permiten archivos de imagen (JPG, PNG, GIF)');
+            input.value = '';
+            vistaPrevia.style.display = "none";
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            alert('La imagen no puede superar los 5MB');
+            input.value = '';
+            vistaPrevia.style.display = "none";
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            vistaPrevia.style.display = "block";
+        }
+        reader.readAsDataURL(file);
+    } else {
+        vistaPrevia.style.display = "none";
+    }
+}
+
+function confirmarRegistroNovedad() {
+    const tipoNovedad = document.getElementById("tipoNovedad").value;
+    const cantidadAfectada = parseInt(document.getElementById("cantidadAfectada").value);
+    const descripcion = document.getElementById("descripcionNovedad").value.trim();
+    const imagenInput = document.getElementById("imagenNovedad");
+    const imagenArchivo = imagenInput.files[0];
+
+    // Validaciones
+    if (!tipoNovedad) {
+        alert("❌ Seleccione el tipo de novedad");
+        return;
+    }
+
+    if (!cantidadAfectada || cantidadAfectada < 1) {
+        alert("❌ Ingrese una cantidad válida");
+        return;
+    }
+
+    if (cantidadAfectada > cantidadMaximaNovedad) {
+        alert(`❌ La cantidad no puede superar ${cantidadMaximaNovedad}`);
+        return;
+    }
+
+    if (!descripcion || descripcion.length < 10) {
+        alert("❌ La descripción es obligatoria y debe tener al menos 10 caracteres");
+        return;
+    }
+
+    if (!imagenArchivo) {
+        alert("❌ Debe adjuntar una imagen de la novedad");
+        return;
+    }
+
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!tiposPermitidos.includes(imagenArchivo.type)) {
+        alert('❌ Solo se permiten archivos de imagen (JPG, PNG, GIF)');
+        return;
+    }
+
+    if (imagenArchivo.size > 5 * 1024 * 1024) {
+        alert('❌ La imagen no puede superar los 5MB');
+        return;
+    }
+
+    // Mostrar loading
+    const btn = document.querySelector('#modalNovedad .btn.btn-primary');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Registrando...';
+    btn.disabled = true;
+
+    // Crear FormData
+    const formData = new FormData();
+    formData.append('solicitud_id', solicitudIdNovedad);
+    formData.append('tipo_novedad', tipoNovedad);
+    formData.append('cantidad_afectada', cantidadAfectada);
+    formData.append('descripcion', descripcion);
+    formData.append('imagen_novedad', imagenArchivo);
+
+    fetch('/solicitudes/registrar-novedad', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + (data.message || 'Novedad registrada exitosamente'));
+            bootstrap.Modal.getInstance(document.getElementById('modalNovedad')).hide();
+            location.reload();
+        } else {
+            alert('❌ ' + (data.message || 'Error al registrar la novedad'));
+        }
+    })
+    .catch(error => {
+        alert('❌ Error al registrar la novedad');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+/* ============================
+   GESTIÓN DE NOVEDADES (ACEPTAR / RECHAZAR)
+============================ */
+let solicitudIdGestionNovedad = null;
+
+function mostrarModalGestionNovedad(solicitudId) {
+    solicitudIdGestionNovedad = solicitudId;
+
+    // limpiar campos
+    document.getElementById("gn_solicitud").textContent = '';
+    document.getElementById("gn_novedad_id").textContent = '';
+    document.getElementById("gn_tipo").textContent = '';
+    document.getElementById("gn_cantidad").textContent = '';
+    document.getElementById("gn_estado").textContent = '';
+    document.getElementById("gn_usuario_registra").textContent = '';
+    document.getElementById("gn_fecha_registro").textContent = '';
+    document.getElementById("gn_descripcion").textContent = '';
+    document.getElementById("gn_observaciones").value = '';
+
+    const img = document.getElementById("gn_imagen");
+    const sinImg = document.getElementById("gn_sin_imagen");
+    img.style.display = "none";
+    sinImg.style.display = "none";
+
+    fetch(`/solicitudes/api/${solicitudId}/novedad`)
+        .then(r => {
+            if (!r.ok) throw new Error('Error HTTP ' + r.status);
+            return r.json();
+        })
+        .then(data => {
+            if (!data.success) {
+                alert('❌ ' + (data.error || 'No se pudo cargar la novedad'));
+                return;
+            }
+
+            const n = data.novedad;
+            document.getElementById("gn_solicitud").textContent = '#' + (n.solicitud_id || '');
+            document.getElementById("gn_novedad_id").textContent = n.novedad_id || '';
+            document.getElementById("gn_tipo").textContent = n.tipo_novedad || '';
+            document.getElementById("gn_cantidad").textContent = n.cantidad_afectada != null ? n.cantidad_afectada : '-';
+            document.getElementById("gn_estado").textContent = n.estado_novedad || '';
+            document.getElementById("gn_usuario_registra").textContent = n.usuario_registra || '';
+            document.getElementById("gn_fecha_registro").textContent = n.fecha_registro || '';
+            document.getElementById("gn_descripcion").textContent = n.descripcion || '';
+
+            if (n.imagen_url) {
+                img.src = n.imagen_url;
+                img.style.display = "block";
+                sinImg.style.display = "none";
+            } else {
+                img.style.display = "none";
+                sinImg.style.display = "block";
+            }
+
+            new bootstrap.Modal(document.getElementById("modalGestionNovedad")).show();
+        })
+        .catch(err => {
+            console.error(err);
+            alert('❌ Error al cargar la novedad');
+        });
+}
+
+function procesarGestionNovedad(accion) {
+    if (!solicitudIdGestionNovedad) {
+        alert('Solicitud no válida');
+        return;
+    }
+
+    const msg = accion === 'aceptar'
+        ? '¿Está seguro que desea ACEPTAR la novedad?'
+        : '¿Está seguro que desea RECHAZAR la novedad?';
+
+    if (!confirm(msg)) return;
+
+    const observaciones = document.getElementById("gn_observaciones").value.trim();
+
+    const btn = (accion === 'aceptar')
+        ? document.getElementById("btnAceptarNovedad")
+        : document.getElementById("btnRechazarNovedad");
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Procesando...';
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('solicitud_id', solicitudIdGestionNovedad);
+    formData.append('accion', accion);
+    formData.append('observaciones', observaciones);
+
+    fetch('/solicitudes/gestionar-novedad', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('Error HTTP ' + r.status);
+        return r.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(`✅ Novedad ${accion === 'aceptar' ? 'aceptada' : 'rechazada'} exitosamente`);
+            bootstrap.Modal.getInstance(document.getElementById("modalGestionNovedad")).hide();
+            location.reload();
+        } else {
+            alert('❌ ' + (data.message || 'Error al procesar la novedad'));
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('❌ Error al procesar la novedad');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
 </script>
 {% endblock %}

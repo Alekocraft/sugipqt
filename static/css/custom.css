@@ -3,7 +3,7 @@
 ============================ */
 
 .fade-in {
-    /* ANTES TENÍA opacity:0; — ESO OCULTABA TODA LA VISTA */
+    
     animation: fadeIn 0.6s ease-in forwards;
 }
 

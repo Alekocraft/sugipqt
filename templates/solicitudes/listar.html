@@ -1,106 +1,128 @@
 {% extends "base.html" %}
 {% block title %}Lista de Solicitudes{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2 class="card-title mb-0">
-                        <i class="fas fa-clipboard-list"></i> Lista de Solicitudes
-                    </h2>
-                    <a href="/solicitudes/crear" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Nueva Solicitud
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                    {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    {% endfor %}
-                    {% endif %}
-                    {% endwith %}
-                    {% if solicitudes %}
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Material</th>
-                                    <th>Solicitante</th>
-                                    <th>Oficina</th>
-                                    <th>Cantidad</th>
-                                    <th>Estado</th>
-                                    <th>Fecha Solicitud</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for solicitud in solicitudes %}
-                                <tr>
-                                    <td>{{ solicitud.id }}</td>
-                                    <td>{{ solicitud.material_nombre }}</td>
-                                    <td>{{ solicitud.usuario_solicitante }}</td>
-                                    <td>{{ solicitud.oficina_nombre }}</td>
-                                    <td>{{ solicitud.cantidad_solicitada }}</td>
-                                    <td>
-                                        {% if solicitud.estado == 'aprobada' %}
-                                        <span class="badge bg-success">Aprobada</span>
-                                        {% elif solicitud.estado == 'rechazada' %}
-                                        <span class="badge bg-danger">Rechazada</span>
-                                        {% else %}
-                                        <span class="badge bg-warning">Pendiente</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ solicitud.fecha_solicitud.strftime('%d/%m/%Y %H:%M') if solicitud.fecha_solicitud else 'N/A' }}</td>
-                                    <td>
-                                        {# ✅ CORRECCIÓN: Convertimos el estado a minúsculas para la comparación #}
-                                        {% if solicitud.estado|lower == 'pendiente' and session.rol in ['aprobador', 'administrador'] %}
-                                        <div class="btn-group" role="group">
-                                            <form method="POST" action="/solicitudes/aprobar/{{ solicitud.id }}"
-                                                  style="display: inline;" onsubmit="return confirm('¿Está seguro de que desea APROBAR esta solicitud?');">
-                                                <button type="submit" class="btn btn-success btn-sm">
-                                                    <i class="fas fa-check"></i> Aprobar
-                                                </button>
-                                            </form>
-                                            <button type="button" class="btn btn-danger btn-sm"
-                                                    onclick="mostrarObservacion({{ solicitud.id }})">
-                                                <i class="fas fa-times"></i> Rechazar
-                                            </button>
-                                        </div>
-                                        <!-- Campo de observación oculto -->
-                                        <div id="observacionDiv_{{ solicitud.id }}" class="mt-2" style="display:none;">
-                                            <form method="POST" action="/solicitudes/rechazar/{{ solicitud.id }}">
-                                                <textarea name="observacion" class="form-control" rows="2"
-                                                          placeholder="Observación (opcional)"></textarea>
-                                                <button type="submit" class="btn btn-danger btn-sm mt-1">
-                                                    Confirmar Rechazo
-                                                </button>
-                                            </form>
-                                        </div>
-                                        {% else %}
-                                        <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info text-center">
-                        <i class="fas fa-info-circle"></i> No hay solicitudes registradas.
-                    </div>
-                    {% endif %}
-                </div>
+<div class="container-fluid">
+    <!-- Botón de volver -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <a href="/dashboard" class="btn btn-secondary">
+                ← Volver al Dashboard
+            </a>
+        </div>
+    </div>
+
+    <h1>📋 Lista de Solicitudes</h1>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                📝 Lista de Solicitudes
+                <span class="badge bg-light text-dark">{{ solicitudes|length }} registros</span>
+            </h5>
+            <a href="/solicitudes/crear" class="btn btn-light btn-sm">
+                <i class="fas fa-plus"></i> Nueva Solicitud
+            </a>
+        </div>
+        <div class="card-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+            
+            {% if solicitudes %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Material</th>
+                            <th>Solicitante</th>
+                            <th>Oficina</th>
+                            <th>Cantidad</th>
+                            <th>Estado</th>
+                            <th>Fecha Solicitud</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for solicitud in solicitudes %}
+                        <tr>
+                            <td><strong>#{{ solicitud.id }}</strong></td>
+                            <td>{{ solicitud.material_nombre }}</td>
+                            <td>{{ solicitud.usuario_solicitante }}</td>
+                            <td>{{ solicitud.oficina_nombre }}</td>
+                            <td>
+                                <span class="badge bg-primary">{{ solicitud.cantidad_solicitada }}</span>
+                            </td>
+                            <td>
+                                {% if solicitud.estado == 'aprobada' %}
+                                <span class="badge bg-success">✅ Aprobada</span>
+                                {% elif solicitud.estado == 'rechazada' %}
+                                <span class="badge bg-danger">❌ Rechazada</span>
+                                {% else %}
+                                <span class="badge bg-warning">⏳ Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if solicitud.fecha_solicitud %}
+                                {{ solicitud.fecha_solicitud.strftime('%d/%m/%Y %H:%M') }}
+                                {% else %}
+                                <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {# ✅ CORRECCIÓN: Convertimos el estado a minúsculas para la comparación #}
+                                {% if solicitud.estado|lower == 'pendiente' and session.rol in ['aprobador', 'administrador'] %}
+                                <div class="btn-group" role="group">
+                                    <form method="POST" action="/solicitudes/aprobar/{{ solicitud.id }}"
+                                          style="display: inline;" onsubmit="return confirm('¿Está seguro de que desea APROBAR esta solicitud?');">
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="fas fa-check"></i> Aprobar
+                                        </button>
+                                    </form>
+                                    <button type="button" class="btn btn-danger btn-sm"
+                                            onclick="mostrarObservacion({{ solicitud.id }})">
+                                        <i class="fas fa-times"></i> Rechazar
+                                    </button>
+                                </div>
+                                <!-- Campo de observación oculto -->
+                                <div id="observacionDiv_{{ solicitud.id }}" class="mt-2" style="display:none;">
+                                    <form method="POST" action="/solicitudes/rechazar/{{ solicitud.id }}">
+                                        <textarea name="observacion" class="form-control" rows="2"
+                                                  placeholder="Observación (opcional)"></textarea>
+                                        <button type="submit" class="btn btn-danger btn-sm mt-1">
+                                            Confirmar Rechazo
+                                        </button>
+                                    </form>
+                                </div>
+                                {% else %}
+                                <a href="/solicitudes/{{ solicitud.id }}" class="btn btn-sm btn-outline-primary">
+                                    👁️ Ver
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info text-center mt-3">
+                <h5>📭 No hay solicitudes</h5>
+                <p>No se encontraron solicitudes registradas.</p>
+                <a href="/solicitudes/crear" class="btn btn-primary">➕ Crear Primera Solicitud</a>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
 <script>
     function mostrarObservacion(solicitudId) {
         // Ocultar todos los campos de observación primero
@@ -111,4 +133,18 @@
         document.getElementById(`observacionDiv_${solicitudId}`).style.display = 'block';
     }
 </script>
+
+<style>
+    .table th {
+        white-space: nowrap;
+    }
+
+    .badge {
+        font-size: 0.8em;
+    }
+
+    .card-body h4 {
+        margin-bottom: 0;
+    }
+</style>
 {% endblock %}

@@ -1,4 +1,5 @@
-{% extends "base.html" %} 
+<!-- solicitudes/solicitudes.html-->
+{% extends "base.html" %}
 {% block title %}Gestión de Solicitudes{% endblock %}
 
 {% block content %}
@@ -9,9 +10,19 @@
          LÓGICA DE PERMISOS CORREGIDA
     ============================== -->
     {% set rol_usuario = session.get('rol','')|lower %}
-    {% set puede_crear_novedad = can_create_novedad() %}
-    {% set puede_gestionar_novedad = can_manage_novedad() %}
-    {% set tiene_permisos_aprobacion = rol_usuario in ['administrador', 'aprobador', 'lider_inventario', 'oficina_coq'] %}
+    {% set oficina_usuario = session.get('oficina_nombre', '')|lower %}
+    
+    {# Lógica simplificada para detectar oficinas #}
+    {% set es_oficina_por_nombre = 'oficina' in rol_usuario %}
+    {% set roles_oficina_conocidos = ['oficina_coq', 'oficina_cali', 'oficina_pereira', 'oficina_neiva', 'oficina_kennedy', 'oficina_bucaramanga', 'oficina_polo_club', 'oficina_nogal', 'oficina_tunja', 'oficina_cartagena', 'oficina_morato', 'oficina_medellin', 'oficina_cedritos', 'oficina_lourdes', 'oficina_regular'] %}
+    {% set es_oficina_por_lista = rol_usuario in roles_oficina_conocidos %}
+    {% set es_oficina_por_oficina = oficina_usuario != '' and oficina_usuario != 'administrador' and oficina_usuario != 'lider_inventario' and oficina_usuario != 'aprobador' %}
+    {% set es_oficina = es_oficina_por_nombre or es_oficina_por_lista or es_oficina_por_oficina %}
+    
+    {# Permisos para novedades - Lógica corregida #}
+    {% set puede_crear_novedad = es_oficina or rol_usuario in ['administrador', 'lider_inventario', 'aprobador'] %}
+    {% set puede_gestionar_novedad = rol_usuario in ['administrador', 'lider_inventario', 'aprobador'] %}
+    {% set tiene_permisos_aprobacion = rol_usuario in ['administrador', 'aprobador', 'lider_inventario'] %}
 
     {# =============== 
        MACRO FILA (permite ordenar por estado)
@@ -128,7 +139,7 @@
         </tr>
     {% endmacro %}
 
-    <!-- Filtros -->
+    <!-- Filtros y búsqueda -->
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="card">
@@ -142,6 +153,10 @@
                                 <option value="aprobada" {% if filtro_estado=='aprobada' %}selected{% endif %}>Aprobada</option>
                                 <option value="rechazada" {% if filtro_estado=='rechazada' %}selected{% endif %}>Rechazada</option>
                                 <option value="devuelta" {% if filtro_estado=='devuelta' %}selected{% endif %}>Devuelta</option>
+                                <!-- Nuevos estados para novedades -->
+                                <option value="novedad_registrada" {% if filtro_estado=='novedad_registrada' %}selected{% endif %}>Novedad Registrada</option>
+                                <option value="novedad_aceptada" {% if filtro_estado=='novedad_aceptada' %}selected{% endif %}>Novedad Aceptada</option>
+                                <option value="novedad_rechazada" {% if filtro_estado=='novedad_rechazada' %}selected{% endif %}>Novedad Rechazada</option>
                             </select>
                         </div>
 
@@ -170,7 +185,7 @@
         </div>
     </div>
 
-    <!-- Resumen -->
+    <!-- Resumen de estados -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -223,17 +238,36 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Nuevo card para novedades registradas -->
+                        <div class="col-md-2">
+                            <div class="card bg-secondary text-white clickable-card" onclick="filtrarPorEstado('novedad_registrada')">
+                                <div class="card-body">
+                                    <h6>Novedades</h6>
+                                    <h4>{{ solicitudes_novedad or 0 }}</h4>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Flash messages -->
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
                 <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {% if category == 'success' %}
+                        <i class="fas fa-check-circle me-2"></i>
+                    {% elif category == 'danger' %}
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                    {% elif category == 'warning' %}
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                    {% else %}
+                        <i class="fas fa-info-circle me-2"></i>
+                    {% endif %}
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -241,7 +275,7 @@
         {% endif %}
     {% endwith %}
 
-    <!-- TABLA -->
+    <!-- Tabla -->
     <div class="row">
         <div class="col-md-12">
             <div class="card">
@@ -418,7 +452,7 @@
                     <div class="mb-3">
                         <label for="cantidad_devuelta" class="form-label">Cantidad a Devolver:</label>
                         <input type="number" class="form-control" id="cantidad_devuelta" name="cantidad_devuelta" min="1" required>
-                        <div class="form-text">Máximo a devolver: <span id="maximo_devolucion"></span></div>
+                        <div class="form-text">Máximo: <span id="maximo_devolucion"></span></div>
                     </div>
                 </form>
             </div>
@@ -494,7 +528,7 @@
     </div>
 </div>
 
-<!-- Modal Gestión de Novedad -->
+<!-- Modal Gestión de Novedad - INTEGRADO DEL PRIMER CÓDIGO -->
 <div class="modal fade" id="modalGestionNovedad" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -1070,4 +1104,32 @@ function procesarGestionNovedad(accion) {
     });
 }
 </script>
+
+<style>
+    .table th {
+        white-space: nowrap;
+    }
+
+    .badge {
+        font-size: 0.8em;
+    }
+
+    .card-body h4 {
+        margin-bottom: 0;
+    }
+    
+    .clickable-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .clickable-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .text-muted small {
+        font-size: 0.75em;
+    }
+</style>
 {% endblock %}

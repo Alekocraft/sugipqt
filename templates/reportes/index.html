@@ -1,38 +1,95 @@
 {% extends "base.html" %}
 {% block title %}Sistema de Reportes{% endblock %}
 {% block content %}
-<h1>📊 Sistema de Reportes</h1>
-<a href="/dashboard" class="btn btn-secondary">← Volver al Dashboard</a>
-<div class="row mt-4">
-    <div class="col-md-4">
-        <div class="card text-white bg-primary">
-            <div class="card-body text-center">
-                <h3>📦</h3>
-                <h5>Reporte de Materiales</h5>
-                <p>Inventario completo con trazabilidad</p>
-                <a href="/reportes/materiales" class="btn btn-light">Ver Reporte</a>
+<div class="container-fluid fade-in">
+    <!-- Encabezado compacto -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1 text-primary">
+                <i class="fas fa-chart-bar me-2"></i>Reportes
+            </h1>
+            <p class="text-muted small">Sistema de reportes y análisis</p>
+        </div>
+        <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Tarjetas de reportes -->
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-box me-2"></i>Materiales
+                    </h5>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-box fa-3x text-primary"></i>
+                    </div>
+                    <h6 class="fw-semibold">Reporte de Materiales</h6>
+                    <p class="text-muted small mb-3">Inventario completo con trazabilidad</p>
+                    <a href="/reportes/materiales" class="btn btn-primary btn-sm">
+                        <i class="fas fa-eye me-1"></i>Ver Reporte
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-white bg-success">
-            <div class="card-body text-center">
-                <h3>📋</h3>
-                <h5>Reporte de Solicitudes</h5>
-                <p>Historial y estado de solicitudes</p>
-                <a href="/reportes/solicitudes" class="btn btn-light">Ver Reporte</a>
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>Solicitudes
+                    </h5>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-clipboard-list fa-3x text-success"></i>
+                    </div>
+                    <h6 class="fw-semibold">Reporte de Solicitudes</h6>
+                    <p class="text-muted small mb-3">Historial y estado de solicitudes</p>
+                    <a href="/reportes/solicitudes" class="btn btn-success btn-sm">
+                        <i class="fas fa-eye me-1"></i>Ver Reporte
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-white bg-warning">
-            <div class="card-body text-center">
-                <h3>📈</h3>
-                <h5>Reporte de Inventario</h5>
-                <p>Valoración y estadísticas</p>
-                <a href="/reportes/inventario" class="btn btn-light">Ver Reporte</a>
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-warning text-dark py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Inventario
+                    </h5>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-chart-line fa-3x text-warning"></i>
+                    </div>
+                    <h6 class="fw-semibold">Reporte de Inventario</h6>
+                    <p class="text-muted small mb-3">Valoración y estadísticas</p>
+                    <a href="/reportes/inventario" class="btn btn-warning btn-sm">
+                        <i class="fas fa-eye me-1"></i>Ver Reporte
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .card {
+        border-radius: 8px;
+        transition: transform 0.2s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .card-header {
+        border-bottom: none;
+        font-weight: 600;
+    }
+</style>
 {% endblock %}

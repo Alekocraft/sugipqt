@@ -3,183 +3,201 @@
 {% block title %}Reporte de Materiales{% endblock %}
 
 {% block content %}
-<h1>📦 Reporte Completo de Materiales</h1>
-<!-- Banner informativo -->
-<div class="alert alert-info">
-    <strong>📊 Vista filtrada:</strong>
-    {% if session.rol in ['administrador', 'lider_inventario'] %}
-    Mostrando datos de TODAS las oficinas (acceso total)
-    {% else %}
-    Mostrando datos únicamente de su oficina: <strong>{{ session.oficina_nombre }}</strong>
-    {% endif %}
-</div>
-<a href="/reportes" class="btn btn-secondary">← Volver a Reportes</a>
+<div class="container-fluid fade-in">
+    <!-- Encabezado compacto -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1 text-primary">
+                <i class="fas fa-box me-2"></i>Reporte de Materiales
+            </h1>
+            <p class="text-muted small">Inventario completo con trazabilidad</p>
+        </div>
+        <a href="/reportes" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Volver a Reportes
+        </a>
+    </div>
 
-<!-- Botones de exportación -->
-<div class="row mt-3">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-body">
-                <h5>📊 Exportar Reporte</h5>
-                <button class="btn btn-success" onclick="exportarExcel()">
-                    📊 Exportar a Excel
+    <!-- Banner informativo -->
+    <div class="alert alert-info mb-4">
+        <strong><i class="fas fa-info-circle me-1"></i>Vista filtrada:</strong>
+        {% if session.rol in ['administrador', 'lider_inventario'] %}
+        Mostrando datos de TODAS las oficinas (acceso total)
+        {% else %}
+        Mostrando datos únicamente de su oficina: <strong>{{ session.oficina_nombre }}</strong>
+        {% endif %}
+    </div>
+
+    <!-- Recuadro de Acciones -->
+    <div class="card border-light mb-4">
+        <div class="card-header bg-light py-2">
+            <h6 class="mb-0 fw-semibold">
+                <i class="fas fa-cogs me-1"></i>Acciones
+            </h6>
+        </div>
+        <div class="card-body py-3">
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-success btn-sm" onclick="exportarExcel()">
+                    <i class="fas fa-file-excel me-1"></i>Exportar Excel
                 </button>
-                <button class="btn btn-danger" onclick="exportarPDF()">
-                    📄 Exportar a PDF
+                <button class="btn btn-danger btn-sm" onclick="exportarPDF()">
+                    <i class="fas fa-file-pdf me-1"></i>Exportar PDF
                 </button>
             </div>
         </div>
     </div>
-</div>
 
-<div class="row mt-3">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h5>📊 Resumen General de Materiales</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h6>Total Materiales</h6>
-                                <h4 class="text-primary">{{ materiales|length }}</h4>
-                            </div>
+    <!-- Resumen General -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white py-2">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="fas fa-chart-bar me-1"></i>Resumen General
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 border-end">
+                            <h4 class="fw-bold mb-0 text-primary">{{ materiales|length }}</h4>
+                            <small class="text-muted">Total Materiales</small>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h6>Valor Total Inventario</h6>
-                                <h4 class="text-success">${{ "{:,.2f}".format(valor_total_inventario|default(0)|float) }}</h4>
-                            </div>
+                        <div class="col-md-3 border-end">
+                            <h4 class="fw-bold mb-0 text-success">${{ "{:,.2f}".format(valor_total_inventario|default(0)|float) }}</h4>
+                            <small class="text-muted">Valor Total</small>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h6>Total Solicitudes</h6>
-                                <h4 class="text-warning">{{ total_solicitudes|default(0) }}</h4>
-                            </div>
+                        <div class="col-md-3 border-end">
+                            <h4 class="fw-bold mb-0 text-warning">{{ total_solicitudes|default(0) }}</h4>
+                            <small class="text-muted">Total Solicitudes</small>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h6>Total Entregado</h6>
-                                <h4 class="text-info">{{ total_entregado|default(0) }}</h4>
-                            </div>
+                        <div class="col-md-3">
+                            <h4 class="fw-bold mb-0 text-info">{{ total_entregado|default(0) }}</h4>
+                            <small class="text-muted">Total Entregado</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<div class="row mt-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">📋 Detalle por Material ({{ materiales|length }} registros)</h5>
-                <small class="text-warning">💡 Desplaza horizontalmente para ver todas las columnas</small>
+    <!-- Lista de Materiales -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-success text-white py-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="fas fa-list me-1"></i>Detalle por Material
+                    <span class="badge bg-light text-dark ms-2">{{ materiales|length }}</span>
+                </h6>
+                <small class="text-warning">
+                    <i class="fas fa-info-circle me-1"></i>Desplaza horizontalmente
+                </small>
             </div>
-            <div class="card-body">
-                <div class="table-responsive" style="max-height: 600px; overflow: auto;">
-                    <table class="table table-striped table-hover table-sm" id="tablaMateriales">
-                        <thead class="table-dark sticky-top">
-                            <tr>
-                                <th>ID</th>
-                                <th>Material</th>
-                                <th>Valor Unitario</th>
-                                <th>Stock</th>
-                                <th>Valor Total</th>
-                                <th>Oficina</th>
-                                <th>Fecha Creación</th>
-                                <th>Solicitudes</th>
-                                <th>Aprobadas</th>
-                                <th>Pendientes</th>
-                                <th>Entregado</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for mat in materiales %}
-                            {% set fecha_creacion = mat.fecha_creacion.strftime('%d/%m/%Y') if mat.fecha_creacion else 'N/A' %}
-                            {% set stats = stats_dict.get(mat.id, [0, 0, 0, 0, 0, 0, 0]) %}
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 600px; overflow: auto;">
+                <table class="table table-hover table-sm align-middle mb-0" id="tablaMateriales">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th class="ps-3">ID</th>
+                            <th>Material</th>
+                            <th class="text-end">V. Unitario</th>
+                            <th class="text-center">Stock</th>
+                            <th class="text-end">V. Total</th>
+                            <th>Oficina</th>
+                            <th>Fecha</th>
+                            <th class="text-center">Solicitudes</th>
+                            <th class="text-center">Aprobadas</th>
+                            <th class="text-center">Pendientes</th>
+                            <th class="text-center">Entregado</th>
+                            <th class="text-center pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mat in materiales %}
+                        {% set fecha_creacion = mat.fecha_creacion.strftime('%d/%m/%Y') if mat.fecha_creacion else 'N/A' %}
+                        {% set stats = stats_dict.get(mat.id, [0, 0, 0, 0, 0, 0, 0]) %}
 
-                            {# ✅ MANEJO SEGURO DE VALORES NONE/UNDEFINED #}
-                            {% set valor_total = mat.valor_total|default(0) %}
-                            {% set total_solicitudes_mat = stats[0]|default(0) %}
-                            {% set aprobadas = stats[1]|default(0) %}
-                            {% set pendientes = stats[2]|default(0) %}
-                            {% set entregado = stats[3]|default(0) %}
-                            {% set stock_actual = mat.cantidad|default(0) %}
-                            {% set valor_unitario = mat.valor_unitario|default(0) %}
-                            {% set oficina_nombre = mat.oficina_id|default('N/A') %}
+                        {# ✅ MANEJO SEGURO DE VALORES NONE/UNDEFINED #}
+                        {% set valor_total = mat.valor_total|default(0) %}
+                        {% set total_solicitudes_mat = stats[0]|default(0) %}
+                        {% set aprobadas = stats[1]|default(0) %}
+                        {% set pendientes = stats[2]|default(0) %}
+                        {% set entregado = stats[3]|default(0) %}
+                        {% set stock_actual = mat.cantidad|default(0) %}
+                        {% set valor_unitario = mat.valor_unitario|default(0) %}
+                        {% set oficina_nombre = mat.oficina_id|default('N/A') %}
 
-                            <tr>
-                                <td><strong>{{ mat.id }}</strong></td>
-                                <td>
-                                    <strong>{{ mat.nombre }}</strong>
-                                    {% if mat.usuario_creador %}
-                                    <br><small class="text-muted">Creado por: {{ mat.usuario_creador }}</small>
-                                    {% endif %}
-                                </td>
-                                <td>${{ "{:,.2f}".format(valor_unitario|float) }}</td>
-                                <td>
-                                    <span class="badge bg-{% if stock_actual > 10 %}success{% elif stock_actual > 0 %}warning{% else %}danger{% endif %}">
-                                        {{ stock_actual }} unidades
-                                    </span>
-                                </td>
-                                <td><strong>${{ "{:,.2f}".format(valor_total|float) }}</strong></td>
-                                <td>{{ oficina_nombre }}</td>
-                                <td><small>{{ fecha_creacion }}</small></td>
-                                <td>
-                                    <span class="badge bg-primary">{{ total_solicitudes_mat }}</span>
-                                </td>
-                                <td>
-                                    {% if aprobadas > 0 %}
-                                    <span class="badge bg-success">{{ aprobadas }}</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">0</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if pendientes > 0 %}
-                                    <span class="badge bg-warning">{{ pendientes }}</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">0</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if entregado > 0 %}
-                                    <span class="badge bg-info">{{ entregado }}</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">0</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-center">
-                                    <a href="/reportes/material/{{ mat.id }}"
-                                       class="btn btn-sm btn-info"
-                                       title="Ver trazabilidad completa">
-                                        📈 Trazabilidad
+                        <tr>
+                            <td class="ps-3 fw-semibold small">{{ mat.id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-box me-2 text-muted small"></i>
+                                    <div>
+                                        <strong class="small">{{ mat.nombre }}</strong>
+                                        {% if mat.usuario_creador %}
+                                        <br><small class="text-muted">Creado por: {{ mat.usuario_creador }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end fw-semibold small">${{ "{:,.2f}".format(valor_unitario|float) }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-{% if stock_actual > 10 %}success{% elif stock_actual > 0 %}warning{% else %}danger{% endif %} small">
+                                    {{ stock_actual }}
+                                </span>
+                            </td>
+                            <td class="text-end fw-bold text-primary small">${{ "{:,.2f}".format(valor_total|float) }}</td>
+                            <td class="small">{{ oficina_nombre }}</td>
+                            <td class="small">{{ fecha_creacion }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-primary small">{{ total_solicitudes_mat }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if aprobadas > 0 %}
+                                <span class="badge bg-success small">{{ aprobadas }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary small">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if pendientes > 0 %}
+                                <span class="badge bg-warning small">{{ pendientes }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary small">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if entregado > 0 %}
+                                <span class="badge bg-info small">{{ entregado }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary small">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center pe-3">
+                                <a href="/reportes/material/{{ mat.id }}"
+                                   class="btn btn-sm btn-outline-info"
+                                   title="Ver trazabilidad completa">
+                                    <i class="fas fa-chart-line"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% if not materiales %}
+                        <tr>
+                            <td colspan="12" class="text-center py-5">
+                                <div class="d-flex flex-column align-items-center">
+                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <h6 class="text-muted">No se encontraron materiales</h6>
+                                    <p class="text-muted small">No hay materiales en el sistema</p>
+                                    <a href="/materiales/crear" class="btn btn-primary btn-sm mt-2">
+                                        <i class="fas fa-plus me-1"></i>Crear primer material
                                     </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                {% if not materiales %}
-                <div class="alert alert-info text-center mt-3">
-                    <h5>📭 No hay materiales registrados</h5>
-                    <p>No se encontraron materiales en el sistema.</p>
-                    <a href="/materiales/crear" class="btn btn-primary">➕ Crear Primer Material</a>
-                </div>
-                {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -194,16 +212,27 @@
 
     .table th {
         white-space: nowrap;
-        position: relative;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #dee2e6;
+        padding: 0.5rem;
     }
-
+    
     .table td {
         vertical-align: middle;
+        padding: 0.5rem;
+        font-size: 0.85rem;
     }
-
+    
     .btn-sm {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .badge {
+        font-size: 0.7rem;
     }
 </style>
 {% endblock %}
@@ -222,13 +251,10 @@
             const ws = XLSX.utils.table_to_sheet(tabla);
             XLSX.utils.book_append_sheet(wb, ws, 'Materiales');
             XLSX.writeFile(wb, `Reporte_Materiales_${new Date().toISOString().split('T')[0]}.xlsx`);
-
-            setTimeout(() => {
-                alert('✅ Exportación a Excel completada exitosamente');
-            }, 1000);
+            mostrarNotificacion('✅ Excel exportado correctamente', 'success');
         } catch (error) {
             console.error('Error en exportación Excel:', error);
-            alert('❌ Error al exportar a Excel');
+            mostrarNotificacion('❌ Error al exportar a Excel', 'error');
         }
     }
 
@@ -237,47 +263,52 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // Título del reporte
-            doc.setFontSize(16);
+            doc.setFontSize(12);
             doc.text('Reporte de Materiales - Sistema de Gestión', 14, 15);
-            doc.setFontSize(10);
-            doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 14, 22);
-            doc.text(`Total de materiales: {{ materiales|length }}`, 14, 29);
-            doc.text(`Valor total inventario: ${{ "{:,.2f}".format(valor_total_inventario|default(0)|float) }}`, 14, 36);
+            doc.setFontSize(8);
+            doc.text(`Generado: ${new Date().toLocaleDateString()}`, 14, 22);
+            doc.text(`Total materiales: {{ materiales|length }}`, 14, 29);
 
-            // Crear tabla en PDF
             doc.autoTable({
                 html: '#tablaMateriales',
-                startY: 45,
+                startY: 35,
                 theme: 'grid',
-                headStyles: { fillColor: [66, 139, 202] },
-                styles: { fontSize: 8 },
-                columnStyles: {
-                    0: { cellWidth: 15 },
-                    1: { cellWidth: 40 },
-                    2: { cellWidth: 25 },
-                    3: { cellWidth: 20 },
-                    4: { cellWidth: 25 },
-                    5: { cellWidth: 30 },
-                    6: { cellWidth: 25 },
-                    7: { cellWidth: 20 },
-                    8: { cellWidth: 20 },
-                    9: { cellWidth: 20 },
-                    10: { cellWidth: 20 },
-                    11: { cellWidth: 25 }
-                }
+                headStyles: { fillColor: [111, 66, 193] },
+                styles: { fontSize: 7 }
             });
 
-            // Guardar PDF
             doc.save(`Reporte_Materiales_${new Date().toISOString().split('T')[0]}.pdf`);
-
-            setTimeout(() => {
-                alert('✅ Exportación a PDF completada exitosamente');
-            }, 1000);
+            mostrarNotificacion('✅ PDF exportado correctamente', 'success');
         } catch (error) {
             console.error('Error en exportación PDF:', error);
-            alert('❌ Error al exportar a PDF');
+            mostrarNotificacion('❌ Error al exportar a PDF', 'error');
         }
+    }
+
+    function mostrarNotificacion(mensaje, tipo) {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${tipo === 'success' ? 'success' : 'danger'} border-0 position-fixed`;
+        toast.style.zIndex = '1060';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.fontSize = '0.8rem';
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${mensaje}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', function() {
+            document.body.removeChild(toast);
+        });
     }
 </script>
 {% endblock %}

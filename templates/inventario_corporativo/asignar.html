@@ -1,71 +1,225 @@
 {% extends "base.html" %}
 {% block title %}Asignar a Oficina{% endblock %}
-{% block content %}
 
-<div class="container-fluid fade-in">
+{% block content %}
+<div class="container-fluid">
+    <!-- Botón de volver -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <a href="/inventario-corporativo/{{ producto.id }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Producto
+            </a>
+        </div>
+    </div>
+
+    <h1>📦 Asignar Producto a Oficina</h1>
+
     <div class="row justify-content-center">
-        <div class="col-lg-7">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-share-square"></i> Asignar "{{ producto.nombre }}"</h5>
+        <div class="col-lg-8">
+            <!-- Información del Producto -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información del Producto</h5>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-info">
-                        <strong>Stock disponible:</strong> {{ producto.cantidad }} unidades
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Producto:</strong> {{ producto.nombre }}</p>
+                            <p><strong>Categoría:</strong> 
+                                <span class="badge bg-secondary">{{ producto.categoria or 'Sin categoría' }}</span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Stock Disponible:</strong> 
+                                <span class="badge bg-success fs-6">{{ producto.cantidad }} unidades</span>
+                            </p>
+                            <p><strong>Estado:</strong> 
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>Disponible
+                                </span>
+                            </p>
+                        </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Formulario de Asignación -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-share-square me-2"></i>Asignar Producto</h5>
+                </div>
+                <div class="card-body">
                     <form method="POST">
-                        <div class="mb-3">
-                            <label class="form-label">Oficina</label>
-                            <select class="form-select" name="oficina_id" required>
-                                <option value="" disabled selected>Seleccione una oficina</option>
-                                {% for o in oficinas %}
-                                <option value="{{ o.id }}">{{ o.nombre }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-building me-2"></i>Oficina Destino
+                                    </label>
+                                    <select class="form-select" name="oficina_id" required>
+                                        <option value="" disabled selected>Seleccione una oficina...</option>
+                                        {% for o in oficinas %}
+                                        <option value="{{ o.id }}">{{ o.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Seleccione la oficina a la que asignará el producto</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-boxes me-2"></i>Cantidad a Asignar
+                                    </label>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           name="cantidad" 
+                                           min="1" 
+                                           max="{{ producto.cantidad }}" 
+                                           placeholder="Máximo: {{ producto.cantidad }}" 
+                                           required>
+                                    <div class="form-text">
+                                        Stock máximo disponible: <strong>{{ producto.cantidad }} unidades</strong>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Cantidad a asignar</label>
-                            <input type="number" class="form-control" name="cantidad" min="1" max="{{ producto.cantidad }}" placeholder="Máximo: {{ producto.cantidad }}" required>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <a href="/inventario-corporativo/{{ producto.id }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
-                            <button class="btn btn-success"><i class="fas fa-check"></i> Confirmar asignación</button>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <a href="/inventario-corporativo/{{ producto.id }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check me-2"></i>Confirmar Asignación
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm mt-3">
-                <div class="card-header bg-light"><strong>Historial reciente</strong></div>
-                <div class="card-body p-0">
-                    <table class="table table-sm mb-0">
-                        <thead><tr><th>Fecha</th><th>Acción</th><th>Oficina</th><th>Cant.</th><th>Usuario</th></tr></thead>
-                        <tbody>
-                            {% for h in historial[:10] %}
-                            <tr>
-                                <td>{{ h.Fecha.strftime('%d/%m/%Y %H:%M') if h.Fecha else '' }}</td>
-                                <td>
-                                    {% if h.Accion == 'ASIGNAR' %}
-                                    <span class="badge bg-success">Asignación</span>
-                                    {% elif h.Accion == 'BAJA_PRODUCTO' %}
-                                    <span class="badge bg-danger">Baja</span>
-                                    {% else %}
-                                    {{ h.Accion }}
-                                    {% endif %}
-                                </td>
-                                <td>{{ h.oficina or '-' }}</td>
-                                <td>{{ h.Cantidad }}</td>
-                                <td>{{ h.UsuarioAccion }}</td>
-                            </tr>
-                            {% else %}
-                            <tr><td colspan="5" class="text-center text-muted py-3">Sin movimientos registrados</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            <!-- Historial de Movimientos -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial Reciente de Movimientos</h5>
                 </div>
+                <div class="card-body p-0">
+                    {% if historial %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Acción</th>
+                                    <th>Oficina</th>
+                                    <th>Cantidad</th>
+                                    <th>Usuario</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for h in historial[:10] %}
+                                <tr>
+                                    <td>
+                                        {% if h.Fecha %}
+                                        {{ h.Fecha.strftime('%d/%m/%Y %H:%M') }}
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if h.Accion == 'ASIGNAR' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-share-square me-1"></i>Asignación
+                                        </span>
+                                        {% elif h.Accion == 'BAJA_PRODUCTO' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-trash me-1"></i>Baja
+                                        </span>
+                                        {% elif h.Accion == 'AJUSTE' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-adjust me-1"></i>Ajuste
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-exchange-alt me-1"></i>{{ h.Accion }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if h.oficina %}
+                                        <span class="badge bg-outline-primary">
+                                            <i class="fas fa-building me-1"></i>{{ h.oficina }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ h.Cantidad }}</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ h.UsuarioAccion or 'Sistema' }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay movimientos registrados</h5>
+                        <p class="text-muted">Este producto no tiene historial de movimientos.</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if historial|length > 10 %}
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Mostrando los 10 movimientos más recientes
+                    </small>
+                </div>
+                {% endif %}
             </div>
-
         </div>
     </div>
 </div>
+
+<style>
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .table th {
+        white-space: nowrap;
+    }
+    
+    .badge {
+        font-size: 0.8em;
+    }
+    
+    .bg-outline-primary {
+        background-color: transparent;
+        border: 1px solid #0d6efd;
+        color: #0d6efd;
+    }
+    
+    .form-select:focus, .form-control:focus {
+        border-color: #198754;
+        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+    }
+    
+    .btn-success {
+        transition: all 0.3s ease;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+    }
+</style>
 {% endblock %}

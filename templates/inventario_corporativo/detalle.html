@@ -1,37 +1,122 @@
 {% extends "base.html" %}
-{% block title %}Detalle de Producto{% endblock %}
-{% block content %}
+{% block title %}Detalle de Producto - {{ producto.nombre }}{% endblock %}
 
-<div class="container-fluid fade-in">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2><i class="fas fa-box"></i> {{ producto.nombre }}</h2>
-        <a href="/inventario-corporativo" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
+{% block content %}
+<div class="container-fluid">
+    <!-- Botón de volver -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <a href="/inventario-corporativo" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Inventario
+            </a>
+        </div>
     </div>
 
+    <h1>📦 Detalle de Producto</h1>
+
     <div class="row">
+        <!-- Información del Producto -->
         <div class="col-lg-6">
-            <div class="card mb-3">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información General</h5>
+                </div>
                 <div class="card-body">
-                    <p><strong>Código:</strong> {{ producto.codigo_unico }}</p>
-                    <p><strong>Categoría:</strong> {{ producto.categoria }}</p>
-                    <p><strong>Proveedor:</strong> {{ producto.proveedor }}</p>
-                    <p><strong>Valor Unitario:</strong> ${{ "{:,.0f}".format(producto.valor_unitario) }}</p>
-                    <p><strong>Stock:</strong> {{ producto.cantidad }} (mín: {{ producto.cantidad_minima or 0 }})</p>
-                    <p><strong>Ubicación:</strong> {{ producto.ubicacion or 'No especificada' }}</p>
-                    <p><strong>Asignable:</strong> {% if producto.es_asignable %}<span class="badge bg-success">Sí</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong><i class="fas fa-barcode me-2"></i>Código:</strong>
+                                <p class="mt-1">{{ producto.codigo_unico }}</p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong><i class="fas fa-tags me-2"></i>Categoría:</strong>
+                                <p class="mt-1">
+                                    <span class="badge bg-secondary">{{ producto.categoria or 'Sin categoría' }}</span>
+                                </p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong><i class="fas fa-truck me-2"></i>Proveedor:</strong>
+                                <p class="mt-1">{{ producto.proveedor or 'No especificado' }}</p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong><i class="fas fa-dollar-sign me-2"></i>Valor Unitario:</strong>
+                                <p class="mt-1 fs-5 text-success fw-bold">
+                                    ${{ "{:,.0f}".format(producto.valor_unitario) }}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong><i class="fas fa-boxes me-2"></i>Stock:</strong>
+                                <div class="mt-1">
+                                    <span class="badge {% if producto.cantidad <= (producto.cantidad_minima or 0) %}bg-warning{% else %}bg-success{% endif %} fs-6">
+                                        {{ producto.cantidad }} unidades
+                                    </span>
+                                    {% if producto.cantidad_minima %}
+                                    <small class="text-muted d-block mt-1">
+                                        Mínimo: {{ producto.cantidad_minima }} unidades
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong><i class="fas fa-map-marker-alt me-2"></i>Ubicación:</strong>
+                                <p class="mt-1">{{ producto.ubicacion or 'No especificada' }}</p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong><i class="fas fa-share-square me-2"></i>Asignable:</strong>
+                                <p class="mt-1">
+                                    {% if producto.es_asignable %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Sí
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-times me-1"></i>No
+                                    </span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Imagen del Producto -->
                     {% if producto.ruta_imagen %}
-                    <img src="{{ producto.ruta_imagen if producto.ruta_imagen.startswith('/') else '/' ~ producto.ruta_imagen }}" class="rounded mt-2" style="max-width:240px;">
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <strong><i class="fas fa-image me-2"></i>Imagen del Producto:</strong>
+                            <div class="mt-2 text-center">
+                                <img src="{{ producto.ruta_imagen if producto.ruta_imagen.startswith('/') else '/' ~ producto.ruta_imagen }}" 
+                                     class="img-fluid rounded shadow-sm" 
+                                     style="max-height: 200px; max-width: 100%;" 
+                                     alt="{{ producto.nombre }}"
+                                     onerror="this.style.display='none'">
+                            </div>
+                        </div>
+                    </div>
                     {% endif %}
                 </div>
             </div>
         </div>
+
+        <!-- Historial y Acciones -->
         <div class="col-lg-6">
-            <div class="card mb-3">
-                <div class="card-header bg-light"><strong>Historial de movimientos</strong></div>
+            <!-- Historial de Movimientos -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Movimientos</h5>
+                </div>
                 <div class="card-body p-0">
+                    {% if historial %}
                     <div class="table-responsive">
-                        <table class="table table-sm mb-0">
-                            <thead>
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-dark">
                                 <tr>
                                     <th>Fecha</th>
                                     <th>Acción</th>
@@ -43,32 +128,132 @@
                             <tbody>
                                 {% for h in historial %}
                                 <tr>
-                                    <td>{{ h.Fecha.strftime('%d/%m/%Y %H:%M') if h.Fecha else '' }}</td>
-                                    <td>{{ h.Accion }}</td>
-                                    <td>{{ h.oficina or '-' }}</td>
-                                    <td>{{ h.Cantidad }}</td>
-                                    <td>{{ h.UsuarioAccion }}</td>
+                                    <td>
+                                        <small>
+                                            {% if h.Fecha %}
+                                            {{ h.Fecha.strftime('%d/%m/%Y %H:%M') }}
+                                            {% else %}
+                                            <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if h.Accion == 'ASIGNAR' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-share-square me-1"></i>Asignación
+                                        </span>
+                                        {% elif h.Accion == 'BAJA_PRODUCTO' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-trash me-1"></i>Baja
+                                        </span>
+                                        {% elif h.Accion == 'AJUSTE' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-adjust me-1"></i>Ajuste
+                                        </span>
+                                        {% elif h.Accion == 'CREACION' %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-plus me-1"></i>Creación
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-exchange-alt me-1"></i>{{ h.Accion }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if h.oficina %}
+                                        <small>{{ h.oficina }}</small>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ h.Cantidad }}</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ h.UsuarioAccion or 'Sistema' }}</small>
+                                    </td>
                                 </tr>
-                                {% else %}
-                                <tr><td colspan="5" class="text-center text-muted py-3">Sin movimientos</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                        <h6 class="text-muted">No hay movimientos registrados</h6>
+                        <p class="text-muted small">Este producto no tiene historial de movimientos.</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
-            <div class="d-flex gap-2">
-                <a class="btn btn-outline-warning" href="/inventario-corporativo/editar/{{ producto.id }}"><i class="fas fa-edit"></i> Editar</a>
-                {% if producto.es_asignable %}
-                <a class="btn btn-outline-success" href="/inventario-corporativo/asignar/{{ producto.id }}"><i class="fas fa-share-square"></i> Asignar</a>
-                {% endif %}
-                <form action="/inventario-corporativo/eliminar/{{ producto.id }}" method="POST" onsubmit="return confirm('¿Eliminar este producto?')">
-                    <button class="btn btn-outline-danger"><i class="fas fa-trash"></i> Eliminar</button>
-                </form>
+            <!-- Acciones -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Acciones</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="/inventario-corporativo/editar/{{ producto.id }}" class="btn btn-warning btn-modulo">
+                            <i class="fas fa-edit me-2"></i>Editar
+                        </a>
+                        
+                        {% if producto.es_asignable %}
+                        <a href="/inventario-corporativo/asignar/{{ producto.id }}" class="btn btn-success btn-modulo">
+                            <i class="fas fa-share-square me-2"></i>Asignar
+                        </a>
+                        {% endif %}
+                        
+                        <form action="/inventario-corporativo/eliminar/{{ producto.id }}" method="POST" 
+                              onsubmit="return confirm('¿Está seguro que desea eliminar el producto \"{{ producto.nombre }}\"? Esta acción no se puede deshacer.')"
+                              class="d-inline">
+                            <button type="submit" class="btn btn-danger btn-modulo">
+                                <i class="fas fa-trash me-2"></i>Eliminar
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
+<style>
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .table th {
+        white-space: nowrap;
+        font-size: 0.875rem;
+    }
+    
+    .badge {
+        font-size: 0.75em;
+    }
+    
+    .btn-modulo {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .btn-modulo:hover {
+        transform: translateY(-2px);
+        border-color: currentColor;
+    }
+    
+    .card {
+        border-radius: 8px;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.075);
+    }
+</style>
+{% endblock %}

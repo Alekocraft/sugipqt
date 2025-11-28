@@ -1,10 +1,20 @@
+<!-- solicitudes/crear.html -->
 {% extends "base.html" %}
 
 {% block title %}Crear Solicitud{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1>Crear Nueva Solicitud</h1>
+<div class="container-fluid">
+    <!-- Botón de volver -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <a href="/dashboard" class="btn btn-secondary">
+                ← Volver al Dashboard
+            </a>
+        </div>
+    </div>
+
+    <h1>📝 Crear Nueva Solicitud</h1>
 
     <!-- Mostrar mensajes de error -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -35,7 +45,7 @@
 
     <div class="card">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Formulario de Solicitud</h5>
+            <h5 class="mb-0">📋 Formulario de Solicitud</h5>
         </div>
         <div class="card-body">
             <form method="POST" action="/solicitudes/crear">
@@ -150,8 +160,8 @@
                     <div class="col-md-6">
                         <!-- Información del Material Seleccionado -->
                         <div class="card bg-light mt-3">
-                            <div class="card-header">
-                                <strong>Información del Material</strong>
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><strong>📦 Información del Material</strong></h6>
                             </div>
                             <div class="card-body">
                                 <div id="imagen-material" class="text-center mb-3" style="display: none;">
@@ -173,9 +183,9 @@
                         </div>
 
                         <!-- Resumen de la Solicitud -->
-                        <div class="card bg-info text-white mt-3">
+                        <div class="card bg-primary text-white mt-3">
                             <div class="card-header">
-                                <strong>Resumen de la Solicitud</strong>
+                                <h6 class="mb-0"><strong>💰 Resumen de la Solicitud</strong></h6>
                             </div>
                             <div class="card-body">
                                 <div id="resumen-solicitud">
@@ -194,11 +204,11 @@
                     <div class="col-12">
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                             <a href="/dashboard" class="btn btn-secondary me-md-2">
-                                Cancelar
+                                ❌ Cancelar
                             </a>
                             {% if materiales %}
                             <button type="submit" class="btn btn-success">
-                                Crear Solicitud
+                                ✅ Crear Solicitud
                             </button>
                             {% else %}
                             <button type="button" class="btn btn-success" disabled>
@@ -349,6 +359,18 @@
     select:disabled {
         background-color: #e9ecef;
         cursor: not-allowed;
+    }
+    
+    .table th {
+        white-space: nowrap;
+    }
+
+    .badge {
+        font-size: 0.8em;
+    }
+
+    .card-body h4 {
+        margin-bottom: 0;
     }
 </style>
 {% endblock %}
