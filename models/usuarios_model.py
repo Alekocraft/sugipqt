@@ -143,48 +143,43 @@ class UsuarioModel:
                 cursor.close()
             finally:
                 conn.close()
-
+    
     @staticmethod
-    def obtener_aprobadores() -> List[Dict[str, Any]]:
-        """
-        Lista usuarios activos con roles que pueden aprobar.
-
-        Retorna
-        -------
-        list[dict]
-            Lista de diccionarios con {id, nombre, usuario, rol, oficina_id}.
-        """
-        conn = get_database_connection()
-        if conn is None:
-            return []
-
-        cursor = conn.cursor()
+    def obtener_aprobadores():
+        """Obtener todos los aprobadores desde la tabla Aprobadores"""
         try:
-            cursor.execute(
-                """
-                SELECT UsuarioId, NombreUsuario, Rol, OficinaId
-                FROM Usuarios
-                WHERE Rol IN ('aprobador', 'oficina_principal', 'administrador')
-                  AND Activo = 1
-                ORDER BY NombreUsuario
-                """
-            )
-
-            aprobadores: List[Dict[str, Any]] = []
+            conn = get_database_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT 
+                    AprobadorId,
+                    NombreAprobador,
+                    Email,
+                    Activo,
+                    FechaCreacion
+                FROM Aprobadores
+                ORDER BY NombreAprobador
+            """)
+            
+            # Convertir resultados a lista de diccionarios
+            columns = [column[0] for column in cursor.description]
+            aprobadores = []
             for row in cursor.fetchall():
-                aprobadores.append(
-                    {
-                        "id": row[0],
-                        "nombre": row[1],
-                        "usuario": row[1],
-                        "rol": row[2],
-                        "oficina_id": row[3] if row[3] is not None else 1,
-                    }
-                )
+                aprobador_dict = {}
+                for i, column in enumerate(columns):
+                    aprobador_dict[column] = row[i]
+                aprobadores.append(aprobador_dict)
+            
+            cursor.close()
+            conn.close()
+            
+            print(f"✅ Aprobadores obtenidos: {len(aprobadores)} registros")
+            if aprobadores:
+                print(f"✅ Primer aprobador: {aprobadores[0]}")
+            
             return aprobadores
-
-        finally:
-            try:
-                cursor.close()
-            finally:
-                conn.close()
+            
+        except Exception as e:
+            print(f"❌ Error en obtener_aprobadores: {str(e)}")
+            return []

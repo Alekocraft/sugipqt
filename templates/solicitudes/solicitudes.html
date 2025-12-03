@@ -1,4 +1,4 @@
-<!-- solicitudes/solicitudes.html-->
+<!-- solicitudes/solicitudes.html -->
 {% extends "base.html" %}
 {% block title %}Gestión de Solicitudes{% endblock %}
 
@@ -703,6 +703,57 @@ function formatoMoneda(valor) {
 }
 
 /* ============================
+   RECHAZAR SOLICITUD - CORREGIDO
+============================ */
+let solicitudIdRechazar = null;
+
+function mostrarModalRechazar(id, materialNombre, solicitanteNombre) {
+    solicitudIdRechazar = id;
+    
+    document.getElementById("infoMaterialRechazar").textContent = materialNombre;
+    document.getElementById("infoSolicitanteRechazar").textContent = solicitanteNombre;
+    document.getElementById("observacion").value = "";
+
+    new bootstrap.Modal(document.getElementById("modalRechazar")).show();
+}
+
+// En solicitudes.html, actualiza la función confirmarRechazo()
+function confirmarRechazo() {
+    const motivo = document.getElementById("observacion").value.trim();
+    if (!motivo) {
+        alert("Debe ingresar un motivo para rechazar la solicitud");
+        return;
+    }
+
+    // Crear formulario dinámico para enviar la solicitud
+    // NOTA IMPORTANTE: Usa /solicitudes/rechazar/ en lugar de /rechazar/
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/solicitudes/rechazar/${solicitudIdRechazar}`;
+    
+    // Agregar el campo de observación
+    const observacionInput = document.createElement('input');
+    observacionInput.type = 'hidden';
+    observacionInput.name = 'observacion';
+    observacionInput.value = motivo;
+    form.appendChild(observacionInput);
+    
+    // Agregar CSRF token si está disponible
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    if (csrfMeta) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfMeta.content;
+        form.appendChild(csrfInput);
+    }
+    
+    // Agregar formulario al DOM y enviar
+    document.body.appendChild(form);
+    form.submit();
+}
+
+/* ============================
    APROBACIÓN PARCIAL
 ============================ */
 let solicitudIdParcial = null;
@@ -736,35 +787,9 @@ function confirmarAprobacionParcial() {
         return;
     }
 
+    // Usa la ruta correcta del blueprint solicitudes_bp
     const form = document.getElementById("formAprobacionParcial");
     form.action = `/solicitudes/aprobar_parcial/${solicitudIdParcial}`;
-    form.submit();
-}
-
-/* ============================
-   RECHAZAR SOLICITUD
-============================ */
-let solicitudIdRechazar = null;
-
-function mostrarModalRechazar(id, materialNombre, solicitanteNombre) {
-    solicitudIdRechazar = id;
-    
-    document.getElementById("infoMaterialRechazar").textContent = materialNombre;
-    document.getElementById("infoSolicitanteRechazar").textContent = solicitanteNombre;
-    document.getElementById("observacion").value = "";
-
-    new bootstrap.Modal(document.getElementById("modalRechazar")).show();
-}
-
-function confirmarRechazo() {
-    const motivo = document.getElementById("observacion").value.trim();
-    if (!motivo) {
-        alert("Debe ingresar un motivo");
-        return;
-    }
-
-    const form = document.getElementById("formRechazar");
-    form.action = `/solicitudes/rechazar/${solicitudIdRechazar}`;
     form.submit();
 }
 

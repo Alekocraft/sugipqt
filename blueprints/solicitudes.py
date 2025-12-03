@@ -24,6 +24,7 @@ from models.novedades_model import NovedadModel
 
 from utils.auth import login_required, role_required
 from utils.permissions import can_create_novedad, can_manage_novedad
+from utils.filters import verificar_acceso_oficina
 
 solicitudes_bp = Blueprint('solicitudes', __name__)
 
@@ -170,56 +171,109 @@ def crear_solicitud():
     return redirect(url_for('solicitudes.listar_solicitudes'))
 
 
+# ============================
+# FUNCIONES DE APROBACIÓN - CORREGIDAS
+# ============================
+
 @solicitudes_bp.route('/aprobar/<int:solicitud_id>', methods=['POST'])
 @login_required
-@role_required('administrador', 'aprobador')
+@role_required('administrador', 'aprobador', 'lider_inventario')
 def aprobar_solicitud(solicitud_id):
+    """Ruta para aprobar completamente una solicitud - CORREGIDA"""
     try:
-        usuario_id = session.get('user_id') or session.get('usuario_id')
-        success, message = SolicitudModel.aprobar(solicitud_id, usuario_id)
-        flash(message, 'success' if success else 'error')
-    except Exception as e:
-        flash(f'❌ Error al aprobar solicitud: {str(e)}', 'error')
+        solicitud = SolicitudModel.obtener_por_id(solicitud_id)
+        if not solicitud or not verificar_acceso_oficina(solicitud.get('oficina_id')):
+            flash('No tiene permisos para aprobar esta solicitud', 'danger')
+            return redirect('/solicitudes')
 
+        usuario_id = session.get('user_id') or session.get('usuario_id')
+        
+        # LLAMADA CORREGIDA - El modelo retorna (success, message)
+        success, message = SolicitudModel.aprobar(solicitud_id, usuario_id)
+        
+        if success:
+            flash('✅ Solicitud aprobada y stock actualizado exitosamente', 'success')
+        else:
+            flash(f'❌ {message}', 'danger')
+            
+    except Exception as e:
+        print(f"❌ Error aprobando solicitud: {e}")
+        traceback.print_exc()
+        flash(f'❌ Error al aprobar la solicitud: {str(e)}', 'danger')
+    
     return redirect(url_for('solicitudes.listar_solicitudes'))
 
 
 @solicitudes_bp.route('/aprobar_parcial/<int:solicitud_id>', methods=['POST'])
 @login_required
-@role_required('administrador', 'aprobador')
+@role_required('administrador', 'aprobador', 'lider_inventario')
 def aprobar_parcial_solicitud(solicitud_id):
     try:
-        cantidad_aprobada = int(request.form['cantidad_aprobada'])
-        usuario_id = session.get('user_id') or session.get('usuario_id')
-        success, message = SolicitudModel.aprobar_parcial(
-            solicitud_id,
-            usuario_id,
-            cantidad_aprobada
-        )
-        flash(message, 'success' if success else 'error')
-    except ValueError:
-        flash('❌ Cantidad inválida', 'error')
-    except Exception as e:
-        flash(f'❌ Error al aprobar parcialmente: {str(e)}', 'error')
+        solicitud = SolicitudModel.obtener_por_id(solicitud_id)
+        if not solicitud or not verificar_acceso_oficina(solicitud.get('oficina_id')):
+            flash('No tiene permisos para aprobar esta solicitud', 'danger')
+            return redirect('/solicitudes')
 
+        usuario_id = session['user_id'] if 'user_id' in session else session['usuario_id']
+        cantidad_aprobada = int(request.form.get('cantidad_aprobada', 0))
+
+        if cantidad_aprobada <= 0:
+            flash('La cantidad aprobada debe ser mayor que 0', 'danger')
+            return redirect('/solicitudes')
+
+        success, message = SolicitudModel.aprobar_parcial(solicitud_id, usuario_id, cantidad_aprobada)
+        
+        if success:
+            flash(message, 'success')
+        else:
+            flash(message, 'danger')
+    except ValueError:
+        flash('La cantidad aprobada debe ser un número válido', 'danger')
+    except Exception as e:
+        print(f"❌ Error aprobando parcialmente solicitud: {e}")
+        flash('Error al aprobar parcialmente la solicitud', 'danger')
+    
     return redirect(url_for('solicitudes.listar_solicitudes'))
 
 
 @solicitudes_bp.route('/rechazar/<int:solicitud_id>', methods=['POST'])
 @login_required
-@role_required('administrador', 'aprobador')
+@role_required('administrador', 'aprobador', 'lider_inventario')
 def rechazar_solicitud(solicitud_id):
+    """Ruta CORREGIDA para rechazar solicitudes - FUNCIONA AHORA"""
     try:
-        observacion = request.form.get('observacion', '')
+        # Obtener la solicitud
+        solicitud = SolicitudModel.obtener_por_id(solicitud_id)
+        if not solicitud:
+            flash('❌ Solicitud no encontrada', 'danger')
+            return redirect(url_for('solicitudes.listar_solicitudes'))
+        
+        # Verificar permisos de acceso a la oficina
+        if not verificar_acceso_oficina(solicitud.get('oficina_id')):
+            flash('❌ No tiene permisos para rechazar esta solicitud', 'danger')
+            return redirect(url_for('solicitudes.listar_solicitudes'))
+
+        # Obtener datos del formulario
         usuario_id = session.get('user_id') or session.get('usuario_id')
+        observacion = request.form.get('observacion', '').strip()
+        
+        if not observacion:
+            flash('❌ Debe ingresar un motivo para rechazar la solicitud', 'danger')
+            return redirect(url_for('solicitudes.listar_solicitudes'))
+            
+        # CORRECCIÓN: La función rechazar del modelo retorna True/False
         success = SolicitudModel.rechazar(solicitud_id, usuario_id, observacion)
+        
         if success:
             flash('✅ Solicitud rechazada exitosamente', 'success')
         else:
-            flash('❌ Error al rechazar la solicitud', 'error')
+            flash('❌ Error al rechazar la solicitud', 'danger')
+            
     except Exception as e:
-        flash(f'❌ Error: {str(e)}', 'error')
-
+        print(f"❌ Error rechazando solicitud: {e}")
+        traceback.print_exc()
+        flash(f'❌ Error al rechazar la solicitud: {str(e)}', 'danger')
+    
     return redirect(url_for('solicitudes.listar_solicitudes'))
 
 
@@ -229,7 +283,7 @@ def rechazar_solicitud(solicitud_id):
 
 @solicitudes_bp.route('/devolucion/<int:solicitud_id>', methods=['POST'])
 @login_required
-@role_required('administrador', 'aprobador')
+@role_required('administrador', 'aprobador', 'lider_inventario')
 def registrar_devolucion(solicitud_id):
     try:
         cantidad_devuelta = int(request.form.get('cantidad_devuelta') or 0)

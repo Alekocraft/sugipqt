@@ -32,16 +32,74 @@ class SolicitudModel:
     def aprobar(solicitud_id, usuario_aprobador_id):
         conn = get_database_connection()
         if conn is None:
-            return False, "Error de conexión"
+            return False, "❌ Error de conexión a la base de datos"
         cursor = conn.cursor()
         try:
+            # PRIMERO: Obtener información de la solicitud
+            cursor.execute("""
+                SELECT sm.MaterialId, sm.CantidadSolicitada, sm.EstadoId,
+                       m.ValorUnitario, m.CantidadDisponible, sm.PorcentajeOficina
+                FROM dbo.SolicitudesMaterial sm
+                INNER JOIN dbo.Materiales m ON sm.MaterialId = m.MaterialId
+                WHERE sm.SolicitudId = ? AND sm.EstadoId = 1
+            """, (solicitud_id,))
+            
+            solicitud_info = cursor.fetchone()
+            
+            if not solicitud_info:
+                return False, "❌ Solicitud no encontrada o no está pendiente"
+            
+            material_id, cantidad_solicitada, estado_id, valor_unitario, stock_disponible, porcentaje_oficina = solicitud_info
+            
+            # VERIFICAR STOCK DISPONIBLE
+            if cantidad_solicitada > stock_disponible:
+                return False, f"❌ Stock insuficiente. Disponible: {stock_disponible}, Solicitado: {cantidad_solicitada}"
+            
+            # OBTENER APROBADOR ID
             aprobador_id = SolicitudModel._obtener_aprobador_id(usuario_aprobador_id)
-            cursor.execute(
-                "{CALL sp_AprobarSolicitud (?, ?)}",
-                (solicitud_id, aprobador_id)
-            )
+            
+            # CALCULAR VALORES FINANCIEROS
+            valor_total_solicitado = valor_unitario * cantidad_solicitada
+            valor_oficina = valor_total_solicitado * (porcentaje_oficina / 100)
+            valor_sede_principal = valor_total_solicitado - valor_oficina
+            
+            # EJECUTAR APROBACIÓN COMPLETA
+            cursor.execute("""
+                BEGIN TRANSACTION;
+                
+                -- 1. APROBAR LA SOLICITUD
+                UPDATE dbo.SolicitudesMaterial 
+                SET EstadoId = 2, -- Aprobada
+                    AprobadorId = ?,
+                    FechaAprobacion = GETDATE(),
+                    CantidadEntregada = ?,
+                    ValorTotalSolicitado = ?,
+                    ValorOficina = ?,
+                    ValorSedePrincipal = ?,
+                    FechaUltimaEntrega = GETDATE()
+                WHERE SolicitudId = ? AND EstadoId = 1;
+                
+                -- 2. ACTUALIZAR STOCK (restar cantidad solicitada)
+                UPDATE dbo.Materiales 
+                SET CantidadDisponible = CantidadDisponible - ?
+                WHERE MaterialId = ?;
+                
+                -- 3. REGISTRAR EN HISTORIAL DE ENTREGAS
+                INSERT INTO dbo.HistorialEntregas (
+                    SolicitudId, CantidadEntregada, UsuarioEntrega, Observaciones
+                ) VALUES (?, ?, 'Sistema', 'Aprobación completa');
+                
+                COMMIT TRANSACTION;
+            """, (
+                aprobador_id, cantidad_solicitada, valor_total_solicitado, 
+                valor_oficina, valor_sede_principal, solicitud_id,
+                cantidad_solicitada, material_id,
+                solicitud_id, cantidad_solicitada
+            ))
+            
             conn.commit()
-            return True, "✅ Solicitud aprobada exitosamente"
+            return True, f"✅ Solicitud aprobada exitosamente. Stock actualizado: -{cantidad_solicitada} unidades"
+            
         except Exception as e:
             conn.rollback()
             err = str(e)
@@ -49,7 +107,9 @@ class SolicitudModel:
                 return False, "❌ Límite mensual excedido"
             if "Stock insuficiente" in err or "excede el inventario" in err:
                 return False, "❌ Stock insuficiente"
-            return False, f"❌ Error: {err}"
+            if "Solicitud no encontrada" in err:
+                return False, "❌ Solicitud no encontrada"
+            return False, f"❌ Error al aprobar: {err}"
         finally:
             cursor.close()
             conn.close()
@@ -81,7 +141,7 @@ class SolicitudModel:
         finally:
             cursor.close()
             conn.close()
-
+            
     @staticmethod
     def rechazar(solicitud_id, usuario_aprobador_id, observacion=""):
         conn = get_database_connection()
@@ -217,11 +277,7 @@ class SolicitudModel:
                     sm.CantidadEntregada,
                     sm.EstadoId,
                     ISNULL(sm.CantidadEntregada,0) 
-                      - ISNULL((
-                            SELECT SUM(d.CantidadDevuelta)
-                            FROM Devoluciones d
-                            WHERE d.SolicitudId = sm.SolicitudId
-                        ), 0) AS CantidadPuedeDevolver
+                      - ISNULL((SELECT SUM(d.CantidadDevuelta) FROM Devoluciones d WHERE d.SolicitudId = sm.SolicitudId), 0) AS CantidadPuedeDevolver
                 FROM dbo.SolicitudesMaterial sm
                 WHERE sm.SolicitudId = ?
             """, (solicitud_id,))

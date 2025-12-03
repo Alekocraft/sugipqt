@@ -36,7 +36,7 @@ from blueprints.solicitudes import solicitudes_bp
 from blueprints.oficinas import oficinas_bp
 from blueprints.aprobadores import aprobadores_bp
 from blueprints.reportes import reportes_bp
-from blueprints.aprobacion import aprobacion_bp
+# ELIMINADO: from blueprints.aprobacion import aprobacion_bp
 from blueprints.api import api_bp
 
 # ===============================
@@ -131,7 +131,6 @@ app.register_blueprint(materiales_bp)
 app.register_blueprint(oficinas_bp)
 app.register_blueprint(aprobadores_bp)
 app.register_blueprint(reportes_bp)
-app.register_blueprint(aprobacion_bp)
 app.register_blueprint(api_bp)
 
 # ===============================
