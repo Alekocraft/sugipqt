@@ -1021,6 +1021,8 @@ let solicitudIdGestionNovedad = null;
 function mostrarModalGestionNovedad(solicitudId) {
     solicitudIdGestionNovedad = solicitudId;
 
+    console.log(`🔍 DEBUG: Llamando API para novedad de solicitud ${solicitudId}`);
+
     // limpiar campos
     document.getElementById("gn_solicitud").textContent = '';
     document.getElementById("gn_novedad_id").textContent = '';
@@ -1039,39 +1041,67 @@ function mostrarModalGestionNovedad(solicitudId) {
 
     fetch(`/solicitudes/api/${solicitudId}/novedad`)
         .then(r => {
-            if (!r.ok) throw new Error('Error HTTP ' + r.status);
+            console.log(`🔍 DEBUG: Status respuesta: ${r.status} ${r.statusText}`);
+            if (!r.ok) {
+                console.error(`❌ DEBUG: Error HTTP ${r.status}`);
+                return r.text().then(text => {
+                    console.error(`❌ DEBUG: Respuesta error: ${text}`);
+                    throw new Error('Error HTTP ' + r.status + ': ' + text);
+                });
+            }
             return r.json();
         })
         .then(data => {
+            console.log('🔍 DEBUG: Datos recibidos:', data);
+            
             if (!data.success) {
+                console.error(`❌ DEBUG: API retornó success=false:`, data.error);
                 alert('❌ ' + (data.error || 'No se pudo cargar la novedad'));
                 return;
             }
 
             const n = data.novedad;
+            console.log('🔍 DEBUG: Datos novedad:', n);
+            
+            // Verificar que tenemos los datos necesarios
+            if (!n.novedad_id && !n.id) {
+                console.error('❌ DEBUG: No se encontró ID de novedad');
+                alert('❌ No se pudo identificar la novedad');
+                return;
+            }
+
             document.getElementById("gn_solicitud").textContent = '#' + (n.solicitud_id || '');
-            document.getElementById("gn_novedad_id").textContent = n.novedad_id || '';
+            document.getElementById("gn_novedad_id").textContent = n.novedad_id || n.id || '';
             document.getElementById("gn_tipo").textContent = n.tipo_novedad || '';
             document.getElementById("gn_cantidad").textContent = n.cantidad_afectada != null ? n.cantidad_afectada : '-';
-            document.getElementById("gn_estado").textContent = n.estado_novedad || '';
+            document.getElementById("gn_estado").textContent = n.estado_novedad || n.estado || '';
             document.getElementById("gn_usuario_registra").textContent = n.usuario_registra || '';
             document.getElementById("gn_fecha_registro").textContent = n.fecha_registro || '';
             document.getElementById("gn_descripcion").textContent = n.descripcion || '';
 
+            console.log(`🔍 DEBUG: Imagen URL: ${n.imagen_url}`);
+
             if (n.imagen_url) {
-                img.src = n.imagen_url;
+                // Asegurar que la URL sea absoluta si es relativa
+                let imgUrl = n.imagen_url;
+                if (!imgUrl.startsWith('http') && !imgUrl.startsWith('/')) {
+                    imgUrl = '/' + imgUrl;
+                }
+                img.src = imgUrl;
                 img.style.display = "block";
                 sinImg.style.display = "none";
+                console.log(`✅ DEBUG: Imagen cargada: ${imgUrl}`);
             } else {
                 img.style.display = "none";
                 sinImg.style.display = "block";
+                console.log('⚠️ DEBUG: Sin imagen asociada');
             }
 
             new bootstrap.Modal(document.getElementById("modalGestionNovedad")).show();
         })
         .catch(err => {
-            console.error(err);
-            alert('❌ Error al cargar la novedad');
+            console.error('❌ DEBUG: Error en fetch:', err);
+            alert('❌ Error al cargar la novedad: ' + err.message);
         });
 }
 

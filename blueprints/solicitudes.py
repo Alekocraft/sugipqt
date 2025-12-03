@@ -140,7 +140,7 @@ def crear_solicitud():
         material_id = int(request.form['material_id'])
         cantidad_solicitada = int(request.form['cantidad_solicitada'])
         porcentaje_oficina = float(request.form['porcentaje_oficina'])
-        usuario_nombre = session.get('user_name') or session.get('usuario_nombre', 'Usuario')
+        usuario_nombre = session.get('usuario_nombre') or session.get('user_name', 'Usuario')
         observacion = request.form.get('observacion', '')
 
         if cantidad_solicitada <= 0:
@@ -186,7 +186,7 @@ def aprobar_solicitud(solicitud_id):
             flash('No tiene permisos para aprobar esta solicitud', 'danger')
             return redirect('/solicitudes')
 
-        usuario_id = session.get('user_id') or session.get('usuario_id')
+        usuario_id = session.get('usuario_id') or session.get('user_id')
         
         # LLAMADA CORREGIDA - El modelo retorna (success, message)
         success, message = SolicitudModel.aprobar(solicitud_id, usuario_id)
@@ -214,7 +214,7 @@ def aprobar_parcial_solicitud(solicitud_id):
             flash('No tiene permisos para aprobar esta solicitud', 'danger')
             return redirect('/solicitudes')
 
-        usuario_id = session['user_id'] if 'user_id' in session else session['usuario_id']
+        usuario_id = session.get('usuario_id') or session.get('user_id')
         cantidad_aprobada = int(request.form.get('cantidad_aprobada', 0))
 
         if cantidad_aprobada <= 0:
@@ -254,7 +254,7 @@ def rechazar_solicitud(solicitud_id):
             return redirect(url_for('solicitudes.listar_solicitudes'))
 
         # Obtener datos del formulario
-        usuario_id = session.get('user_id') or session.get('usuario_id')
+        usuario_id = session.get('usuario_id') or session.get('user_id')
         observacion = request.form.get('observacion', '').strip()
         
         if not observacion:
@@ -288,7 +288,7 @@ def registrar_devolucion(solicitud_id):
     try:
         cantidad_devuelta = int(request.form.get('cantidad_devuelta') or 0)
         observacion = request.form.get('observacion_devolucion', '')
-        usuario_nombre = session.get('user_name') or session.get('usuario_nombre', 'Usuario')
+        usuario_nombre = session.get('usuario_nombre') or session.get('user_name', 'Usuario')
 
         if cantidad_devuelta <= 0:
             flash('❌ La cantidad a devolver debe ser mayor a 0', 'error')
@@ -361,7 +361,7 @@ def api_solicitudes_pendientes():
 
 
 # ============================
-# NOVEDADES
+# NOVEDADES - CORREGIDAS CON CLAVES DE SESIÓN CONSISTENTES
 # ============================
 
 @solicitudes_bp.route('/test-novedad')
@@ -432,54 +432,173 @@ def registrar_novedad():
         return jsonify({'success': False, 'message': 'Error interno del servidor'}), 500
 
 
+@solicitudes_bp.route('/api/<int:solicitud_id>/novedad')
+@login_required
+def obtener_novedad_solicitud(solicitud_id):
+    """Obtiene la última novedad de una solicitud - CORREGIDA CON CLAVES DE SESIÓN"""
+    print(f"🔍 DEBUG obtener_novedad_solicitud: Llamando con solicitud_id={solicitud_id}")
+    print(f"🔍 DEBUG Session data: usuario_id={session.get('usuario_id')}, usuario_nombre={session.get('usuario_nombre')}")
+    
+    try:
+        # Obtener la última novedad
+        novedad = NovedadModel.obtener_ultima_por_solicitud(solicitud_id)
+        
+        if not novedad:
+            print(f"❌ DEBUG: No se encontró novedad para solicitud {solicitud_id}")
+            return jsonify({
+                'success': False,
+                'error': 'No hay novedades registradas para esta solicitud'
+            }), 404
+        
+        print(f"🔍 DEBUG: Novedad devuelta por modelo - Claves: {list(novedad.keys())}")
+        
+        # Obtener URL de imagen
+        imagen_url = None
+        ruta_imagen = novedad.get('RutaImagen') or novedad.get('ruta_imagen')
+        print(f"🔍 DEBUG: Ruta imagen: {ruta_imagen}")
+        
+        if ruta_imagen:
+            # Asegurar que la ruta sea correcta
+            if not ruta_imagen.startswith('static/'):
+                imagen_url = f"/static/{ruta_imagen}"
+            else:
+                imagen_url = f"/{ruta_imagen}"
+            print(f"🔍 DEBUG: Imagen URL construida: {imagen_url}")
+        
+        # Formatear fecha_registro si es datetime
+        fecha_registro = novedad.get('FechaRegistro') or novedad.get('fecha_reporte')
+        
+        if fecha_registro and hasattr(fecha_registro, 'strftime'):
+            try:
+                fecha_registro = fecha_registro.strftime('%d/%m/%Y %H:%M:%S')
+            except Exception as e:
+                fecha_registro = str(fecha_registro)
+        
+        # Preparar respuesta con todas las claves posibles para compatibilidad
+        novedad_formateada = {
+            'id': novedad.get('NovedadId') or novedad.get('id'),
+            'novedad_id': novedad.get('NovedadId') or novedad.get('id'),
+            'solicitud_id': novedad.get('SolicitudId') or novedad.get('solicitud_id'),
+            'tipo_novedad': novedad.get('TipoNovedad') or novedad.get('tipo'),
+            'descripcion': novedad.get('Descripcion') or novedad.get('descripcion'),
+            'cantidad_afectada': novedad.get('CantidadAfectada') or novedad.get('cantidad_afectada'),
+            'estado': novedad.get('EstadoNovedad') or novedad.get('estado'),
+            'estado_novedad': novedad.get('EstadoNovedad') or novedad.get('estado'),
+            'usuario_registra': novedad.get('UsuarioRegistra') or novedad.get('usuario_registra'),
+            'fecha_registro': fecha_registro,
+            'usuario_resuelve': novedad.get('UsuarioResuelve') or novedad.get('usuario_resuelve'),
+            'fecha_resolucion': novedad.get('FechaResolucion'),
+            'observaciones_resolucion': novedad.get('ObservacionesResolucion'),
+            'ruta_imagen': ruta_imagen,
+            'imagen_url': imagen_url
+        }
+        
+        print(f"✅ DEBUG: Enviando respuesta exitosa")
+        return jsonify({
+            'success': True,
+            'novedad': novedad_formateada
+        })
+        
+    except Exception as e:
+        print(f"❌ ERROR en obtener_novedad_solicitud: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': 'Error al obtener la novedad'
+        }), 500
+
+
 @solicitudes_bp.route('/gestionar-novedad', methods=['POST'])
 @login_required
 def gestionar_novedad():
-    if not _check_novedad_manage_permissions():
-        return jsonify({'success': False, 'message': 'No tiene permisos para gestionar novedades'}), 403
-
+    print(f"🔍 DEBUG gestionar_novedad: Llamado - Session: usuario_id={session.get('usuario_id')}")
+    
     try:
         solicitud_id = request.form.get('solicitud_id')
         accion = request.form.get('accion')
         observaciones = request.form.get('observaciones', '')
-
-        if not all([solicitud_id, accion]):
-            return jsonify({'success': False, 'message': 'Datos incompletos'}), 400
-
+        
+        print(f"🔍 DEBUG: Datos recibidos - solicitud_id={solicitud_id}, accion={accion}")
+        
+        if not solicitud_id or not accion:
+            return jsonify({'success': False, 'message': 'Faltan datos'}), 400
+        
+        # Obtener todas las novedades de la solicitud
         novedades = NovedadModel.obtener_por_solicitud(int(solicitud_id))
+        
         if not novedades:
-            return jsonify({'success': False, 'message': 'No se encontró novedad para esta solicitud'}), 404
-
-        novedad = novedades[0]
-
+            return jsonify({'success': False, 'message': 'No se encontraron novedades para esta solicitud'}), 404
+        
+        # Encontrar la novedad pendiente (la más reciente o la que tenga estado 'pendiente')
+        novedad_a_gestionar = None
+        for novedad in novedades:
+            estado_novedad = novedad.get('estado', '').lower()
+            if estado_novedad == 'pendiente':
+                novedad_a_gestionar = novedad
+                break
+        
+        # Si no hay pendiente, usar la más reciente (primera de la lista ordenada)
+        if not novedad_a_gestionar and novedades:
+            novedad_a_gestionar = novedades[0]
+        
+        if not novedad_a_gestionar:
+            return jsonify({'success': False, 'message': 'No se encontró novedad para gestionar'}), 404
+        
+        print(f"🔍 DEBUG: Novedad a gestionar encontrada: ID={novedad_a_gestionar.get('id')}")
+        
+        # Determinar el nuevo estado basado en la acción
         if accion == 'aceptar':
-            nuevo_estado_novedad = 'aceptada'
-            nuevo_estado_solicitud = 9  # novedad aceptada
+            nuevo_estado = 'resuelta'
+            estado_solicitud_id = 9  # ID para 'novedad_aceptada'
+        elif accion == 'rechazar':
+            nuevo_estado = 'rechazada'
+            estado_solicitud_id = 10  # ID para 'novedad_rechazada'
         else:
-            nuevo_estado_novedad = 'rechazada'
-            nuevo_estado_solicitud = 10  # novedad rechazada
-
-        success_novedad = NovedadModel.actualizar_estado(
-            novedad_id=novedad['novedad_id'],
-            estado=nuevo_estado_novedad,
-            usuario_resuelve=session.get('usuario_nombre') or session.get('user_name', 'Usuario'),
+            return jsonify({'success': False, 'message': 'Acción no válida'}), 400
+        
+        # Actualizar estado de la novedad
+        novedad_id = novedad_a_gestionar.get('id')
+        if not novedad_id:
+            novedad_id = novedad_a_gestionar.get('novedad_id') or novedad_a_gestionar.get('NovedadId')
+        
+        if not novedad_id:
+            return jsonify({'success': False, 'message': 'No se pudo identificar la novedad'}), 500
+        
+        # Obtener el usuario actual para registrar quién resuelve
+        usuario_resuelve = session.get('usuario_nombre') or session.get('usuario', 'sistema')
+        
+        print(f"🔍 DEBUG: Actualizando novedad {novedad_id} a estado {nuevo_estado}")
+        
+        # Actualizar la novedad
+        actualizado = NovedadModel.actualizar_estado(
+            novedad_id=novedad_id,
+            estado=nuevo_estado,
+            usuario_resuelve=usuario_resuelve,
             observaciones_resolucion=observaciones
         )
-
+        
+        if not actualizado:
+            return jsonify({'success': False, 'message': 'Error al actualizar la novedad'}), 500
+        
+        # Actualizar el estado de la solicitud - CORRECCIÓN
+        print(f"🔍 DEBUG: Actualizando estado de solicitud {solicitud_id} a ID {estado_solicitud_id}")
         success_solicitud = SolicitudModel.actualizar_estado_solicitud(
-            int(solicitud_id),
-            nuevo_estado_solicitud
+            int(solicitud_id), 
+            estado_solicitud_id
         )
-
-        if success_novedad and success_solicitud:
-            return jsonify({
-                'success': True,
-                'message': f'Novedad {nuevo_estado_novedad} exitosamente'
-            })
-        else:
-            return jsonify({'success': False, 'message': 'Error al procesar la novedad'}), 500
-
+        
+        if not success_solicitud:
+            return jsonify({'success': False, 'message': 'Novedad actualizada pero error al actualizar la solicitud'}), 500
+        
+        return jsonify({
+            'success': True,
+            'message': f'Novedad {accion}ada exitosamente'
+        })
+        
     except Exception as e:
+        print(f"❌ ERROR en gestionar_novedad: {str(e)}")
+        import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': 'Error interno del servidor'}), 500
 
@@ -495,40 +614,3 @@ def obtener_novedades_pendientes():
         return jsonify({'success': True, 'novedades': novedades})
     except Exception:
         return jsonify({'success': False, 'message': 'Error interno'}), 500
-
-
-@solicitudes_bp.route('/api/<int:solicitud_id>/novedad', methods=['GET'])
-def api_novedad_solicitud(solicitud_id):
-    """
-    Devuelve la última novedad de la solicitud (normalmente la REGISTRADA)
-    para mostrarla en el modal de gestión de novedad.
-    """
-    if not can_manage_novedad():
-        return jsonify({'success': False, 'error': 'Sin permisos para gestionar novedades'}), 403
-
-    nov = NovedadModel.obtener_ultima_por_solicitud(solicitud_id)
-    if not nov:
-        return jsonify({'success': False, 'error': 'No hay novedades para esta solicitud'}), 404
-
-    imagen_url = None
-    ruta = nov.get('RutaImagen')
-    if ruta:
-        # Si en BD guardas sólo 'images/novedades/archivo.jpg'
-        imagen_url = url_for('static', filename=ruta, _external=False)
-
-    data = {
-        'novedad_id':        nov.get('NovedadId'),
-        'solicitud_id':      nov.get('SolicitudId'),
-        'tipo_novedad':      nov.get('TipoNovedad'),
-        'descripcion':       nov.get('Descripcion'),
-        'cantidad_afectada': nov.get('CantidadAfectada'),
-        'estado_novedad':    nov.get('EstadoNovedad'),
-        'usuario_registra':  nov.get('UsuarioRegistra'),
-        'fecha_registro':    nov.get('FechaRegistro').strftime('%d/%m/%Y %H:%M') if nov.get('FechaRegistro') else None,
-        'usuario_resuelve':  nov.get('UsuarioResuelve'),
-        'fecha_resolucion':  nov.get('FechaResolucion').strftime('%d/%m/%Y %H:%M') if nov.get('FechaResolucion') else None,
-        'observaciones_resolucion': nov.get('ObservacionesResolucion'),
-        'imagen_url':        imagen_url,
-    }
-
-    return jsonify({'success': True, 'novedad': data})
