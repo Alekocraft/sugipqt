@@ -251,7 +251,7 @@
             <div class="modal-body text-dark" style="background-color: #F8F9FA;">
                 <!-- Estadísticas mejoradas -->
                 <div class="row g-4 mb-4">
-                    <!-- Materiales - Solo mostrar si tiene permisos -->
+                    <!-- 🔽 MATERIALES - Solo mostrar si tiene permisos 'view' -->
                     {% if can_access('materiales', 'view') %}
                     <div class="col-xl-3 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-4 bg-white h-100 text-dark">
@@ -328,6 +328,7 @@
                         </h5>
 
                         <div class="d-flex flex-wrap gap-3 acciones-rapidas">
+                            <!-- 🔽 CREAR MATERIAL - Solo para quienes tienen permiso 'create' -->
                             {% if can_access('materiales', 'create') %}
                             <a href="/materiales/crear" class="btn btn-primary btn-lg">
                                 <i class="fas fa-plus me-2"></i> Crear Material
@@ -340,7 +341,7 @@
                             </a>
                             {% endif %}
 
-                            {% if can_access('reportes') %}
+                            {% if can_access('reportes', 'view_all') or can_access('reportes', 'view_own') %}
                             <a href="/reportes" class="btn btn-info btn-lg">
                                 <i class="fas fa-chart-bar me-2"></i> Ver Reportes
                             </a>
@@ -446,7 +447,7 @@
                                 <i class="fas fa-search me-2"></i> Buscar Productos
                             </a>
 
-                            {% if can_access('reportes') %}
+                            {% if can_access('reportes', 'view_all') or can_access('reportes', 'view_own') %}
                             <a href="/reportes" class="btn btn-info btn-lg">
                                 <i class="fas fa-chart-bar me-2"></i> Ver Reportes
                             </a>

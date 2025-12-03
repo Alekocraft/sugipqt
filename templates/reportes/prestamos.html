@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+{% block title %}Reporte de Préstamos{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+<style>
+    .badge-estado-prestamo {
+        font-size: 0.85em;
+        padding: 5px 10px;
+    }
+    .vencido {
+        background-color: #dc3545;
+        color: white;
+    }
+    .por-vencer {
+        background-color: #ffc107;
+        color: black;
+    }
+    .card-prestamo {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .card-prestamo:hover {
+        transform: translateY(-2px);
+    }
+    .material-item {
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        padding: 4px 8px;
+        margin: 2px;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1 text-info">
+                <i class="fas fa-exchange-alt me-2"></i>Reporte de Préstamos
+            </h1>
+            <p class="text-muted small">Historial y estado de préstamos de material</p>
+        </div>
+        <div>
+            <a href="/reportes" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas de préstamos -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Préstamos Activos</h6>
+                    <h2 class="fw-bold text-primary">{{ prestamos_activos }}</h2>
+                    <small class="text-muted">En curso actualmente</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Por Vencer (7 días)</h6>
+                    <h2 class="fw-bold text-warning">{{ por_vencer }}</h2>
+                    <small class="text-muted">Próximos a vencer</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Vencidos</h6>
+                    <h2 class="fw-bold text-danger">{{ vencidos }}</h2>
+                    <small class="text-muted">Fuera de plazo</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Tasa de Devolución</h6>
+                    <h2 class="fw-bold text-success">{{ tasa_devolucion }}%</h2>
+                    <small class="text-muted">Devoluciones a tiempo</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros rápidos -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h6 class="fw-semibold mb-3">Filtrar por estado:</h6>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge bg-primary filtro-rapido" data-estado="PRESTADO">
+                    <i class="fas fa-clock me-1"></i>Activos ({{ prestamos_activos }})
+                </span>
+                <span class="badge bg-success filtro-rapido" data-estado="DEVUELTO">
+                    <i class="fas fa-check me-1"></i>Devueltos ({{ devueltos }})
+                </span>
+                <span class="badge bg-danger filtro-rapido" data-estado="VENCIDO">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Vencidos ({{ vencidos }})
+                </span>
+                <span class="badge bg-warning filtro-rapido" data-estado="POR_VENCER">
+                    <i class="fas fa-hourglass-half me-1"></i>Por Vencer ({{ por_vencer }})
+                </span>
+                <span class="badge bg-secondary filtro-rapido" data-estado="">
+                    <i class="fas fa-list me-1"></i>Todos ({{ total_prestamos }})
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros avanzados -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Fecha desde</label>
+                    <input type="date" id="fecha-desde" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Fecha hasta</label>
+                    <input type="date" id="fecha-hasta" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Oficina</label>
+                    <select id="filtro-oficina" class="form-select form-select-sm">
+                        <option value="">Todas las oficinas</option>
+                        {% for oficina in oficinas %}
+                        <option value="{{ oficina.nombre }}">{{ oficina.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button id="btn-aplicar-filtros" class="btn btn-primary btn-sm flex-grow-1">
+                            <i class="fas fa-filter me-1"></i>Aplicar Filtros
+                        </button>
+                        <div class="btn-group">
+                            <button id="btn-exportar-excel" class="btn btn-success btn-sm">
+                                <i class="fas fa-file-excel me-1"></i>Excel
+                            </button>
+                            <button id="btn-exportar-pdf" class="btn btn-danger btn-sm">
+                                <i class="fas fa-file-pdf me-1"></i>PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de préstamos -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="tabla-prestamos" class="table table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha Préstamo</th>
+                            <th>Solicitante</th>
+                            <th>Oficina</th>
+                            <th>Material</th>
+                            <th>Cantidad</th>
+                            <th>Fecha Devolución</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for prestamo in prestamos %}
+                        <tr class="{% if prestamo.vencido %}table-danger{% elif prestamo.por_vencer %}table-warning{% endif %}">
+                            <td><span class="badge bg-secondary">#{{ prestamo.id }}</span></td>
+                            <td>
+                                {% if prestamo.fecha_prestamo %}
+                                    {{ prestamo.fecha_prestamo.strftime('%d/%m/%Y') }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>{{ prestamo.solicitante_nombre }}</td>
+                            <td>{{ prestamo.oficina_nombre }}</td>
+                            <td>{{ prestamo.material_nombre }}</td>
+                            <td>{{ prestamo.cantidad }}</td>
+                            <td>
+                                {% if prestamo.fecha_devolucion_prevista %}
+                                    {{ prestamo.fecha_devolucion_prevista.strftime('%d/%m/%Y') }}
+                                    {% if prestamo.fecha_devolucion_real %}
+                                    <br><small class="text-muted">Devuelto: {{ prestamo.fecha_devolucion_real.strftime('%d/%m/%Y') }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if prestamo.estado == 'PRESTADO' %}
+                                    {% if prestamo.vencido %}
+                                    <span class="badge badge-estado-prestamo vencido">Vencido</span>
+                                    {% elif prestamo.por_vencer %}
+                                    <span class="badge badge-estado-prestamo por-vencer">Por Vencer</span>
+                                    {% else %}
+                                    <span class="badge bg-primary badge-estado-prestamo">Activo</span>
+                                    {% endif %}
+                                {% elif prestamo.estado == 'DEVUELTO' %}
+                                <span class="badge bg-success badge-estado-prestamo">Devuelto</span>
+                                {% elif prestamo.estado == 'CANCELADO' %}
+                                <span class="badge bg-secondary badge-estado-prestamo">Cancelado</span>
+                                {% else %}
+                                <span class="badge bg-info badge-estado-prestamo">{{ prestamo.estado }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/prestamos/{{ prestamo.id }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if can_access('prestamos', 'return') and prestamo.estado == 'PRESTADO' %}
+                                    <button class="btn btn-outline-success" onclick="registrarDevolucion({{ prestamo.id }})" 
+                                            title="Registrar Devolución">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información adicional -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="fw-semibold mb-0">Materiales Más Prestados</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for material in materiales_mas_prestados %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ material.nombre }}
+                            <span class="badge bg-primary rounded-pill">{{ material.veces_prestado }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="fw-semibold mb-0">Próximos Vencimientos</h6>
+                </div>
+                <div class="card-body">
+                    {% for prestamo in proximos_vencimientos %}
+                    <div class="card card-prestamo mb-2" style="border-left-color: {% if prestamo.dias_restantes <= 0 %}#dc3545{% elif prestamo.dias_restantes <= 3 %}#ffc107{% else %}#28a745{% endif %};">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="fw-semibold">#{{ prestamo.id }} - {{ prestamo.solicitante_nombre }}</small>
+                                    <br>
+                                    <small class="text-muted">Material: {{ prestamo.material_nombre }}</small>
+                                    <br>
+                                    <small class="text-muted">Vence: {{ prestamo.fecha_devolucion_estimada.strftime('%d/%m/%Y') }}</small>
+                                </div>
+                                <div>
+                                    <span class="badge {% if prestamo.dias_restantes <= 0 %}bg-danger{% elif prestamo.dias_restantes <= 3 %}bg-warning{% else %}bg-success{% endif %}">
+                                        {% if prestamo.dias_restantes <= 0 %}
+                                            Vencido
+                                        {% else %}
+                                            {{ prestamo.dias_restantes }} días
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- DataTables y botones de exportación -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Inicializar DataTable
+    var table = $('#tabla-prestamos').DataTable({
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+        },
+        "pageLength": 25,
+        "order": [[1, "desc"]],
+        "dom": 'Bfrtip',
+        "buttons": [
+            {
+                extend: 'excel',
+                text: '<i class="fas fa-file-excel me-1"></i>Excel',
+                className: 'btn btn-success btn-sm',
+                title: 'Reporte_Prestamos_' + new Date().toLocaleDateString('es-ES'),
+                exportOptions: {
+                    columns: ':visible'
+                }
+            },
+            {
+                extend: 'pdf',
+                text: '<i class="fas fa-file-pdf me-1"></i>PDF',
+                className: 'btn btn-danger btn-sm',
+                title: 'Reporte_Prestamos_' + new Date().toLocaleDateString('es-ES'),
+                exportOptions: {
+                    columns: ':visible'
+                },
+                customize: function(doc) {
+                    doc.content[1].table.widths = Array(doc.content[1].table.body[0].length).fill('*');
+                }
+            }
+        ]
+    });
+
+    // Filtros rápidos por estado
+    $('.filtro-rapido').click(function() {
+        var estado = $(this).data('estado');
+        
+        if (estado === 'POR_VENCER') {
+            // Filtro personalizado para préstamos por vencer
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    var estado = data[7];
+                    return estado.includes('Por Vencer') || estado.includes('Vencido');
+                }
+            );
+            table.draw();
+            $.fn.dataTable.ext.search.pop();
+        } else if (estado === 'VENCIDO') {
+            // Filtro personalizado para préstamos vencidos
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    var estado = data[7];
+                    return estado.includes('Vencido');
+                }
+            );
+            table.draw();
+            $.fn.dataTable.ext.search.pop();
+        } else {
+            // Filtro normal por estado
+            table.columns(7).search(estado).draw();
+        }
+    });
+
+    // Aplicar filtros avanzados
+    $('#btn-aplicar-filtros').click(function() {
+        var fechaDesde = $('#fecha-desde').val();
+        var fechaHasta = $('#fecha-hasta').val();
+        var oficina = $('#filtro-oficina').val();
+        
+        // Filtro de fecha
+        if (fechaDesde || fechaHasta) {
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    var fechaTabla = data[1];
+                    var fecha = new Date(fechaTabla.split('/').reverse().join('-'));
+                    
+                    var desde = fechaDesde ? new Date(fechaDesde) : null;
+                    var hasta = fechaHasta ? new Date(fechaHasta) : null;
+                    
+                    if ((desde === null && hasta === null) ||
+                        (desde === null && fecha <= hasta) ||
+                        (desde <= fecha && hasta === null) ||
+                        (desde <= fecha && fecha <= hasta)) {
+                        return true;
+                    }
+                    return false;
+                }
+            );
+        }
+        
+        // Filtro por oficina
+        table.columns(3).search(oficina).draw();
+        
+        // Limpiar filtro de fecha
+        if (fechaDesde || fechaHasta) {
+            table.draw();
+            $.fn.dataTable.ext.search.pop();
+        }
+    });
+
+    // Función para registrar devolución
+    window.registrarDevolucion = function(id) {
+        if (confirm('¿Está seguro de registrar la devolución de este préstamo?')) {
+            fetch('/api/prestamos/' + id + '/devolver', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al registrar la devolución');
+            });
+        }
+    };
+
+    // Exportar Excel
+    $('#btn-exportar-excel').click(function() {
+        table.button('.buttons-excel').trigger();
+    });
+
+    // Exportar PDF
+    $('#btn-exportar-pdf').click(function() {
+        table.button('.buttons-pdf').trigger();
+    });
+});
+</script>
+{% endblock %}

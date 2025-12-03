@@ -1,4 +1,4 @@
-﻿# models/novedades_model.py
+# models/novedades_model.py
 from database import get_database_connection
 
 class NovedadModel:
@@ -44,60 +44,118 @@ class NovedadModel:
         finally:
             cursor.close()
             conn.close()
-
+             
     @staticmethod
-    def obtener_por_solicitud(solicitud_id):
+    def obtener_todas():
+        """Obtiene todas las novedades con información de oficina"""
         conn = get_database_connection()
         if conn is None:
+            print("❌ ERROR: No hay conexión a BD en obtener_todas")
             return []
 
-        cursor = conn.cursor()
+        cursor = None
         try:
+            cursor = conn.cursor()
+            
+            # CORRECCIÓN: Usar el nombre correcto de la tabla NovedadesSolicitudes
             cursor.execute("""
                 SELECT 
-                    NovedadId,
-                    SolicitudId,
-                    TipoNovedad,
-                    Descripcion,
-                    CantidadAfectada,
-                    UsuarioRegistra,
-                    FechaRegistro,
-                    RutaImagen,
-                    EstadoNovedad,
-                    UsuarioResuelve,
-                    ObservacionesResolucion,
-                    FechaResolucion
-                FROM NovedadesSolicitudes
-                WHERE SolicitudId = ?
-                ORDER BY FechaRegistro DESC
-            """, (solicitud_id,))
+                    ns.NovedadId,
+                    ns.SolicitudId,
+                    sm.OficinaSolicitanteId,
+                    o.NombreOficina,
+                    ns.TipoNovedad,
+                    ns.Descripcion,
+                    ns.CantidadAfectada,
+                    ns.UsuarioRegistra,
+                    ns.FechaRegistro,
+                    ns.EstadoNovedad,
+                    ns.UsuarioResuelve,
+                    ns.FechaResolucion,
+                    ns.ObservacionesResolucion,
+                    ns.RutaImagen
+                FROM NovedadesSolicitudes ns
+                INNER JOIN SolicitudesMaterial sm ON ns.SolicitudId = sm.SolicitudId
+                INNER JOIN Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
+                ORDER BY ns.FechaRegistro DESC
+            """)
 
             rows = cursor.fetchall()
+            print(f"✅ NovedadModel.obtener_todas: Se obtuvieron {len(rows)} novedades")
+            
             resultados = []
             for r in rows:
+                # Determinar prioridad basada en tipo
+                tipo_novedad = r[4] or ""
+                prioridad = "media"
+                tipo_lower = tipo_novedad.lower()
+                
+                if any(palabra in tipo_lower for palabra in ['robo', 'perdida', 'urgente', 'grave', 'emergencia']):
+                    prioridad = "alta"
+                elif any(palabra in tipo_lower for palabra in ['daño', 'avería', 'averia', 'incidente', 'problema']):
+                    prioridad = "media"
+                else:
+                    prioridad = "baja"
+                
+                # Determinar estado amigable
+                estado_db = r[9] or "pendiente"
+                estado = "pendiente"
+                estado_lower = estado_db.lower()
+                
+                if estado_lower == "pendiente":
+                    estado = "pendiente"
+                elif "proceso" in estado_lower or "en proceso" in estado_lower:
+                    estado = "en_proceso"
+                elif any(est in estado_lower for est in ["resuelto", "solucionado", "cerrado", "completado", "finalizado"]):
+                    estado = "resuelto"
+                elif "cancelado" in estado_lower:
+                    estado = "cancelado"
+                
+                # Convertir fecha si es necesario
+                fecha_registro = r[8]
+                if isinstance(fecha_registro, str):
+                    try:
+                        fecha_registro = datetime.strptime(fecha_registro, '%Y-%m-%d %H:%M:%S.%f')
+                    except:
+                        try:
+                            fecha_registro = datetime.strptime(fecha_registro, '%Y-%m-%d %H:%M:%S')
+                        except:
+                            fecha_registro = datetime.now()
+                
                 resultados.append({
-                    "novedad_id": r[0],
+                    "id": r[0],
                     "solicitud_id": r[1],
-                    "tipo_novedad": r[2],
-                    "descripcion": r[3],
-                    "cantidad_afectada": r[4],
-                    "usuario_registra": r[5],
-                    "fecha_registro": r[6],
-                    "ruta_imagen": r[7],
-                    "estado": r[8],
-                    "usuario_resuelve": r[9],
-                    "observaciones_resolucion": r[10],
+                    "oficina_id": r[2],
+                    "oficina_nombre": r[3],
+                    "tipo": r[4],
+                    "descripcion": r[5],
+                    "cantidad_afectada": r[6],
+                    "usuario_registra": r[7],
+                    "fecha_reporte": fecha_registro,  # Cambiado de fecha_registro a fecha_reporte
+                    "estado": estado,
+                    "usuario_resuelve": r[10],
                     "fecha_resolucion": r[11],
+                    "observaciones_resolucion": r[12],
+                    "ruta_imagen": r[13],
+                    "prioridad": prioridad,
+                    "reportante_nombre": r[7],  # Usuario que registra
+                    "asignado_a_nombre": r[10] or "Sin asignar",  # Usuario que resuelve
+                    "color_tipo": "#6f42c1"  # Color fijo para simplificar
                 })
+            
             return resultados
 
         except Exception as e:
-            print("❌ ERROR NovedadModel.obtener_por_solicitud:", str(e))
+            print(f"❌ ERROR NovedadModel.obtener_todas: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return []
 
         finally:
-            cursor.close()
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     @staticmethod
     def obtener_novedades_pendientes():

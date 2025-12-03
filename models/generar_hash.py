@@ -2,7 +2,7 @@
 import bcrypt
 
 usuarios = {
-    "cmrodriguez": "123456",
+    "pruebacoq": "123456",
     
 }
 print("🔐 HASHES REALES PARA SQL SERVER\n" + "="*50)

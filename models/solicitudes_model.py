@@ -506,3 +506,155 @@ class SolicitudModel:
                 "cantidad_entregada": row[17] or 0,
             })
         return solicitudes
+
+    # ==========================
+    # MÉTODOS ADICIONALES
+    # ==========================
+
+    @staticmethod
+    def obtener_estadisticas_por_material(material_id):
+        """Obtiene estadísticas de solicitudes para un material específico"""
+        conn = get_database_connection()
+        if conn is None:
+            return [0, 0, 0, 0, 0, 0, 0]
+        
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_solicitudes,
+                    SUM(CASE WHEN EstadoId = 2 THEN 1 ELSE 0 END) as aprobadas,
+                    SUM(CASE WHEN EstadoId = 1 THEN 1 ELSE 0 END) as pendientes,
+                    SUM(ISNULL(CantidadEntregada, 0)) as total_entregado,
+                    SUM(CASE WHEN EstadoId = 5 THEN 1 ELSE 0 END) as devueltas,
+                    SUM(CASE WHEN EstadoId = 3 THEN 1 ELSE 0 END) as rechazadas,
+                    SUM(CASE WHEN TieneNovedad = 1 THEN 1 ELSE 0 END) as con_novedad
+                FROM SolicitudesMaterial
+                WHERE MaterialId = ?
+            """, (material_id,))
+            
+            row = cursor.fetchone()
+            if row:
+                return [
+                    int(row[0] or 0),
+                    int(row[1] or 0),
+                    int(row[2] or 0),
+                    int(row[3] or 0),
+                    int(row[4] or 0),
+                    int(row[5] or 0),
+                    int(row[6] or 0)
+                ]
+            return [0, 0, 0, 0, 0, 0, 0]
+            
+        except Exception as e:
+            print(f"Error obteniendo estadísticas para material {material_id}: {e}")
+            return [0, 0, 0, 0, 0, 0, 0]
+        finally:
+            cursor.close()
+            conn.close()
+
+    @staticmethod
+    def obtener_por_nombre(nombre):
+        conn = get_database_connection()
+        if conn is None:
+            return None
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT OficinaId, NombreOficina, DirectorOficina, Ubicacion, 
+                       EsPrincipal, Activo, FechaCreacion, Email
+                FROM Oficinas
+                WHERE UPPER(NombreOficina) = UPPER(?)
+            """, (nombre,))
+            
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'id': row[0],
+                    'nombre': row[1],
+                    'director': row[2],
+                    'ubicacion': row[3],
+                    'es_principal': bool(row[4]) if row[4] is not None else False,
+                    'activo': bool(row[5]) if row[5] is not None else True,
+                    'fecha_creacion': row[6],
+                    'email': row[7]
+                }
+            return None
+        except Exception as e:
+            print(f"Error obteniendo oficina por nombre: {e}")
+            return None
+        finally:
+            cursor.close()
+            conn.close()
+
+    @staticmethod
+    def obtener_todas_con_detalle():
+        """Obtiene todas las solicitudes con detalles completos"""
+        conn = get_database_connection()
+        if not conn:
+            return []
+        try:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT 
+                    sm.SolicitudId,
+                    sm.OficinaSolicitanteId,
+                    o.NombreOficina,
+                    sm.MaterialId,
+                    m.NombreElemento,
+                    sm.CantidadSolicitada,
+                    sm.CantidadEntregada,
+                    sm.FechaSolicitud,
+                    sm.EstadoId,
+                    es.NombreEstado,
+                    sm.AprobadorId,
+                    a.NombreAprobador,
+                    sm.FechaAprobacion,
+                    sm.PorcentajeOficina,
+                    sm.UsuarioSolicitante,
+                    sm.Observacion,
+                    sm.ValorTotalSolicitado,
+                    sm.ValorOficina,
+                    sm.ValorSedePrincipal
+                FROM SolicitudesMaterial sm
+                INNER JOIN Oficinas o ON sm.OficinaSolicitanteId = o.OficinaId
+                INNER JOIN Materiales m ON sm.MaterialId = m.MaterialId
+                INNER JOIN EstadosSolicitud es ON sm.EstadoId = es.EstadoId
+                LEFT JOIN Aprobadores a ON sm.AprobadorId = a.AprobadorId
+                ORDER BY sm.FechaSolicitud DESC
+            """)
+            
+            columns = [column[0] for column in cursor.description]
+            solicitudes = []
+            for row in cursor.fetchall():
+                solicitud = dict(zip(columns, row))
+                # Renombrar campos para consistencia
+                solicitud['id'] = solicitud.pop('SolicitudId')
+                solicitud['oficina_id'] = solicitud.pop('OficinaSolicitanteId')
+                solicitud['oficina_nombre'] = solicitud.pop('NombreOficina')
+                solicitud['material_id'] = solicitud.pop('MaterialId')
+                solicitud['material_nombre'] = solicitud.pop('NombreElemento')
+                solicitud['cantidad_solicitada'] = solicitud.pop('CantidadSolicitada')
+                solicitud['cantidad_entregada'] = solicitud.pop('CantidadEntregada')
+                solicitud['fecha_solicitud'] = solicitud.pop('FechaSolicitud')
+                solicitud['estado_id'] = solicitud.pop('EstadoId')
+                solicitud['estado'] = solicitud.pop('NombreEstado')
+                solicitud['aprobador_id'] = solicitud.pop('AprobadorId')
+                solicitud['aprobador_nombre'] = solicitud.pop('NombreAprobador')
+                solicitud['fecha_aprobacion'] = solicitud.pop('FechaAprobacion')
+                solicitud['porcentaje_oficina'] = solicitud.pop('PorcentajeOficina')
+                solicitud['usuario_solicitante'] = solicitud.pop('UsuarioSolicitante')
+                solicitud['observacion'] = solicitud.pop('Observacion')
+                solicitudes.append(solicitud)
+            
+            return solicitudes
+            
+        except Exception as e:
+            print(f"Error obteniendo solicitudes con detalle: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()

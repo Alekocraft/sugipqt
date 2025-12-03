@@ -178,6 +178,7 @@
                     </li>
                     {% endif %}
 
+                    <!-- 🔽 MATERIALES en Préstamos - Solo visible para quienes tienen permiso -->
                     {% if can_access is defined and can_access('materiales', 'view') %}
                     <li class="nav-item">
                         <a class="nav-link {% if current_path.startswith('/prestamos/elementos') %}active{% endif %}" 
@@ -228,6 +229,7 @@
                     </li>
                     <!-- /Aprobadores y Oficinas SIEMPRE visibles -->
 
+                    <!-- 🔽 MATERIALES - Solo visible para quienes tienen permiso 'view' -->
                     {% if can_access is defined and can_access('materiales', 'view') %}
                     <li class="nav-item">
                         <a class="nav-link {% if current_path.startswith('/materiales') %}active{% endif %}" href="/materiales">

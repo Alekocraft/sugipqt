@@ -38,7 +38,7 @@
             <form method="GET" class="row g-2">
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold">Estado</label>
-                    <select name="estado" class="form-select form-select-sm">
+                    <select name="estado" id="estado" class="form-select form-select-sm">
                         <option value="todos" {% if filtro_estado=='todos' %}selected{% endif %}>Todos los estados</option>
                         <option value="pendiente" {% if filtro_estado=='pendiente' %}selected{% endif %}>Pendiente</option>
                         <option value="aprobada" {% if filtro_estado=='aprobada' %}selected{% endif %}>Aprobada</option>
@@ -47,7 +47,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold">Oficina</label>
-                    <select name="oficina" class="form-select form-select-sm">
+                    <select name="oficina" id="oficina" class="form-select form-select-sm">
                         <option value="todas" {% if filtro_oficina=='todas' %}selected{% endif %}>Todas las oficinas</option>
                         {% for oficina in oficinas_unique %}
                         <option value="{{ oficina }}" {% if filtro_oficina==oficina %}selected{% endif %}>{{ oficina }}</option>

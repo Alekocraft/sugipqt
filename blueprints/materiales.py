@@ -1,4 +1,5 @@
 # blueprints/materiales.py
+# SOLO debe tener el código original, no código de reportes_bp
 
 from __future__ import annotations
 
@@ -12,9 +13,10 @@ from werkzeug.utils import secure_filename
 
 # Local
 from models.materiales_model import MaterialModel
+from models.solicitudes_model import SolicitudModel  # ✅ IMPORTANTE: Añadir esta importación
 from models.oficinas_model import OficinaModel
 from utils.permissions import can_access
-from utils.filters import verificar_acceso_oficina
+from utils.filters import verificar_acceso_oficina, filtrar_por_oficina_usuario  # ✅ Añadir filtrar_por_oficina_usuario
 
 materiales_bp = Blueprint('materiales', __name__, url_prefix='/materiales')
 
@@ -33,13 +35,59 @@ def listar_materiales():
 
     try:
         print("📦 Cargando lista de materiales...")
-        materiales = MaterialModel.obtener_todos() or []
-        print(f"📦 Se cargaron {len(materiales)} materiales para mostrar")
-        return render_template('materials/listar.html', materiales=materiales)
+        
+        # ✅ Obtener todos los materiales
+        todos_materiales = MaterialModel.obtener_todos() or []
+        
+        # ✅ Aplicar filtro por oficina según permisos del usuario
+        materiales = filtrar_por_oficina_usuario(todos_materiales, 'oficina_id')
+        
+        print(f"📦 Se cargaron {len(materiales)} materiales para mostrar (filtrados por oficina)")
+        
+        # ✅ OBTENER ESTADÍSTICAS DE SOLICITUDES POR MATERIAL
+        stats_dict = {}
+        valor_total_inventario = 0
+        total_solicitudes = 0
+        total_entregado = 0
+        
+        for material in materiales:
+            try:
+                material_id = material.get('id')
+                if not material_id:
+                    continue
+                    
+                # Obtener estadísticas de solicitudes para este material
+                stats = SolicitudModel.obtener_estadisticas_por_material(material_id)
+                stats_dict[material_id] = stats
+                
+                # Calcular valores totales
+                valor_total = float(material.get('valor_total', 0) or 0)
+                valor_total_inventario += valor_total
+                
+                if stats and len(stats) >= 4:
+                    total_solicitudes += stats[0] or 0  # Total solicitudes
+                    total_entregado += stats[3] or 0    # Total entregado
+                    
+            except Exception as e:
+                print(f"⚠️ Error procesando material {material_id}: {e}")
+                continue
+        
+        return render_template('materials/listar.html', 
+                             materiales=materiales,
+                             stats_dict=stats_dict,
+                             valor_total_inventario=valor_total_inventario,
+                             total_solicitudes=total_solicitudes,
+                             total_entregado=total_entregado)
+        
     except Exception as e:
         print(f"❌ Error obteniendo materiales: {e}")
         flash('Error al cargar los materiales', 'danger')
-        return render_template('materials/listar.html', materiales=[])
+        return render_template('materials/listar.html', 
+                             materiales=[],
+                             stats_dict={},
+                             valor_total_inventario=0,
+                             total_solicitudes=0,
+                             total_entregado=0)
 
 
 # RUTA GET PARA MOSTRAR EL FORMULARIO DE CREACIÓN

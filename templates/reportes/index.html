@@ -15,8 +15,10 @@
         </a>
     </div>
 
-    <!-- Tarjetas de reportes -->
+    <!-- Tarjetas de reportes - SOLO VISIBLES SI TIENE PERMISOS -->
     <div class="row">
+        <!-- 🔽 REPORTE DE MATERIALES - Solo si tiene permiso para ver materiales -->
+        {% if can_access('materiales', 'view') %}
         <div class="col-md-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-primary text-white py-3">
@@ -36,6 +38,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
+
+        <!-- 🔽 REPORTE DE SOLICITUDES - Solo si tiene permiso para ver solicitudes -->
+        {% if can_access('solicitudes', 'view') %}
         <div class="col-md-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-success text-white py-3">
@@ -55,6 +61,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
+
+        <!-- 🔽 REPORTE DE INVENTARIO - Solo si tiene permiso para ver inventario corporativo -->
+        {% if can_access('inventario_corporativo', 'view') %}
         <div class="col-md-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-warning text-dark py-3">
@@ -74,7 +84,95 @@
                 </div>
             </div>
         </div>
+        {% endif %}
+
+        <!-- 🔽 REPORTE DE PRÉSTAMOS - Solo si tiene permiso para ver préstamos -->
+        {% if can_access('prestamos', 'view') or can_access('prestamos', 'view_own') %}
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-info text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exchange-alt me-2"></i>Préstamos
+                    </h5>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-exchange-alt fa-3x text-info"></i>
+                    </div>
+                    <h6 class="fw-semibold">Reporte de Préstamos</h6>
+                    <p class="text-muted small mb-3">Historial y estado de préstamos</p>
+                    <a href="/reportes/prestamos" class="btn btn-info btn-sm">
+                        <i class="fas fa-eye me-1"></i>Ver Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 🔽 REPORTE DE NOVEDADES - Solo si tiene permiso para ver novedades -->
+        {% if can_access('novedades', 'view') %}
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-purple text-white py-3" style="background-color: #6f42c1;">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-circle me-2"></i>Novedades
+                    </h5>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-exclamation-circle fa-3x" style="color: #6f42c1;"></i>
+                    </div>
+                    <h6 class="fw-semibold">Reporte de Novedades</h6>
+                    <p class="text-muted small mb-3">Historial de incidentes y reportes</p>
+                    <a href="/reportes/novedades" class="btn btn-sm" style="background-color: #6f42c1; color: white;">
+                        <i class="fas fa-eye me-1"></i>Ver Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 🔽 REPORTE DE OFICINAS - Solo si tiene permiso para ver oficinas -->
+        {% if can_access('oficinas', 'view') %}
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-secondary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-building me-2"></i>Oficinas
+                    </h5>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-building fa-3x text-secondary"></i>
+                    </div>
+                    <h6 class="fw-semibold">Reporte de Oficinas</h6>
+                    <p class="text-muted small mb-3">Inventario por oficina</p>
+                    <a href="/reportes/oficinas" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-eye me-1"></i>Ver Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
+
+    <!-- Mensaje si no tiene permisos para ningún reporte -->
+    {% if not (can_access('materiales', 'view') or 
+               can_access('solicitudes', 'view') or 
+               can_access('inventario_corporativo', 'view') or 
+               can_access('prestamos', 'view') or 
+               can_access('novedades', 'view') or 
+               can_access('oficinas', 'view')) %}
+    <div class="alert alert-info mt-4">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle me-3 fa-2x"></i>
+            <div>
+                <h5 class="fw-bold mb-2">Sin permisos para reportes</h5>
+                <p class="mb-0">No tienes permisos para ver ningún reporte. Contacta al administrador del sistema si necesitas acceso.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <style>

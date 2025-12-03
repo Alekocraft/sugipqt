@@ -275,6 +275,8 @@ def crear_prestamo():
         return redirect('/login')
     
     if not can_access('prestamos', 'create'):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'No tienes permisos para crear préstamos'}), 403
         flash('No tienes permisos para crear préstamos', 'danger')
         return redirect('/prestamos')
 
@@ -291,21 +293,33 @@ def crear_prestamo():
 
         # Validaciones
         if not elemento_id:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': 'Debes seleccionar un elemento'})
             flash('Debes seleccionar un elemento', 'warning')
             return redirect('/prestamos/crear')
         if int(cantidad) <= 0:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': 'La cantidad debe ser mayor a 0'})
             flash('La cantidad debe ser mayor a 0', 'warning')
             return redirect('/prestamos/crear')
         if not fecha_prevista:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': 'La fecha de devolución prevista es obligatoria'})
             flash('La fecha de devolución prevista es obligatoria', 'warning')
             return redirect('/prestamos/crear')
         if not evento:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': 'El evento/motivo del préstamo es obligatorio'})
             flash('El evento/motivo del préstamo es obligatorio', 'warning')
             return redirect('/prestamos/crear')
         if not observaciones:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': 'Las observaciones son obligatorias'})
             flash('Las observaciones son obligatorias', 'warning')
             return redirect('/prestamos/crear')
         if not solicitante_id or not oficina_id:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': 'No se encontraron datos de sesión para solicitante/oficina'})
             flash('No se encontraron datos de sesión para solicitante/oficina', 'danger')
             return redirect('/prestamos/crear')
 
@@ -314,7 +328,7 @@ def crear_prestamo():
             conn = get_database_connection()
             cur = conn.cursor()
             
-            # Valida stock
+            # Valida stock con bloqueo para evitar race conditions
             cur.execute("""
                 SELECT CantidadDisponible, NombreElemento
                 FROM dbo.ElementosPublicitarios WITH (UPDLOCK, ROWLOCK)
@@ -322,12 +336,18 @@ def crear_prestamo():
             """, (int(elemento_id),))
             row = cur.fetchone()
             if not row:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({'success': False, 'message': 'Elemento no encontrado o inactivo'})
                 flash('Elemento no encontrado o inactivo', 'danger')
                 return redirect('/prestamos/crear')
 
             disponible = int(row[0] or 0)
             nombre_elemento = row[1]
-            if int(cantidad) > disponible:
+            cantidad_int = int(cantidad)
+            
+            if cantidad_int > disponible:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({'success': False, 'message': f'Stock insuficiente. Disponible: {disponible}'})
                 flash(f'Stock insuficiente. Disponible: {disponible}', 'danger')
                 return redirect('/prestamos/crear')
 
@@ -340,20 +360,48 @@ def crear_prestamo():
                     (ElementoId, UsuarioSolicitanteId, OficinaId, CantidadPrestada, 
                      FechaPrestamo, FechaDevolucionPrevista, Estado, Evento, Observaciones, 
                      UsuarioPrestador, Activo)
+                OUTPUT INSERTED.PrestamoId
                 VALUES (?, ?, ?, ?, GETDATE(), ?, 'PRESTADO', ?, ?, ?, 1)
             """, (
-                int(elemento_id), solicitante_id, oficina_id, int(cantidad),
+                int(elemento_id), solicitante_id, oficina_id, cantidad_int,
                 fecha_prevista, evento, observaciones, usuario_prestador
             ))
+
+            # Obtener el ID del préstamo creado
+            prestamo_id = cur.fetchone()[0]
+            print(f"✅ Préstamo creado con ID: {prestamo_id}")
 
             # Descontar stock
             cur.execute("""
                 UPDATE dbo.ElementosPublicitarios
                 SET CantidadDisponible = CantidadDisponible - ?
                 WHERE ElementoId = ? AND Activo = 1
-            """, (int(cantidad), int(elemento_id)))
+            """, (cantidad_int, int(elemento_id)))
 
             conn.commit()
+            
+            # Verificar que realmente se insertó
+            cur.execute("""
+                SELECT COUNT(*) FROM dbo.PrestamosElementos 
+                WHERE PrestamoId = ? AND Activo = 1
+            """, (prestamo_id,))
+            if cur.fetchone()[0] > 0:
+                print(f"✅ Verificación exitosa: Préstamo {prestamo_id} existe en BD")
+            else:
+                print(f"⚠️ Advertencia: Préstamo {prestamo_id} no encontrado después de commit")
+            
+            # Respuesta para AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': True,
+                    'message': f'✅ Préstamo registrado exitosamente: {nombre_elemento} (Cantidad: {cantidad})',
+                    'prestamo_id': prestamo_id,
+                    'elemento_nombre': nombre_elemento,
+                    'cantidad': cantidad,
+                    'redirect': '/prestamos'
+                })
+                
+            # Respuesta normal (no AJAX)
             flash(f'✅ Préstamo de "{nombre_elemento}" registrado correctamente para el evento: {evento}', 'success')
             return redirect('/prestamos')
             
@@ -362,6 +410,11 @@ def crear_prestamo():
                 if conn: conn.rollback()
             except:
                 pass
+            
+            print(f"❌ Error en crear_prestamo: {e}")
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': f'Error al crear préstamo: {str(e)}'})
             flash(f'Error al crear préstamo: {e}', 'danger')
             return redirect('/prestamos/crear')
         finally:
@@ -865,6 +918,7 @@ def api_elemento_info(elemento_id: int):
             if conn: conn.close()
         except: 
             pass
+
 @prestamos_bp.route('/prestamos/crearmaterial', methods=['GET'])
 def crear_material():
     """Ruta simple para crear material - SOLO GET"""

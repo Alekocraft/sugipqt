@@ -48,21 +48,34 @@ ROLE_PERMISSIONS = {
         'office_filter': 'all'
     },
 
-    # 🔽 AQUÍ VIENE EL AJUSTE IMPORTANTE
-    'oficina_coq': {
-        # 👉 Agregamos 'inventario_corporativo' a los módulos
-        'modules': ['dashboard', 'material_pop', 'inventario_corporativo', 'prestamo_material', 'reportes', 'solicitudes'],   
+     
+    'tesoreria': {
+        'modules': ['dashboard', 'material_pop', 'inventario_corporativo', 'prestamo_material', 'reportes'],
         'actions': {
-            # Materiales ya podía crear
-            'materiales': ['view', 'create'],
-            # 👉 Damos los mismos permisos a inventario corporativo:
-            'inventario_corporativo': ['view', 'create'],
+            'materiales': [],  
+            'solicitudes': ['view'],  
+            'oficinas': ['view'],
+            'aprobadores': ['view'],
+            'reportes': ['view_all'],  
+            'inventario_corporativo': ['view'],  
+            'prestamos': ['view'],  
+            'novedades': ['view']  
+        },
+        'office_filter': 'all'  
+    },
+
+    'oficina_coq': {
+        'modules': ['dashboard', 'material_pop', 'prestamo_material', 'reportes', 'oficinas', 'solicitudes'],
+        'actions': {
+            'materiales': [], 
             'solicitudes': ['view', 'create'],   
-            'prestamos': ['view', 'create'],
+            'oficinas': ['view'],
+            'aprobadores': ['view'],
+            'prestamos': ['view_own', 'create'],
             'reportes': ['view_own'],
             'novedades': ['create']
         },
-        'office_filter': 'COQ'
+        'office_filter': 'COQ' 
     },
 
     'oficina_cali': {

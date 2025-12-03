@@ -1,0 +1,631 @@
+{% extends "base.html" %}
+{% block title %}Reporte de Oficinas - Inventario Corporativo{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+<style>
+    .tabla-materiales-oficina {
+        font-size: 0.85rem;
+    }
+    .tabla-materiales-oficina td, .tabla-materiales-oficina th {
+        padding: 0.5rem;
+    }
+    .detalle-row {
+        background-color: #f8f9fa;
+    }
+    .btn-ver-detalle {
+        transition: all 0.3s ease;
+    }
+    .btn-ver-detalle:hover {
+        transform: scale(1.05);
+    }
+    .valor-inventario {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #198754;
+    }
+    .card-inventario {
+        border-left: 4px solid #198754 !important;
+    }
+    /* Estilo para fila expandida */
+    .fila-expandida td {
+        border-bottom: none !important;
+    }
+    .badge-movimientos {
+        background-color: #6c757d;
+    }
+    /* Estilos para la sección de historial */
+    .historial-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        margin-top: 1rem;
+    }
+    .historial-header {
+        background-color: #f8f9fa;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .historial-table {
+        margin-bottom: 0;
+    }
+    .historial-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: #495057;
+    }
+    .historial-table td {
+        vertical-align: middle;
+        font-size: 0.85rem;
+    }
+    .observaciones-cell {
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .observaciones-cell:hover {
+        white-space: normal;
+        overflow: visible;
+        position: relative;
+        z-index: 1000;
+        background-color: white;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .badge-accion {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1 text-secondary">
+                <i class="fas fa-building me-2"></i>Reporte de Oficinas - Inventario Corporativo
+            </h1>
+            <p class="text-muted small">
+                <i class="fas fa-database me-1"></i>Información del inventario corporativo por oficina
+                <br><small class="text-success"><i class="fas fa-check-circle me-1"></i>Fuente: Tabla Materiales (INVENTARIO CORPORATIVO)</small>
+            </p>
+        </div>
+        <div>
+            <a href="/reportes" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumen general -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Total Oficinas</h6>
+                    <h2 class="fw-bold">{{ total_oficinas }}</h2>
+                    <small class="text-muted">Con inventario corporativo</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Materiales Totales</h6>
+                    <h2 class="fw-bold text-primary">{{ total_materiales_oficinas }}</h2>
+                    <small class="text-muted">En inventario corporativo</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Solicitudes</h6>
+                    <h2 class="fw-bold text-warning">{{ total_solicitudes_oficinas }}</h2>
+                    <small class="text-muted">Realizadas por oficinas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Movimientos</h6>
+                    <h2 class="fw-bold text-secondary">{{ total_movimientos_oficinas }}</h2>
+                    <small class="text-muted">Asignaciones/Traslados</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Oficinas Activas</h6>
+                    <h2 class="fw-bold text-success">{{ oficinas_activas }}</h2>
+                    <small class="text-muted">De {{ total_oficinas }} totales</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 card-inventario">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Valor Total Inventario</h6>
+                    <h2 class="fw-bold text-success">${{ "%.2f"|format(total_valor_inventario) }}</h2>
+                    <small class="text-muted">Valor corporativo total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exportar TODO el inventario corporativo -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h6 class="fw-semibold mb-0">
+                <i class="fas fa-file-export me-2"></i>Exportar Inventario Corporativo Completo
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <p class="mb-0 small text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Exporte toda la información del inventario corporativo de TODAS las oficinas en un solo archivo.
+                        Incluye: Materiales, cantidades, valores, oficinas, categorías, etc.
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{{ url_for('reportes.exportar_inventario_corporativo_excel') }}" 
+                       class="btn btn-success btn-sm me-2">
+                        <i class="fas fa-file-excel me-1"></i>Exportar Excel Completo
+                    </a>
+                    <a href="{{ url_for('reportes.exportar_inventario_corporativo_pdf') }}" 
+                       class="btn btn-danger btn-sm" target="_blank">
+                        <i class="fas fa-file-pdf me-1"></i>Exportar PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla detallada por oficina - SIN DATATABLES PARA EVITAR CONFLICTOS -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="fw-semibold mb-0">
+                <i class="fas fa-table me-2"></i>Detalle por Oficina
+            </h6>
+            <div>
+                <button id="btn-expandir-todo" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-expand-alt me-1"></i>Expandir Todo
+                </button>
+                <button id="btn-colapsar-todo" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-compress-alt me-1"></i>Colapsar Todo
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table id="tabla-oficinas" class="table table-hover mb-0" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th width="18%">Nombre Oficina</th>
+                            <th width="12%">Ubicación</th>
+                            <th width="8%" class="text-center">Materiales</th>
+                            <th width="8%" class="text-center">Solicitudes</th>
+                            <th width="8%" class="text-center">Préstamos</th>
+                            <th width="8%" class="text-center">Movimientos</th>
+                            <th width="14%" class="text-center">Valor Inventario</th>
+                            <th width="24%" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-oficinas">
+                        {% for oficina in oficinas %}
+                        <!-- Fila principal de la oficina -->
+                        <tr class="fila-oficina" data-oficina-id="{{ oficina.id }}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-building me-2 text-muted"></i>
+                                    <div>
+                                        <span class="fw-semibold d-block">{{ oficina.nombre }}</span>
+                                        <small class="text-muted">{{ oficina.region or 'Sin región' }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <small>{{ oficina.ubicacion }}</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info rounded-pill">{{ oficina.cantidad_materiales }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-warning rounded-pill">{{ oficina.cantidad_solicitudes }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary rounded-pill">{{ oficina.cantidad_prestamos }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-movimientos rounded-pill">{{ oficina.cantidad_movimientos }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="valor-inventario">${{ "%.2f"|format(oficina.valor_total_inventario or 0) }}</span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary btn-ver-detalle" 
+                                        data-oficina-id="{{ oficina.id }}"
+                                        data-oficina-nombre="{{ oficina.nombre }}">
+                                    <i class="fas fa-chevron-down me-1"></i>Ver Detalle
+                                </button>
+                                <button class="btn btn-sm btn-outline-success btn-exportar-oficina"
+                                        data-oficina-id="{{ oficina.id }}"
+                                        data-oficina-nombre="{{ oficina.nombre }}">
+                                    <i class="fas fa-file-excel me-1"></i>Exportar
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        <!-- Fila expandible con detalle del inventario -->
+                        <tr class="detalle-row d-none" id="detalle-oficina-{{ oficina.id }}">
+                            <td colspan="8" class="p-0">
+                                <div class="p-3 border-top bg-light">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6 class="fw-semibold mb-3">
+                                                <i class="fas fa-boxes me-2"></i>Materiales en Inventario Corporativo de {{ oficina.nombre }}
+                                            </h6>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <button class="btn btn-sm btn-outline-secondary btn-copiar-inventario"
+                                                    data-oficina-id="{{ oficina.id }}">
+                                                <i class="fas fa-copy me-1"></i>Copiar resumen
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-cerrar-detalle"
+                                                    data-oficina-id="{{ oficina.id }}">
+                                                <i class="fas fa-times me-1"></i>Cerrar
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if oficina.materiales and oficina.materiales|length > 0 %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered tabla-materiales-oficina">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>Código</th>
+                                                        <th>Producto</th>
+                                                        <th class="text-center">Cantidad</th>
+                                                        <th class="text-center">Valor Unitario</th>
+                                                        <th class="text-center">Valor Total</th>
+                                                        <th class="text-center">Stock Mínimo</th>
+                                                        <th class="text-center">Categoría</th>
+                                                        <th class="text-center">Estado</th>
+                                                        <th class="text-center">Unidad de Medida</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for material in oficina.materiales %}
+                                                    <tr>
+                                                        <td class="text-muted">{{ loop.index }}</td>
+                                                        <td>
+                                                            <small class="fw-semibold text-primary">{{ material.codigo_unico|default('N/A', true) }}</small>
+                                                        </td>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <i class="fas fa-box me-2 text-muted"></i>
+                                                                <div>
+                                                                    <span class="fw-semibold d-block">{{ material.nombre }}</span>
+                                                                    {% if material.descripcion %}
+                                                                    <small class="text-muted">{{ material.descripcion[:50] }}{% if material.descripcion|length > 50 %}...{% endif %}</small>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-info">{{ material.cantidad }}</span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <small>${{ "%.2f"|format(material.valor_unitario or 0) }}</small>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="fw-semibold text-success">${{ "%.2f"|format(material.valor_total or 0) }}</span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-secondary">{{ material.stock_minimo or 0 }}</span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-light text-dark">{{ material.categoria or 'General' }}</span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            {% if material.activo %}
+                                                            <span class="badge bg-success">Activo</span>
+                                                            {% else %}
+                                                            <span class="badge bg-secondary">Inactivo</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-light text-dark">{{ material.unidad_medida or 'Unidad' }}</span>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                    <!-- Fila de totales -->
+                                                    <tr class="table-light">
+                                                        <td colspan="6" class="text-end fw-semibold">TOTAL INVENTARIO:</td>
+                                                        <td class="text-center fw-bold text-success">
+                                                            ${{ "%.2f"|format(oficina.valor_total_inventario or 0) }}
+                                                        </td>
+                                                        <td colspan="3"></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Historial de movimientos - VERSIÓN SIMPLIFICADA -->
+                                        {% if oficina.movimientos %}
+                                        <div class="historial-card mt-4">
+                                            <div class="historial-header">
+                                                <h6 class="fw-semibold mb-0">
+                                                    <i class="fas fa-history me-2"></i>Historial de Asignaciones
+                                                    <span class="badge badge-movimientos ms-2">{{ oficina.movimientos|length }}</span>
+                                                </h6>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm historial-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Fecha</th>
+                                                            <th>Acción</th>
+                                                            <th>Material</th>
+                                                            <th class="text-center">Cantidad</th>
+                                                            <th>Usuario</th>
+                                                            <th>Observaciones</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for movimiento in oficina.movimientos %}
+                                                        <tr>
+                                                            <td class="text-nowrap">
+                                                                <small class="text-muted">
+                                                                    {% if movimiento.fecha %}
+                                                                        {{ movimiento.fecha.strftime('%d/%m/%Y %H:%M') }}
+                                                                    {% else %}
+                                                                        N/A
+                                                                    {% endif %}
+                                                                </small>
+                                                            </td>
+                                                            <td>
+                                                                <span class="badge badge-accion bg-success">
+                                                                    {{ movimiento.accion }}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <small>{{ movimiento.material_nombre }}</small>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <span class="badge bg-primary">{{ movimiento.cantidad }}</span>
+                                                            </td>
+                                                            <td>
+                                                                <small>{{ movimiento.usuario_nombre }}</small>
+                                                            </td>
+                                                            <td class="observaciones-cell">
+                                                                <small class="text-muted">
+                                                                    {{ movimiento.observaciones|default('-') }}
+                                                                </small>
+                                                            </td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-history fa-2x text-muted mb-3"></i>
+                                            <h6 class="text-muted">No hay movimientos registrados</h6>
+                                        </div>
+                                        {% endif %}
+                                        
+                                    {% else %}
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                                            <h6 class="text-muted">No hay inventario corporativo en esta oficina</h6>
+                                            <p class="small text-muted">Esta oficina no tiene materiales asignados en el inventario corporativo.</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para exportar oficina específica -->
+<div class="modal fade" id="modalExportarOficina" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-export me-2"></i>Exportar Inventario de Oficina
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Exportar el inventario corporativo de: <strong id="nombre-oficina-exportar"></strong>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Formato:</label>
+                    <select class="form-select" id="formato-oficina">
+                        <option value="excel">Excel (.xlsx)</option>
+                        <option value="pdf">PDF (.pdf)</option>
+                        <option value="csv">CSV (.csv)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Incluir:</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="oficina-incluir-materiales" checked>
+                        <label class="form-check-label" for="oficina-incluir-materiales">
+                            Materiales del inventario
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="oficina-incluir-movimientos" checked>
+                        <label class="form-check-label" for="oficina-incluir-movimientos">
+                            Historial de movimientos
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="oficina-incluir-totales" checked>
+                        <label class="form-check-label" for="oficina-incluir-totales">
+                            Totales y resumen
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn-generar-exportacion-oficina">
+                    <i class="fas fa-download me-1"></i>Descargar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- DataTables para funcionalidad básica -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Configuración inicial
+    console.log("✅ Página de oficinas cargada correctamente");
+    
+    // Manejar clic en botón "Ver Detalle"
+    $(document).on('click', '.btn-ver-detalle', function(e) {
+        e.stopPropagation();
+        var oficinaId = $(this).data('oficina-id');
+        var detalleRow = $(`#detalle-oficina-${oficinaId}`);
+        var btn = $(this);
+        
+        if (detalleRow.hasClass('d-none')) {
+            // Ocultar todos los detalles abiertos primero
+            $('.detalle-row').addClass('d-none');
+            $('.btn-ver-detalle').html('<i class="fas fa-chevron-down me-1"></i>Ver Detalle');
+            
+            // Mostrar este detalle
+            detalleRow.removeClass('d-none');
+            btn.html('<i class="fas fa-chevron-up me-1"></i>Ocultar');
+            
+            // Desplazar a la vista
+            $('html, body').animate({
+                scrollTop: detalleRow.offset().top - 100
+            }, 500);
+        } else {
+            detalleRow.addClass('d-none');
+            btn.html('<i class="fas fa-chevron-down me-1"></i>Ver Detalle');
+        }
+    });
+    
+    // Manejar clic en botón "Cerrar" dentro del detalle
+    $(document).on('click', '.btn-cerrar-detalle', function(e) {
+        e.stopPropagation();
+        var oficinaId = $(this).data('oficina-id');
+        var detalleRow = $(`#detalle-oficina-${oficinaId}`);
+        var btn = $(`.btn-ver-detalle[data-oficina-id="${oficinaId}"]`);
+        
+        detalleRow.addClass('d-none');
+        btn.html('<i class="fas fa-chevron-down me-1"></i>Ver Detalle');
+    });
+    
+    // Expandir todo
+    $('#btn-expandir-todo').click(function() {
+        $('.detalle-row').removeClass('d-none');
+        $('.btn-ver-detalle').html('<i class="fas fa-chevron-up me-1"></i>Ocultar');
+    });
+    
+    // Colapsar todo
+    $('#btn-colapsar-todo').click(function() {
+        $('.detalle-row').addClass('d-none');
+        $('.btn-ver-detalle').html('<i class="fas fa-chevron-down me-1"></i>Ver Detalle');
+    });
+    
+    // Exportar oficina específica
+    $(document).on('click', '.btn-exportar-oficina', function() {
+        var oficinaId = $(this).data('oficina-id');
+        var oficinaNombre = $(this).data('oficina-nombre');
+        
+        $('#nombre-oficina-exportar').text(oficinaNombre);
+        $('#modalExportarOficina').data('oficina-id', oficinaId);
+        $('#modalExportarOficina').modal('show');
+    });
+    
+    // Generar exportación de oficina
+    $('#btn-generar-exportacion-oficina').click(function() {
+        var oficinaId = $('#modalExportarOficina').data('oficina-id');
+        var formato = $('#formato-oficina').val();
+        var incluirMateriales = $('#oficina-incluir-materiales').is(':checked') ? '1' : '0';
+        var incluirMovimientos = $('#oficina-incluir-movimientos').is(':checked') ? '1' : '0';
+        var incluirTotales = $('#oficina-incluir-totales').is(':checked') ? '1' : '0';
+        
+        // Construir URL de exportación
+        var url = `/reportes/exportar/oficina/${oficinaId}/${formato}?`;
+        url += `materiales=${incluirMateriales}&`;
+        url += `movimientos=${incluirMovimientos}&`;
+        url += `totales=${incluirTotales}`;
+        
+        window.open(url, '_blank');
+        $('#modalExportarOficina').modal('hide');
+    });
+    
+    // Copiar resumen del inventario
+    $(document).on('click', '.btn-copiar-inventario', function() {
+        var oficinaId = $(this).data('oficina-id');
+        var fila = $(`.fila-oficina[data-oficina-id="${oficinaId}"]`);
+        var nombreOficina = fila.find('td:first-child .fw-semibold').text().trim();
+        var valorInventario = fila.find('.valor-inventario').text().trim();
+        var totalMateriales = fila.find('.bg-info').text().trim();
+        var totalMovimientos = fila.find('.badge-movimientos').text().trim();
+        
+        var texto = `📊 Inventario Corporativo - ${nombreOficina}\n`;
+        texto += `📦 Materiales: ${totalMateriales}\n`;
+        texto += `📋 Movimientos: ${totalMovimientos}\n`;
+        texto += `💰 Valor Total: ${valorInventario}\n`;
+        texto += `📅 Reporte: ${new Date().toLocaleDateString('es-ES')}`;
+        
+        navigator.clipboard.writeText(texto).then(function() {
+            var btn = $(this);
+            var originalHtml = btn.html();
+            btn.html('<i class="fas fa-check me-1"></i>Copiado!');
+            btn.removeClass('btn-outline-secondary').addClass('btn-success');
+            
+            setTimeout(function() {
+                btn.html(originalHtml);
+                btn.removeClass('btn-success').addClass('btn-outline-secondary');
+            }, 2000);
+        }.bind(this));
+    });
+    
+    // Mensaje de carga
+    console.log(`📊 Reporte de oficinas cargado: ${$('.fila-oficina').length} oficinas`);
+    
+    // Mejorar interacción con las observaciones
+    $(document).on('mouseenter', '.observaciones-cell', function() {
+        $(this).addClass('active');
+    });
+    
+    $(document).on('mouseleave', '.observaciones-cell', function() {
+        $(this).removeClass('active');
+    });
+});
+</script>
+{% endblock %}

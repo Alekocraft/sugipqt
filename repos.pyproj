@@ -46,6 +46,9 @@
     <Content Include="templates\reportes\inventario.html" />
     <Content Include="templates\reportes\materiales.html" />
     <Content Include="templates\reportes\material_detalle.html" />
+    <Content Include="templates\reportes\novedades.html" />
+    <Content Include="templates\reportes\oficinas.html" />
+    <Content Include="templates\reportes\prestamos.html" />
     <Content Include="templates\reportes\solicitudes.html" />
     <Content Include="templates\solicitudes\solicitudes.html" />
     <Content Include="templates\solicitudes\crear.html" />
@@ -58,6 +61,7 @@
     <Compile Include="blueprints\aprobadores.py" />
     <Compile Include="blueprints\inventario_corporativo.py" />
     <Compile Include="blueprints\materiales.py" />
+    <Compile Include="blueprints\novedades_model.py" />
     <Compile Include="blueprints\oficinas.py" />
     <Compile Include="blueprints\prestamos.py" />
     <Compile Include="blueprints\reportes.py" />

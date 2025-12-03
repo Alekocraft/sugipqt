@@ -9,31 +9,33 @@ class MaterialModel:
             return []
         cursor = conn.cursor()
         try:
-            # CONSULTA BASE
+            # CONSULTA BASE MEJORADA PARA INCLUIR NOMBRE DE OFICINA
             sql = """
                 SELECT 
-                    MaterialId, 
-                    NombreElemento, 
-                    ValorUnitario, 
-                    CantidadDisponible,
-                    ISNULL(ValorTotal, 0) as ValorTotal,
-                    OficinaCreadoraId, 
-                    Activo, 
-                    FechaCreacion,
-                    UsuarioCreador, 
-                    RutaImagen,
-                    CantidadMinima
-                FROM Materiales 
-                WHERE Activo = 1
+                    m.MaterialId, 
+                    m.NombreElemento, 
+                    m.ValorUnitario, 
+                    m.CantidadDisponible,
+                    ISNULL(m.ValorTotal, 0) as ValorTotal,
+                    m.OficinaCreadoraId, 
+                    m.Activo, 
+                    m.FechaCreacion,
+                    m.UsuarioCreador, 
+                    m.RutaImagen,
+                    m.CantidadMinima,
+                    o.NombreOficina  -- 🆕 AÑADIDO: Nombre de la oficina
+                FROM Materiales m
+                LEFT JOIN Oficinas o ON m.OficinaCreadoraId = o.OficinaId
+                WHERE m.Activo = 1
             """
-            
+        
             # FILTRO OPCIONAL POR OFICINA
             params = ()
             if oficina_id:
-                sql += " AND OficinaCreadoraId = ?"
+                sql += " AND m.OficinaCreadoraId = ?"
                 params = (oficina_id,)
 
-            sql += " ORDER BY MaterialId DESC"
+            sql += " ORDER BY m.MaterialId DESC"
             cursor.execute(sql, params)
 
             materiales = []
@@ -49,7 +51,8 @@ class MaterialModel:
                     'fecha_creacion': row[7],
                     'usuario_creador': row[8],
                     'ruta_imagen': row[9],
-                    'cantidad_minima': row[10] if row[10] is not None else 0
+                    'cantidad_minima': row[10] if row[10] is not None else 0,
+                    'oficina_nombre': row[11] if row[11] else f"Oficina {row[5]}"  # 🆕 Nombre de oficina
                 }
                 materiales.append(material)
             return materiales
@@ -270,3 +273,5 @@ class MaterialModel:
         finally:
             cursor.close()
             conn.close()
+
+

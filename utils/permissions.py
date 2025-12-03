@@ -16,6 +16,7 @@ def normalize_role_key(role_raw: str) -> str:
     - "Administrador"           -> "administrador"
     - "Líder Inventario"        -> "lider_inventario"
     - "OFICINA COQ"             -> "oficina_coq"
+    - "Tesoreria"               -> "tesoreria"  # NUEVO ROL
     """
     if not role_raw:
         return ''
@@ -54,6 +55,8 @@ def normalize_role_key(role_raw: str) -> str:
         return 'administrador'
     if 'lider' in r_norm and 'invent' in r_norm:
         return 'lider_inventario'
+    if 'tesorer' in r_norm:  # NUEVO: para detectar "tesorería"
+        return 'tesoreria'
     if 'coq' in r_norm:
         return 'oficina_coq'
 
@@ -98,7 +101,7 @@ class PermissionManager:
     def can_view_actions() -> bool:
         """Verifica si puede ver columnas de acciones en préstamos"""
         role_key = PermissionManager.get_user_permissions().get('role_key', '')
-        roles_con_acciones = {'administrador', 'aprobador', 'lider_inventario'}
+        roles_con_acciones = {'administrador', 'aprobador', 'lider_inventario', 'tesoreria'}  # Añadido tesoreria
         return role_key in roles_con_acciones
 
     @staticmethod
@@ -139,6 +142,35 @@ class PermissionManager:
         else:
             return office_key
 
+    @staticmethod
+    def should_show_materiales_menu() -> bool:
+        """Verifica si debe mostrar el menú/opción de materiales en la UI"""
+        return PermissionManager.has_action_permission('materiales', 'view')
+    
+    @staticmethod
+    def get_visible_modules() -> list:
+        """Obtiene solo los módulos visibles para el usuario actual"""
+        perms = PermissionManager.get_user_permissions()
+        all_modules = perms['role'].get('modules', [])
+        
+        # Filtrar módulos según permisos específicos
+        visible_modules = []
+        
+        for module in all_modules:
+            if module == 'materiales':
+                # Solo mostrar materiales si tiene permiso de view
+                if PermissionManager.has_action_permission('materiales', 'view'):
+                    visible_modules.append(module)
+            elif module == 'inventario_corporativo':
+                # Solo mostrar inventario corporativo si tiene permiso de view
+                if PermissionManager.has_action_permission('inventario_corporativo', 'view'):
+                    visible_modules.append(module)
+            else:
+                # Para otros módulos, mostrar siempre
+                visible_modules.append(module)
+        
+        return visible_modules
+
 
 # Funciones de conveniencia
 def can_access(module: str, action: Optional[str] = None) -> bool:
@@ -166,6 +198,14 @@ def can_create_novedad() -> bool:
 
 def can_manage_novedad() -> bool:
     return PermissionManager.can_manage_novedad()
+
+
+# ⬇️ FUNCIONES PARA CONTROLAR VISIBILIDAD EN LA UI
+def should_show_materiales_menu() -> bool:
+    return PermissionManager.should_show_materiales_menu()
+
+def get_visible_modules():
+    return PermissionManager.get_visible_modules()
 
 
 def get_accessible_modules():

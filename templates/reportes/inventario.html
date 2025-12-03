@@ -1,139 +1,178 @@
+<!-- templates/reportes/inventario.html - Versión simplificada y funcional -->
 {% extends "base.html" %}
-
-{% block title %}Reporte de Valoración de Inventario{% endblock %}
+{% block title %}Reporte de Inventario{% endblock %}
+{% block styles %}
+<style>
+    .valor-total {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #28a745;
+    }
+    .valor-promedio {
+        font-size: 1.2em;
+        color: #17a2b8;
+    }
+    .badge-stock {
+        min-width: 40px;
+        font-size: 0.9em;
+        padding: 4px 8px;
+    }
+    .table th {
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    .table td {
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid fade-in">
-    <!-- Encabezado compacto -->
+    <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 fw-bold mb-1 text-primary">
-                <i class="fas fa-chart-line me-2"></i>Valoración de Inventario
+            <h1 class="h3 fw-bold mb-1 text-warning">
+                <i class="fas fa-chart-line me-2"></i>Reporte de Inventario
             </h1>
-            <p class="text-muted small">Reporte de valoración y estadísticas</p>
+            <p class="text-muted small">Valoración y estadísticas del inventario</p>
         </div>
-        <a href="/reportes" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-left me-1"></i>Volver a Reportes
-        </a>
-    </div>
-
-    <!-- Banner informativo -->
-    <div class="alert alert-info mb-4">
-        <strong><i class="fas fa-info-circle me-1"></i>Vista filtrada:</strong>
-        {% if session.rol in ['administrador', 'lider_inventario'] %}
-        Mostrando datos de TODAS las oficinas (acceso total)
-        {% else %}
-        Mostrando datos únicamente de su oficina: <strong>{{ session.oficina_nombre }}</strong>
-        {% endif %}
-    </div>
-
-    <!-- Recuadro de Acciones -->
-    <div class="card border-light mb-4">
-        <div class="card-header bg-light py-2">
-            <h6 class="mb-0 fw-semibold">
-                <i class="fas fa-cogs me-1"></i>Acciones de Exportación
-            </h6>
-        </div>
-        <div class="card-body py-3">
-            <div class="d-flex flex-wrap gap-2">
-                <button class="btn btn-danger btn-sm" onclick="exportarPDF()">
-                    <i class="fas fa-file-pdf me-1"></i>Exportar PDF
-                </button>
-                <button class="btn btn-success btn-sm" onclick="exportarExcel()">
-                    <i class="fas fa-file-excel me-1"></i>Exportar Excel
-                </button>
-                <button class="btn btn-warning btn-sm" onclick="exportarBajoStock()">
-                    <i class="fas fa-exclamation-triangle me-1"></i>Solo Bajo Stock
-                </button>
-            </div>
+        <div>
+            <a href="/reportes" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
         </div>
     </div>
 
     <!-- Estadísticas generales -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm text-center">
-                <div class="card-body py-3">
-                    <h4 class="fw-bold text-primary mb-1">${{ "{:,.2f}".format(valor_total|default(0)|float) }}</h4>
-                    <small class="text-muted">Valor Total Inventario</small>
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Total Productos</h6>
+                    <h2 class="fw-bold">{{ total_productos }}</h2>
+                    <small class="text-muted">Materiales en inventario</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm text-center">
-                <div class="card-body py-3">
-                    <h4 class="fw-bold text-success mb-1">{{ materiales|length }}</h4>
-                    <small class="text-muted">Total Materiales</small>
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Valor Total</h6>
+                    <h2 class="valor-total">${{ "{:,.0f}".format(valor_total_inventario|default(0)|float) }}</h2>
+                    <small class="text-muted">Valoración total</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm text-center">
-                <div class="card-body py-3">
-                    <h4 class="fw-bold text-warning mb-1">{{ cantidad_total|default(0) }}</h4>
-                    <small class="text-muted">Unidades Totales</small>
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Valor Promedio</h6>
+                    <h2 class="valor-promedio">${{ "{:,.0f}".format(valor_promedio|default(0)|float) }}</h2>
+                    <small class="text-muted">Por producto</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm text-center">
-                <div class="card-body py-3">
-                    <h4 class="fw-bold text-danger mb-1">{{ materiales_bajo_stock|length }}</h4>
-                    <small class="text-muted">Bajo Stock</small>
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Stock Total</h6>
+                    <h2 class="fw-bold text-info">
+                        {% set total_stock = productos|sum(attribute='cantidad') %}
+                        {{ total_stock }}
+                    </h2>
+                    <small class="text-muted">Unidades totales</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Materiales con Bajo Stock -->
+    <!-- Distribución por oficina -->
+    {% if ubicaciones %}
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-danger text-white py-2">
+        <div class="card-header bg-light">
+            <h6 class="fw-semibold mb-0">Distribución por Oficina</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for ubicacion in ubicaciones %}
+                <div class="col-md-4 mb-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-semibold mb-0">{{ ubicacion.nombre }}</h6>
+                                <span class="badge bg-primary">{{ ubicacion.cantidad }}</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-info" role="progressbar" 
+                                     style="width: {{ (ubicacion.cantidad / total_productos * 100) if total_productos > 0 else 0 }}%">
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                {{ ((ubicacion.cantidad / total_productos * 100) if total_productos > 0 else 0)|round(1) }}% del total
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tabla de productos -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
             <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-semibold">
-                    <i class="fas fa-exclamation-triangle me-1"></i>Materiales con Bajo Stock
-                    <span class="badge bg-light text-dark ms-2">{{ materiales_bajo_stock|length }}</span>
-                </h6>
-                <small class="text-warning">
-                    Valor: ${{ "{:,.2f}".format(valor_bajo_stock|default(0)|float) }}
-                </small>
+                <h6 class="fw-semibold mb-0">Detalle del Inventario</h6>
+                <div>
+                    <button onclick="exportarExcel()" class="btn btn-success btn-sm">
+                        <i class="fas fa-file-excel me-1"></i>Excel
+                    </button>
+                </div>
             </div>
         </div>
         <div class="card-body p-0">
-            {% if materiales_bajo_stock %}
-            <div class="table-responsive">
-                <table class="table table-hover table-sm align-middle mb-0" id="tablaBajoStock">
-                    <thead class="table-light">
+            <div class="table-responsive" style="max-height: 500px; overflow: auto;">
+                <table class="table table-hover table-sm align-middle mb-0">
+                    <thead class="table-light sticky-top">
                         <tr>
                             <th class="ps-3">ID</th>
                             <th>Material</th>
-                            <th class="text-center">Stock</th>
                             <th class="text-end">V. Unitario</th>
+                            <th class="text-center">Stock</th>
                             <th class="text-end">V. Total</th>
-                            <th class="text-center pe-3">Acciones</th>
+                            <th>Oficina</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for mat in materiales_bajo_stock %}
-                        {% set stock_actual = mat.cantidad|default(0) %}
-                        {% set valor_unitario = mat.valor_unitario|default(0) %}
-                        {% set valor_total_mat = mat.valor_total|default(0) %}
-
+                        {% for producto in productos %}
                         <tr>
-                            <td class="ps-3 fw-semibold small">{{ mat.id|default('N/A') }}</td>
-                            <td class="small">{{ mat.nombre|default('N/A') }}</td>
-                            <td class="text-center">
-                                <span class="badge bg-danger small">{{ stock_actual }}</span>
+                            <td class="ps-3 fw-semibold small">{{ producto.id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-box me-2 text-muted small"></i>
+                                    <div>
+                                        <strong class="small">{{ producto.nombre }}</strong>
+                                    </div>
+                                </div>
                             </td>
-                            <td class="text-end fw-semibold small">${{ "{:,.2f}".format(valor_unitario|float) }}</td>
-                            <td class="text-end fw-bold text-primary small">${{ "{:,.2f}".format(valor_total_mat|float) }}</td>
-                            <td class="text-center pe-3">
-                                <div class="btn-group btn-group-sm">
-                                    <a href="/materiales/editar/{{ mat.id }}" class="btn btn-outline-warning btn-sm" title="Reponer">
-                                        <i class="fas fa-plus"></i>
-                                    </a>
-                                    <a href="/reportes/material/{{ mat.id }}" class="btn btn-outline-info btn-sm" title="Ver Detalle">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
+                            <td class="text-end fw-semibold small">${{ "{:,.0f}".format(producto.valor_unitario|float) }}</td>
+                            <td class="text-center">
+                                <span class="badge badge-stock {% if producto.cantidad > 10 %}bg-success{% elif producto.cantidad > 0 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ producto.cantidad }}
+                                </span>
+                            </td>
+                            <td class="text-end fw-bold text-primary small">${{ "{:,.0f}".format(producto.valor_total|float) }}</td>
+                            <td class="small">{{ producto.oficina_nombre }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <div class="d-flex flex-column align-items-center">
+                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <h6 class="text-muted">No se encontraron materiales</h6>
+                                    <p class="text-muted small">No hay materiales en el inventario</p>
                                 </div>
                             </td>
                         </tr>
@@ -141,272 +180,14 @@
                     </tbody>
                 </table>
             </div>
-            {% else %}
-            <div class="text-center py-4">
-                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                <h6 class="text-success">¡Excelente! No hay materiales con bajo stock.</h6>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Stock Normal -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-success text-white py-2">
-            <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-semibold">
-                    <i class="fas fa-check-circle me-1"></i>Stock Normal
-                    <span class="badge bg-light text-dark ms-2">{{ materiales_stock_normal|length }}</span>
-                </h6>
-                <small class="text-warning">
-                    Valor: ${{ "{:,.2f}".format(valor_stock_normal|default(0)|float) }}
-                </small>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            {% if materiales_stock_normal %}
-            <div class="table-responsive">
-                <table class="table table-hover table-sm align-middle mb-0" id="tablaStockNormal">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-3">ID</th>
-                            <th>Material</th>
-                            <th class="text-center">Stock</th>
-                            <th class="text-end">V. Unitario</th>
-                            <th class="text-end">V. Total</th>
-                            <th class="text-center pe-3">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for mat in materiales_stock_normal %}
-                        {% set stock_actual = mat.cantidad|default(0) %}
-                        {% set valor_unitario = mat.valor_unitario|default(0) %}
-                        {% set valor_total_mat = mat.valor_total|default(0) %}
-
-                        <tr>
-                            <td class="ps-3 fw-semibold small">{{ mat.id|default('N/A') }}</td>
-                            <td class="small">{{ mat.nombre|default('N/A') }}</td>
-                            <td class="text-center">
-                                <span class="badge bg-success small">{{ stock_actual }}</span>
-                            </td>
-                            <td class="text-end fw-semibold small">${{ "{:,.2f}".format(valor_unitario|float) }}</td>
-                            <td class="text-end fw-bold text-primary small">${{ "{:,.2f}".format(valor_total_mat|float) }}</td>
-                            <td class="text-center pe-3">
-                                <a href="/reportes/material/{{ mat.id }}" class="btn btn-outline-info btn-sm" title="Ver Detalle">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="text-center py-4">
-                <i class="fas fa-info-circle fa-2x text-warning mb-2"></i>
-                <h6 class="text-warning">No hay materiales con stock normal.</h6>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>
 
-<style>
-    .table th {
-        white-space: nowrap;
-        font-weight: 600;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        border-bottom: 1px solid #dee2e6;
-        padding: 0.5rem;
-    }
-    
-    .table td {
-        vertical-align: middle;
-        padding: 0.5rem;
-        font-size: 0.85rem;
-    }
-    
-    .btn-sm {
-        font-size: 0.7rem;
-        padding: 0.2rem 0.4rem;
-    }
-    
-    .badge {
-        font-size: 0.7rem;
-    }
-</style>
-{% endblock %}
-
-{% block scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-
 <script>
-    // Función para exportar a Excel (SOLO stock normal y bajo stock)
-    function exportarExcel() {
-        try {
-            const wb = XLSX.utils.book_new();
-
-            // Exportar materiales con bajo stock
-            if (document.getElementById('tablaBajoStock')) {
-                const tablaBajoStock = document.getElementById('tablaBajoStock');
-                const wsBajoStock = XLSX.utils.table_to_sheet(tablaBajoStock);
-                XLSX.utils.book_append_sheet(wb, wsBajoStock, 'Bajo Stock');
-            }
-
-            // Exportar stock normal
-            if (document.getElementById('tablaStockNormal')) {
-                const tablaStockNormal = document.getElementById('tablaStockNormal');
-                const wsStockNormal = XLSX.utils.table_to_sheet(tablaStockNormal);
-                XLSX.utils.book_append_sheet(wb, wsStockNormal, 'Stock Normal');
-            }
-
-            // Verificar que hay al menos una hoja para exportar
-            if (wb.SheetNames.length === 0) {
-                alert('No hay datos para exportar.');
-                return;
-            }
-
-            // Guardar el archivo
-            XLSX.writeFile(wb, `Reporte_Stock_${new Date().toISOString().split('T')[0]}.xlsx`);
-            mostrarNotificacion('✅ Excel exportado correctamente', 'success');
-        } catch (error) {
-            console.error('Error en exportación Excel:', error);
-            mostrarNotificacion('❌ Error al exportar a Excel', 'error');
-        }
-    }
-
-    // Función para exportar solo bajo stock a Excel
-    function exportarBajoStock() {
-        try {
-            if (document.getElementById('tablaBajoStock')) {
-                const tablaBajoStock = document.getElementById('tablaBajoStock');
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.table_to_sheet(tablaBajoStock);
-                XLSX.utils.book_append_sheet(wb, ws, 'Bajo Stock');
-                XLSX.writeFile(wb, `Bajo_Stock_${new Date().toISOString().split('T')[0]}.xlsx`);
-                mostrarNotificacion('✅ Bajo Stock exportado', 'success');
-            } else {
-                alert('No hay materiales con bajo stock para exportar.');
-            }
-        } catch (error) {
-            console.error('Error en exportación Bajo Stock:', error);
-            mostrarNotificacion('❌ Error al exportar Bajo Stock', 'error');
-        }
-    }
-
-    // Función para exportar a PDF
-    function exportarPDF() {
-        try {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            doc.setFontSize(12);
-            doc.text('Reporte de Inventario - Sistema de Gestión', 14, 15);
-            doc.setFontSize(8);
-            doc.text(`Generado: ${new Date().toLocaleDateString()}`, 14, 22);
-
-            let yPosition = 30;
-
-            // Función para agregar tabla
-            function agregarTabla(titulo, tablaId) {
-                const tabla = document.getElementById(tablaId);
-                if (!tabla) return yPosition;
-
-                // Agregar título de sección
-                if (yPosition > 250) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-
-                doc.setFontSize(12);
-                doc.text(titulo, 14, yPosition);
-                yPosition += 8;
-
-                // Convertir tabla a array para PDF
-                const headers = [];
-                const rows = [];
-
-                // Obtener headers
-                const headerRows = tabla.querySelectorAll('thead tr');
-                headerRows.forEach(headerRow => {
-                    const headerCells = headerRow.querySelectorAll('th');
-                    const headerRowData = [];
-                    headerCells.forEach(cell => {
-                        headerRowData.push(cell.textContent.trim());
-                    });
-                    headers.push(headerRowData);
-                });
-
-                // Obtener datos
-                const dataRows = tabla.querySelectorAll('tbody tr');
-                dataRows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    const rowData = [];
-                    cells.forEach(cell => {
-                        // Remover botones y elementos HTML
-                        const cellCopy = cell.cloneNode(true);
-                        const buttons = cellCopy.querySelectorAll('button, a');
-                        buttons.forEach(btn => btn.remove());
-                        rowData.push(cellCopy.textContent.trim());
-                    });
-                    rows.push(rowData);
-                });
-
-                // Crear tabla en PDF
-                doc.autoTable({
-                    head: headers,
-                    body: rows,
-                    startY: yPosition,
-                    theme: 'grid',
-                    headStyles: { fillColor: [66, 139, 202] },
-                    styles: { fontSize: 8 }
-                });
-
-                yPosition = doc.lastAutoTable.finalY + 10;
-                return yPosition;
-            }
-
-            // Agregar solo las tablas de stock normal y bajo stock
-            yPosition = agregarTabla('Materiales con Bajo Stock (< 10 unidades)', 'tablaBajoStock');
-            yPosition = agregarTabla('Stock Normal (≥ 10 unidades)', 'tablaStockNormal');
-
-            // Guardar PDF
-            doc.save(`Reporte_Stock_${new Date().toISOString().split('T')[0]}.pdf`);
-            mostrarNotificacion('✅ PDF exportado correctamente', 'success');
-        } catch (error) {
-            console.error('Error en exportación PDF:', error);
-            mostrarNotificacion('❌ Error al exportar a PDF', 'error');
-        }
-    }
-
-    function mostrarNotificacion(mensaje, tipo) {
-        const toast = document.createElement('div');
-        toast.className = `toast align-items-center text-white bg-${tipo === 'success' ? 'success' : 'danger'} border-0 position-fixed`;
-        toast.style.zIndex = '1060';
-        toast.style.top = '20px';
-        toast.style.right = '20px';
-        toast.style.fontSize = '0.8rem';
-        
-        toast.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${mensaje}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        `;
-        
-        document.body.appendChild(toast);
-        const bsToast = new bootstrap.Toast(toast);
-        bsToast.show();
-        
-        toast.addEventListener('hidden.bs.toast', function() {
-            document.body.removeChild(toast);
-        });
-    }
+function exportarExcel() {
+    alert('Función de exportación a Excel - En desarrollo');
+    // Implementar exportación similar a otros reportes
+}
 </script>
 {% endblock %}
