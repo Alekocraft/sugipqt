@@ -1,3 +1,5 @@
+#config/permissions.py
+
 """
 Sistema centralizado de permisos basado en roles y oficinas config/permissions.py
 """

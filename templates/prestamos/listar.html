@@ -58,19 +58,19 @@
                 <div class="card-body">
                     <div class="row text-center">
                         <div class="col-md-3 border-end">
-                            <h4 class="fw-bold mb-0 text-primary">{{ prestamos|length }}</h4>
+                            <h4 class="fw-bold mb-0 text-primary" id="total-prestamos">{{ prestamos|length }}</h4>
                             <small class="text-muted">Total Préstamos</small>
                         </div>
                         <div class="col-md-3 border-end">
-                            <h4 class="fw-bold mb-0 text-warning">{{ prestamos|selectattr('estado', 'equalto', 'PRESTADO')|list|length }}</h4>
+                            <h4 class="fw-bold mb-0 text-warning" id="pendientes">{{ prestamos|selectattr('estado', 'equalto', 'PRESTADO')|list|length }}</h4>
                             <small class="text-muted">Pendientes</small>
                         </div>
                         <div class="col-md-3 border-end">
-                            <h4 class="fw-bold mb-0 text-success">{{ prestamos|selectattr('estado', 'equalto', 'APROBADO')|list|length }}</h4>
+                            <h4 class="fw-bold mb-0 text-success" id="aprobados">{{ prestamos|selectattr('estado', 'equalto', 'APROBADO')|list|length }}</h4>
                             <small class="text-muted">Aprobados</small>
                         </div>
                         <div class="col-md-3">
-                            <h4 class="fw-bold mb-0 text-info">{{ prestamos|selectattr('estado', 'equalto', 'DEVUELTO')|list|length }}</h4>
+                            <h4 class="fw-bold mb-0 text-info" id="devueltos">{{ prestamos|selectattr('estado', 'equalto', 'DEVUELTO')|list|length }}</h4>
                             <small class="text-muted">Devueltos</small>
                         </div>
                     </div>
@@ -127,7 +127,7 @@
             <div class="card">
                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Préstamos</h5>
-                    <span class="badge bg-light text-dark rounded-pill">{{ prestamos|length }} registros</span>
+                    <span class="badge bg-light text-dark rounded-pill" id="total-registros">{{ prestamos|length }} registros</span>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive" style="max-height: 600px; overflow: auto;">
@@ -149,9 +149,9 @@
                                     {% endif %}
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="prestamos-body">
                                 {% for r in prestamos %}
-                                <tr>
+                                <tr id="prestamo-{{ r.id }}" data-estado="{{ r.estado }}">
                                     <td class="fw-semibold">{{ r.id }}</td>
                                     <td>
                                         <div class="d-flex align-items-center">
@@ -198,25 +198,24 @@
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm" role="group">
                                             {% if r.estado == 'PRESTADO' %}
-                                            <button type="button" class="btn btn-outline-success"
-                                                    data-bs-toggle="modal" data-bs-target="#aprobarModal"
-                                                    data-id="{{ r.id }}" title="Aprobar Préstamo">
+                                            <button type="button" class="btn btn-outline-success" onclick="aprobarPrestamo({{ r.id }})"
+                                                    title="Aprobar Préstamo">
                                                 <i class="fas fa-check"></i>
                                             </button>
                                             <button type="button" class="btn btn-outline-warning"
-                                                    data-bs-toggle="modal" data-bs-target="#aprobarParcialModal"
-                                                    data-id="{{ r.id }}" data-cantidad="{{ r.cantidad }}" title="Aprobar Parcialmente">
+                                                    onclick="mostrarModalAprobarParcial({{ r.id }}, {{ r.cantidad }})"
+                                                    title="Aprobar Parcialmente">
                                                 <i class="fas fa-check-double"></i>
                                             </button>
                                             <button type="button" class="btn btn-outline-danger"
-                                                    data-bs-toggle="modal" data-bs-target="#rechazarModal"
-                                                    data-id="{{ r.id }}" title="Rechazar Préstamo">
+                                                    onclick="mostrarModalRechazar({{ r.id }})"
+                                                    title="Rechazar Préstamo">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                             {% elif r.estado in ['APROBADO', 'APROBADO_PARCIAL'] %}
                                             <button type="button" class="btn btn-outline-info"
-                                                    data-bs-toggle="modal" data-bs-target="#devolucionModal"
-                                                    data-id="{{ r.id }}" title="Registrar Devolución">
+                                                    onclick="mostrarModalDevolucion({{ r.id }})"
+                                                    title="Registrar Devolución">
                                                 <i class="fas fa-undo"></i>
                                             </button>
                                             {% else %}
@@ -251,43 +250,6 @@
     </div>
 </div>
 
-<!-- Modales Mejorados -->
-<!-- Modal Aprobar -->
-<div class="modal fade" id="aprobarModal" tabindex="-1" aria-labelledby="aprobarModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="aprobarModalLabel">
-                    <i class="fas fa-check-circle me-2"></i>Aprobar Préstamo
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-question-circle fa-2x text-warning"></i>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h6 class="mb-1">¿Está seguro de que desea aprobar este préstamo?</h6>
-                        <p class="mb-0 text-muted">Esta acción no se puede deshacer.</p>
-                    </div>
-                </div>
-                <form id="formAprobar" method="post" action="">
-                    <input type="hidden" name="prestamo_id" id="aprobar_prestamo_id">
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Cancelar
-                </button>
-                <button type="submit" form="formAprobar" class="btn btn-success">
-                    <i class="fas fa-check me-2"></i>Sí, Aprobar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Modal Aprobar Parcial -->
 <div class="modal fade" id="aprobarParcialModal" tabindex="-1" aria-labelledby="aprobarParcialModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -308,8 +270,8 @@
                         <p class="mb-0 text-muted">Solo se aprobará la cantidad especificada.</p>
                     </div>
                 </div>
-                <form id="formAprobarParcial" method="post" action="">
-                    <input type="hidden" name="prestamo_id" id="aprobar_parcial_prestamo_id">
+                <form id="formAprobarParcial">
+                    <input type="hidden" id="aprobar_parcial_prestamo_id">
                     <div class="mb-3">
                         <label for="cantidad_aprobada" class="form-label fw-semibold">Cantidad Aprobada</label>
                         <input type="number" class="form-control" id="cantidad_aprobada" name="cantidad_aprobada"
@@ -325,7 +287,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-2"></i>Cancelar
                 </button>
-                <button type="submit" form="formAprobarParcial" class="btn btn-warning">
+                <button type="button" class="btn btn-warning" onclick="aprobarParcial()">
                     <i class="fas fa-check-double me-2"></i>Aprobar Parcial
                 </button>
             </div>
@@ -353,8 +315,8 @@
                         <p class="mb-0 text-muted">Esta acción no se puede deshacer.</p>
                     </div>
                 </div>
-                <form id="formRechazar" method="post" action="">
-                    <input type="hidden" name="prestamo_id" id="rechazar_prestamo_id">
+                <form id="formRechazar">
+                    <input type="hidden" id="rechazar_prestamo_id">
                     <div class="mb-3">
                         <label for="observacion" class="form-label fw-semibold">Observación <span class="text-danger">*</span></label>
                         <textarea class="form-control" id="observacion" name="observacion" rows="3"
@@ -370,7 +332,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-2"></i>Cancelar
                 </button>
-                <button type="submit" form="formRechazar" class="btn btn-danger">
+                <button type="button" class="btn btn-danger" onclick="rechazarPrestamo()">
                     <i class="fas fa-times me-2"></i>Rechazar
                 </button>
             </div>
@@ -398,8 +360,8 @@
                         <p class="mb-0 text-muted">El material será marcado como devuelto.</p>
                     </div>
                 </div>
-                <form id="formDevolucion" method="post" action="">
-                    <input type="hidden" name="prestamo_id" id="devolucion_prestamo_id">
+                <form id="formDevolucion">
+                    <input type="hidden" id="devolucion_prestamo_id">
                     <div class="mb-3">
                         <label for="observacion_devolucion" class="form-label fw-semibold">Observación (opcional)</label>
                         <textarea class="form-control" id="observacion_devolucion" name="observacion" rows="3"
@@ -415,7 +377,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-2"></i>Cancelar
                 </button>
-                <button type="submit" form="formDevolucion" class="btn btn-info">
+                <button type="button" class="btn btn-info" onclick="registrarDevolucion()">
                     <i class="fas fa-undo me-2"></i>Registrar Devolución
                 </button>
             </div>
@@ -482,7 +444,278 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
 <script>
-    // Exportar a Excel
+    // ========== FUNCIONES DE MANEJO DE PRÉSTAMOS (REALES) ==========
+
+    // Aprobar préstamo
+    function aprobarPrestamo(prestamoId) {
+        if (confirm('¿Está seguro de que desea aprobar este préstamo?')) {
+            fetch(`/prestamos/${prestamoId}/aprobar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarNotificacion('✅ ' + data.message, 'success');
+                    actualizarEstadoPrestamo(prestamoId, data.estado);
+                } else {
+                    mostrarNotificacion('❌ ' + (data.message || 'Error al aprobar el préstamo'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarNotificacion('❌ Error al aprobar el préstamo', 'error');
+            });
+        }
+    }
+
+    // Mostrar modal para aprobar parcialmente
+    function mostrarModalAprobarParcial(prestamoId, cantidadMaxima) {
+        document.getElementById('aprobar_parcial_prestamo_id').value = prestamoId;
+        document.getElementById('cantidad_aprobada').value = cantidadMaxima;
+        document.getElementById('cantidad_aprobada').max = cantidadMaxima;
+        document.getElementById('max_cantidad').textContent = cantidadMaxima;
+        
+        const modal = new bootstrap.Modal(document.getElementById('aprobarParcialModal'));
+        modal.show();
+    }
+
+    // Aprobar parcialmente
+    function aprobarParcial() {
+        const prestamoId = document.getElementById('aprobar_parcial_prestamo_id').value;
+        const cantidadAprobada = document.getElementById('cantidad_aprobada').value;
+        
+        if (!cantidadAprobada || cantidadAprobada <= 0) {
+            mostrarNotificacion('❌ Por favor ingrese una cantidad válida', 'error');
+            return;
+        }
+        
+        fetch(`/prestamos/${prestamoId}/aprobar_parcial`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ cantidad_aprobada: parseInt(cantidadAprobada) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('✅ ' + data.message, 'success');
+                actualizarEstadoPrestamo(prestamoId, data.estado);
+                // Cerrar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('aprobarParcialModal'));
+                modal.hide();
+            } else {
+                mostrarNotificacion('❌ ' + (data.message || 'Error al aprobar parcialmente'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('❌ Error al aprobar parcialmente', 'error');
+        });
+    }
+
+    // Mostrar modal para rechazar
+    function mostrarModalRechazar(prestamoId) {
+        document.getElementById('rechazar_prestamo_id').value = prestamoId;
+        document.getElementById('observacion').value = '';
+        
+        const modal = new bootstrap.Modal(document.getElementById('rechazarModal'));
+        modal.show();
+    }
+
+    // Rechazar préstamo
+    function rechazarPrestamo() {
+        const prestamoId = document.getElementById('rechazar_prestamo_id').value;
+        const observacion = document.getElementById('observacion').value.trim();
+        
+        if (!observacion) {
+            mostrarNotificacion('❌ Por favor ingrese una observación', 'error');
+            return;
+        }
+        
+        fetch(`/prestamos/${prestamoId}/rechazar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ observacion: observacion })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('✅ ' + data.message, 'success');
+                actualizarEstadoPrestamo(prestamoId, data.estado);
+                // Cerrar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('rechazarModal'));
+                modal.hide();
+            } else {
+                mostrarNotificacion('❌ ' + (data.message || 'Error al rechazar el préstamo'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('❌ Error al rechazar el préstamo', 'error');
+        });
+    }
+
+    // Mostrar modal para devolución
+    function mostrarModalDevolucion(prestamoId) {
+        document.getElementById('devolucion_prestamo_id').value = prestamoId;
+        document.getElementById('observacion_devolucion').value = '';
+        
+        const modal = new bootstrap.Modal(document.getElementById('devolucionModal'));
+        modal.show();
+    }
+
+    // Registrar devolución
+    function registrarDevolucion() {
+        const prestamoId = document.getElementById('devolucion_prestamo_id').value;
+        const observacion = document.getElementById('observacion_devolucion').value.trim();
+        
+        fetch(`/prestamos/${prestamoId}/devolucion`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ observacion: observacion })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('✅ ' + data.message, 'success');
+                actualizarEstadoPrestamo(prestamoId, data.estado);
+                // Cerrar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('devolucionModal'));
+                modal.hide();
+            } else {
+                mostrarNotificacion('❌ ' + (data.message || 'Error al registrar la devolución'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('❌ Error al registrar la devolución', 'error');
+        });
+    }
+
+    // Actualizar estado del préstamo en la tabla (solo interfaz)
+    function actualizarEstadoPrestamo(prestamoId, nuevoEstado) {
+        const fila = document.getElementById(`prestamo-${prestamoId}`);
+        if (!fila) return;
+        
+        // Actualizar atributo de estado
+        fila.setAttribute('data-estado', nuevoEstado);
+        
+        // Actualizar badge de estado
+        const estadoBadge = fila.querySelector('.estado-badge');
+        const icono = fila.querySelector('.estado-badge i');
+        
+        // Actualizar clases CSS
+        estadoBadge.className = `badge rounded-pill fw-normal py-2 px-3 estado-badge estado-${nuevoEstado.toLowerCase().replace(' ', '-')}`;
+        
+        // Actualizar icono
+        const iconosMap = {
+            'PRESTADO': 'fa-clock',
+            'APROBADO': 'fa-check-circle',
+            'RECHAZADO': 'fa-times-circle',
+            'APROBADO_PARCIAL': 'fa-check-double',
+            'DEVUELTO': 'fa-undo'
+        };
+        
+        icono.className = `fas ${iconosMap[nuevoEstado] || 'fa-question-circle'} me-1`;
+        
+        // Actualizar texto
+        estadoBadge.innerHTML = `${icono.outerHTML} ${nuevoEstado}`;
+        
+        // Actualizar botones de acción
+        const accionesTd = fila.querySelector('td.text-center');
+        if (accionesTd) {
+            let nuevosBotones = '';
+            
+            if (nuevoEstado === 'PRESTADO') {
+                nuevosBotones = `
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-success" onclick="aprobarPrestamo(${prestamoId})"
+                                title="Aprobar Préstamo">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-warning"
+                                onclick="mostrarModalAprobarParcial(${prestamoId}, ${fila.querySelector('td:nth-child(3)').textContent})"
+                                title="Aprobar Parcialmente">
+                            <i class="fas fa-check-double"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger"
+                                onclick="mostrarModalRechazar(${prestamoId})"
+                                title="Rechazar Préstamo">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+            } else if (nuevoEstado === 'APROBADO' || nuevoEstado === 'APROBADO_PARCIAL') {
+                nuevosBotones = `
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-info"
+                                onclick="mostrarModalDevolucion(${prestamoId})"
+                                title="Registrar Devolución">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                    </div>
+                `;
+            } else {
+                nuevosBotones = '<span class="text-muted small">N/A</span>';
+            }
+            
+            accionesTd.innerHTML = nuevosBotones;
+        }
+        
+        // Actualizar contadores
+        actualizarContadores();
+    }
+
+    // Actualizar contadores de resumen
+    function actualizarContadores() {
+        const filas = document.querySelectorAll('#prestamos-body tr');
+        let total = 0;
+        let pendientes = 0;
+        let aprobados = 0;
+        let devueltos = 0;
+        
+        filas.forEach(fila => {
+            const estado = fila.getAttribute('data-estado');
+            total++;
+            
+            switch(estado) {
+                case 'PRESTADO':
+                    pendientes++;
+                    break;
+                case 'APROBADO':
+                    aprobados++;
+                    break;
+                case 'DEVUELTO':
+                    devueltos++;
+                    break;
+                case 'APROBADO_PARCIAL':
+                    aprobados++; // Contar como aprobado para el resumen
+                    break;
+            }
+        });
+        
+        // Actualizar elementos en el DOM
+        document.getElementById('total-prestamos').textContent = total;
+        document.getElementById('pendientes').textContent = pendientes;
+        document.getElementById('aprobados').textContent = aprobados;
+        document.getElementById('devueltos').textContent = devueltos;
+        document.getElementById('total-registros').textContent = `${total} registros`;
+    }
+
+    // ========== FUNCIONES DE EXPORTACIÓN ==========
+    
     function exportarExcelPrestamos() {
         try {
             const tabla = document.getElementById('tablaPrestamos');
@@ -497,18 +730,22 @@
         }
     }
 
-    // Exportar a PDF
     function exportarPDFPrestamos() {
         try {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
+            
+            const totalPrestamos = document.getElementById('total-prestamos').textContent;
+            const pendientes = document.getElementById('pendientes').textContent;
+            const aprobados = document.getElementById('aprobados').textContent;
+            const devueltos = document.getElementById('devueltos').textContent;
 
             doc.setFontSize(16);
             doc.text('Reporte de Préstamos - Sistema de Gestión', 14, 15);
             doc.setFontSize(10);
             doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 14, 22);
-            doc.text(`Total de préstamos: {{ prestamos|length }}`, 14, 29);
-            doc.text(`Filtro estado: {{ filtro_estado or 'Todos' }}`, 14, 36);
+            doc.text(`Total de préstamos: ${totalPrestamos}`, 14, 29);
+            doc.text(`Pendientes: ${pendientes} | Aprobados: ${aprobados} | Devueltos: ${devueltos}`, 14, 36);
 
             doc.autoTable({
                 html: '#tablaPrestamos',
@@ -555,56 +792,5 @@
             document.body.removeChild(toast);
         });
     }
-
-    // Manejo de modales
-    document.addEventListener('DOMContentLoaded', function () {
-        // Aprobar
-        const aprobarModal = document.getElementById('aprobarModal');
-        if (aprobarModal) {
-            aprobarModal.addEventListener('show.bs.modal', function (event) {
-                const button = event.relatedTarget;
-                const id = button.getAttribute('data-id');
-                document.getElementById('aprobar_prestamo_id').value = id;
-                document.getElementById('formAprobar').action = `/prestamos/${id}/aprobar`;
-            });
-        }
-
-        // Aprobar parcial
-        const aprobarParcialModal = document.getElementById('aprobarParcialModal');
-        if (aprobarParcialModal) {
-            aprobarParcialModal.addEventListener('show.bs.modal', function (event) {
-                const button = event.relatedTarget;
-                const id = button.getAttribute('data-id');
-                const cant = button.getAttribute('data-cantidad');
-                document.getElementById('aprobar_parcial_prestamo_id').value = id;
-                document.getElementById('cantidad_aprobada').value = cant;
-                document.getElementById('cantidad_aprobada').max = cant;
-                document.getElementById('max_cantidad').textContent = cant;
-                document.getElementById('formAprobarParcial').action = `/prestamos/${id}/aprobar_parcial`;
-            });
-        }
-
-        // Rechazar
-        const rechazarModal = document.getElementById('rechazarModal');
-        if (rechazarModal) {
-            rechazarModal.addEventListener('show.bs.modal', function (event) {
-                const id = event.relatedTarget.getAttribute('data-id');
-                document.getElementById('rechazar_prestamo_id').value = id;
-                document.getElementById('formRechazar').action = `/prestamos/${id}/rechazar`;
-                document.getElementById('observacion').value = '';
-            });
-        }
-
-        // Devolución
-        const devolucionModal = document.getElementById('devolucionModal');
-        if (devolucionModal) {
-            devolucionModal.addEventListener('show.bs.modal', function (event) {
-                const id = event.relatedTarget.getAttribute('data-id');
-                document.getElementById('devolucion_prestamo_id').value = id;
-                document.getElementById('formDevolucion').action = `/prestamos/${id}/devolucion`;
-                document.getElementById('observacion_devolucion').value = '';
-            });
-        }
-    });
 </script>
 {% endblock %}
