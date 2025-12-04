@@ -3,7 +3,6 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Botón de volver -->
     <div class="row mb-3">
         <div class="col-md-12">
             <a href="/dashboard" class="btn btn-secondary">
@@ -12,9 +11,8 @@
         </div>
     </div>
 
-    <h1>👤 Gestión de Aprobadores</h1>
+    <h1 class="mb-4">Gestión de Aprobadores</h1>
 
-    <!-- Mensajes Flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -26,30 +24,17 @@
         {% endif %}
     {% endwith %}
 
-    <!-- DEBUG: Solo si necesitas verificar los datos (quitar en producción) -->
-    {% if debug %}
-    <div class="alert alert-warning">
-        <h6>🔍 Modo Debug Activado</h6>
-        <p><strong>Total de aprobadores:</strong> {{ aprobadores|length }}</p>
-        {% if aprobadores and aprobadores|length > 0 %}
-            <p><strong>Primer aprobador:</strong></p>
-            <pre>{{ aprobadores[0]|tojson(indent=2) }}</pre>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- Tabla de aprobadores -->
     <div class="row">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        📋 Lista de Aprobadores
-                        <span class="badge bg-light text-dark ms-2">{{ aprobadores|length }} registros</span>
+                        <i class="fas fa-list me-2"></i>Lista de Aprobadores
+                        <span class="badge bg-light text-dark ms-2">{{ aprobadores|length }}</span>
                     </h5>
                     {% if can_access is defined and can_access('aprobadores', 'create') %}
                     <a href="/aprobadores/crear" class="btn btn-light btn-sm">
-                        <i class="fas fa-plus"></i> Nuevo Aprobador
+                        <i class="fas fa-plus me-1"></i>Nuevo
                     </a>
                     {% endif %}
                 </div>
@@ -64,7 +49,7 @@
                                     <th>Email</th>
                                     <th>Oficina</th>
                                     <th>Estado</th>
-                                    <th>Fecha Registro</th>
+                                    <th>Registro</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -73,7 +58,7 @@
                                     <td><strong>#{{ aprobador.AprobadorId }}</strong></td>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="avatar-circle bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <div class="bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                                                 {{ aprobador.NombreAprobador[0] if aprobador.NombreAprobador else 'U' }}
                                             </div>
                                             <div>
@@ -83,25 +68,29 @@
                                     </td>
                                     <td>
                                         {% if aprobador.Email %}
-                                        <span class="text-primary">
-                                            <i class="fas fa-envelope me-1"></i>{{ aprobador.Email }}
-                                        </span>
+                                        <a href="mailto:{{ aprobador.Email }}" class="text-decoration-none">
+                                            <i class="fas fa-envelope me-1 text-muted"></i>{{ aprobador.Email }}
+                                        </a>
                                         {% else %}
                                         <span class="text-muted">No especificado</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="badge bg-outline-primary">COQ</span>
+                                        <span class="badge bg-light text-dark border">COQ</span>
                                     </td>
                                     <td>
                                         {% if aprobador.Activo == 1 %}
-                                        <span class="badge bg-success">Activo</span>
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Activo
+                                        </span>
                                         {% else %}
-                                        <span class="badge bg-danger">Inactivo</span>
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-times-circle me-1"></i>Inactivo
+                                        </span>
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        <small class="text-muted">
+                                    <td class="text-muted">
+                                        <small>
                                             {% if aprobador.FechaCreacion %}
                                                 {% if aprobador.FechaCreacion is string %}
                                                     {{ aprobador.FechaCreacion[:10] }}
@@ -119,20 +108,15 @@
                         </table>
                     </div>
                     {% else %}
-                    <div class="alert alert-info text-center mt-3">
-                        <h5>👥 No hay aprobadores registrados</h5>
-                        <p>No se encontraron aprobadores en el sistema.</p>
-                        <div class="mt-3">
-                            <p class="mb-2">Posibles causas:</p>
-                            <ul class="list-unstyled">
-                                <li>• La tabla Aprobadores está vacía</li>
-                                <li>• Hay un error en la conexión a la base de datos</li>
-                                <li>• No hay registros activos</li>
-                            </ul>
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-3x text-muted"></i>
                         </div>
+                        <h4 class="text-muted mb-3">No hay aprobadores registrados</h4>
+                        <p class="text-muted mb-4">No se encontraron registros en el sistema.</p>
                         {% if can_access is defined and can_access('aprobadores', 'create') %}
-                        <a href="/aprobadores/crear" class="btn btn-primary mt-2">
-                            <i class="fas fa-plus"></i> Registrar Primer Aprobador
+                        <a href="/aprobadores/crear" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Agregar Aprobador
                         </a>
                         {% endif %}
                     </div>
@@ -142,7 +126,7 @@
                 <div class="card-footer text-muted">
                     <small>
                         <i class="fas fa-info-circle me-1"></i>
-                        Mostrando {{ aprobadores|length }} aprobador(es)
+                        Total: {{ aprobadores|length }} aprobador(es)
                     </small>
                 </div>
                 {% endif %}
@@ -153,50 +137,39 @@
 
 <style>
     .table th {
-        white-space: nowrap;
-    }
-
-    .badge {
-        font-size: 0.8em;
-    }
-
-    .avatar-circle {
-        font-weight: bold;
-        font-size: 1.1em;
-    }
-
-    .bg-outline-primary {
-        background-color: transparent;
-        border: 1px solid #0d6efd;
-        color: #0d6efd;
-    }
-
-    .card-body h4 {
-        margin-bottom: 0;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
-    .table tbody tr:hover {
-        background-color: rgba(0, 123, 255, 0.05);
+    .table td {
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s;
+    }
+    
+    .rounded-circle {
+        font-weight: 600;
+        font-size: 1rem;
     }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Inicializar tooltips si es necesario
     document.addEventListener('DOMContentLoaded', function() {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-        
-        // Opcional: Confirmación para acciones futuras
-        document.querySelectorAll('.btn-danger').forEach(function(button) {
-            button.addEventListener('click', function(e) {
-                if (!confirm('¿Está seguro de realizar esta acción?')) {
-                    e.preventDefault();
-                }
-            });
         });
     });
 </script>

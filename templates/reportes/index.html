@@ -2,7 +2,7 @@
 {% block title %}Sistema de Reportes{% endblock %}
 {% block content %}
 <div class="container-fluid fade-in">
-    <!-- Encabezado compacto -->
+    <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 fw-bold mb-1 text-primary">
@@ -15,9 +15,8 @@
         </a>
     </div>
 
-    <!-- Tarjetas de reportes - SOLO VISIBLES SI TIENE PERMISOS -->
+    <!-- Tarjetas de reportes - Control de acceso por permisos -->
     <div class="row">
-        <!-- 🔽 REPORTE DE MATERIALES - Solo si tiene permiso para ver materiales -->
         {% if can_access('materiales', 'view') %}
         <div class="col-md-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
@@ -40,7 +39,6 @@
         </div>
         {% endif %}
 
-        <!-- 🔽 REPORTE DE SOLICITUDES - Solo si tiene permiso para ver solicitudes -->
         {% if can_access('solicitudes', 'view') %}
         <div class="col-md-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
@@ -63,7 +61,6 @@
         </div>
         {% endif %}
 
-        <!-- 🔽 REPORTE DE INVENTARIO - Solo si tiene permiso para ver inventario corporativo -->
         {% if can_access('inventario_corporativo', 'view') %}
         <div class="col-md-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
@@ -86,7 +83,6 @@
         </div>
         {% endif %}
 
-        <!-- 🔽 REPORTE DE PRÉSTAMOS - Solo si tiene permiso para ver préstamos -->
         {% if can_access('prestamos', 'view') or can_access('prestamos', 'view_own') %}
         <div class="col-md-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
@@ -109,7 +105,6 @@
         </div>
         {% endif %}
 
-        <!-- 🔽 REPORTE DE NOVEDADES - Solo si tiene permiso para ver novedades -->
         {% if can_access('novedades', 'view') %}
         <div class="col-md-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
@@ -132,7 +127,6 @@
         </div>
         {% endif %}
 
-        <!-- 🔽 REPORTE DE OFICINAS - Solo si tiene permiso para ver oficinas -->
         {% if can_access('oficinas', 'view') %}
         <div class="col-md-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
@@ -156,7 +150,7 @@
         {% endif %}
     </div>
 
-    <!-- Mensaje si no tiene permisos para ningún reporte -->
+    <!-- Mensaje de ausencia de permisos -->
     {% if not (can_access('materiales', 'view') or 
                can_access('solicitudes', 'view') or 
                can_access('inventario_corporativo', 'view') or 

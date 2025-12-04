@@ -11,7 +11,7 @@ class Config:
     # Configuración de Flask
     JSON_AS_ASCII = False
     TEMPLATES_AUTO_RELOAD = True
-    SESSION_COOKIE_SECURE = False  # True en producción con HTTPS
+    SESSION_COOKIE_SECURE = False 
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)

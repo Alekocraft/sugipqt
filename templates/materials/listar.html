@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Lista de Materiales{% endblock %}
+{% block title %}Gestión de Materiales{% endblock %}
 {% block content %}
 <div class="container mt-4">
     <div class="row">
@@ -7,10 +7,10 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h2 class="card-title mb-0">
-                        <i class="fas fa-box"></i> Lista de Materiales
+                        <i class="fas fa-box"></i> Inventario de Materiales
                     </h2>
                     <a href="/materiales/crear" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Nuevo Material
+                        <i class="fas fa-plus"></i> Agregar Material
                     </a>
                 </div>
                 <div class="card-body">
@@ -26,16 +26,24 @@
                     {% endwith %}
 
                     {% if materiales %}
-                    <p class="text-muted">Mostrando {{ materiales|length }} materiales</p>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="text-muted mb-0">{{ materiales|length }} materiales registrados</p>
+                        <div class="text-muted small">
+                            <span class="badge bg-success me-2">Disponible</span>
+                            <span class="badge bg-warning me-2">Bajo stock</span>
+                            <span class="badge bg-danger">Agotado</span>
+                        </div>
+                    </div>
+                    
                     <div class="table-responsive">
                         <table class="table table-striped table-hover">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
+                                    <th>Código</th>
+                                    <th>Material</th>
                                     <th>Valor Unitario</th>
-                                    <th>Cantidad</th>
-                                    <th>Oficina</th>
+                                    <th>Stock</th>
+                                    <th>Ubicación</th>
                                     <th>Imagen</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -43,37 +51,51 @@
                             <tbody>
                                 {% for material in materiales %}
                                 <tr>
-                                    <td><strong>{{ material.id }}</strong></td>
+                                    <td><strong>MAT-{{ "%04d"|format(material.id) }}</strong></td>
                                     <td>{{ material.nombre }}</td>
                                     <td>${{ "{:,.2f}".format(material.valor_unitario) }}</td>
                                     <td>
-                                        <span class="badge {% if material.cantidad > 10 %}bg-success{% elif material.cantidad > 0 %}bg-warning{% else %}bg-danger{% endif %}">
-                                            {{ material.cantidad }}
-                                        </span>
-                                    </td>
-                                    <td>{{ material.oficina_id }}</td>
-                                    <td>
-                                        {% if material.ruta_imagen %}
-                                        <!-- CORRECCIÓN: Agregar /uploads/ en la ruta -->
-                                        <img src="/static/uploads/{{ material.ruta_imagen }}"
-                                             alt="{{ material.nombre }}"
-                                             style="max-width: 50px; max-height: 50px;"
-                                             class="img-thumbnail"
-                                             onerror="this.style.display='none'">
+                                        {% if material.cantidad > 10 %}
+                                        <span class="badge bg-success">{{ material.cantidad }} unidades</span>
+                                        {% elif material.cantidad > 0 %}
+                                        <span class="badge bg-warning text-dark">{{ material.cantidad }} unidades</span>
                                         {% else %}
-                                        <span class="text-muted">Sin imagen</span>
+                                        <span class="badge bg-danger">Agotado</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="/materiales/editar/{{ material.id }}" class="btn btn-warning btn-sm">
-                                                <i class="fas fa-edit"></i> Editar
+                                        <span class="badge bg-secondary">
+                                            Oficina {{ material.oficina_id }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if material.ruta_imagen %}
+                                        <img src="/static/uploads/{{ material.ruta_imagen }}"
+                                             alt="{{ material.nombre }}"
+                                             style="width: 60px; height: 60px; object-fit: cover;"
+                                             class="img-thumbnail border"
+                                             onerror="this.src='/static/img/placeholder-material.png'">
+                                        {% else %}
+                                        <div class="text-center text-muted">
+                                            <i class="fas fa-image fa-lg"></i>
+                                            <div class="small">Sin imagen</div>
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <a href="/materiales/editar/{{ material.id }}" 
+                                               class="btn btn-outline-primary btn-sm"
+                                               title="Editar material">
+                                                <i class="fas fa-edit"></i>
                                             </a>
-                                            <form method="POST" action="/materiales/eliminar/{{ material.id }}"
-                                                  style="display: inline;"
-                                                  onsubmit="return confirm('¿Está seguro de eliminar este material?');">
-                                                <button type="submit" class="btn btn-danger btn-sm">
-                                                    <i class="fas fa-trash"></i> Eliminar
+                                            <form method="POST" 
+                                                  action="/materiales/eliminar/{{ material.id }}"
+                                                  onsubmit="return confirm('¿Confirmar eliminación del material {{ material.nombre }}?');">
+                                                <button type="submit" 
+                                                        class="btn btn-outline-danger btn-sm"
+                                                        title="Eliminar material">
+                                                    <i class="fas fa-trash"></i>
                                                 </button>
                                             </form>
                                         </div>
@@ -84,15 +106,53 @@
                         </table>
                     </div>
                     {% else %}
-                    <div class="alert alert-info text-center">
-                        <i class="fas fa-info-circle"></i> No hay materiales registrados.
-                        <br>
-                        <a href="/materiales/crear" class="btn btn-primary mt-2">➕ Crear Primer Material</a>
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-box-open fa-3x text-muted"></i>
+                        </div>
+                        <h4 class="text-muted mb-3">Inventario vacío</h4>
+                        <p class="text-muted mb-4">No hay materiales registrados en el sistema</p>
+                        <a href="/materiales/crear" class="btn btn-primary">
+                            <i class="fas fa-plus-circle me-2"></i>Registrar primer material
+                        </a>
                     </div>
                     {% endif %}
                 </div>
+                {% if materiales %}
+                <div class="card-footer text-muted">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small>Última actualización: {{ fecha_actual|default('N/A') }}</small>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <small>Total de registros: {{ materiales|length }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.table th {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.table td {
+    vertical-align: middle;
+}
+.img-thumbnail {
+    border-radius: 4px;
+    padding: 2px;
+    background-color: #fff;
+}
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+</style>
 {% endblock %}

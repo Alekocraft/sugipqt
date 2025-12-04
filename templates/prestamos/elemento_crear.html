@@ -98,9 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        // 🔒 PREVENIR DOBLE ENVÍO
         if (enviando) {
-            console.log("⚠️ Formulario ya enviándose, ignorando...");
             return;
         }
         enviando = true;
@@ -124,9 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
             mostrarAlerta(json.message, json.success ? "success" : "danger");
 
             if (json.success) {
-                form.reset(); // Limpiar formulario solo si fue exitoso
+                form.reset();
                 
-                // 🔒 Deshabilitar el botón por 3 segundos después de éxito
                 setTimeout(() => {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<i class="fas fa-save"></i> Crear Material';
@@ -139,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } catch (error) {
-            console.error("Error:", error);
+            console.error("Error en creación de material:", error);
             mostrarAlerta("Error inesperado del servidor", "danger");
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fas fa-save"></i> Crear Material';
@@ -155,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         
-        // Auto-cerrar alertas de éxito después de 5 segundos
         if (tipo === 'success') {
             setTimeout(() => {
                 const alert = document.querySelector('.alert');
@@ -166,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 🔒 PREVENIR DOBLE CLIC RÁPIDO
     submitBtn.addEventListener('click', function(e) {
         if (enviando) {
             e.preventDefault();

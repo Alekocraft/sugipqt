@@ -69,7 +69,6 @@
         border-color: currentColor;
     }
     
-    /* Mejoras visuales para las tarjetas de estadísticas */
     .stats-number {
         font-size: 2.5rem;
         font-weight: 700;
@@ -83,7 +82,6 @@
         margin-bottom: 1rem;
     }
     
-    /* Gradientes mejorados para las tarjetas de módulos */
     .card-modulo-pop {
         background: linear-gradient(135deg, #A73493 0%, #8c2a7a 100%);
     }
@@ -97,7 +95,6 @@
         color: #212529 !important;
     }
     
-    /* Efectos de hover específicos para cada módulo */
     .card-modulo-pop:hover {
         background: linear-gradient(135deg, #b83a9e 0%, #9a2f84 100%);
     }
@@ -110,13 +107,11 @@
         background: linear-gradient(135deg, #e0e0e0 0%, #d1d1d1 100%);
     }
     
-    /* Iconos en headers de modales - corregidos */
     .modal-header .fas {
         color: #fff !important;
         opacity: 0.9;
     }
     
-    /* Mejoras en las acciones rápidas */
     .acciones-rapidas .btn {
         border-radius: 8px;
         font-weight: 500;
@@ -132,7 +127,6 @@
 
 {% block content %}
 <div class="container fade-in mt-4">
-    <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="fw-bold mb-2" style="color: #A73493;">
@@ -141,29 +135,17 @@
             <p class="text-muted fs-5">Resumen general del sistema de gestión de inventarios</p>
         </div>
         <div class="badge bg-primary fs-6 p-2">
-    <i class="fas fa-calendar me-2"></i>
-    <span id="fecha-actual">{{ now.strftime('%d/%m/%Y') if now else "" }}</span>
+            <i class="fas fa-calendar me-2"></i>
+            <span id="fecha-actual">{{ now.strftime('%d/%m/%Y') if now else "" }}</span>
         </div>
-
-        <script>
-        // JavaScript que asegura que siempre se muestre la fecha
-        document.addEventListener('DOMContentLoaded', function() {
-            const fechaElement = document.getElementById('fecha-actual');
-            if (!fechaElement.textContent.trim()) {
-                const hoy = new Date();
-                fechaElement.textContent = hoy.toLocaleDateString('es-ES');
-            }
-        });
-        </script>
     </div>
 
-    <!-- Bienvenida -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body bg-white rounded-3">
             <div class="row align-items-center">
                 <div class="col-md-8">
                     <h4 class="fw-semibold text-dark mb-2">
-                        🚀 Bienvenido, {{ session.usuario_nombre }}
+                        Bienvenido, {{ session.usuario_nombre }}
                     </h4>
                     <p class="text-muted mb-0 fs-5">
                         <strong><i class="fas fa-shield-alt me-2"></i>Rol:</strong> 
@@ -182,10 +164,8 @@
         </div>
     </div>
 
-    <!-- Sección de módulos principales -->
     <div class="row g-4 mb-4">
         {% if can_access('material_pop') %}
-        <!-- Material POP -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-modulo card-modulo-pop text-white text-center p-4"
                  data-bs-toggle="modal" data-bs-target="#modalMaterialPOP">
@@ -201,7 +181,6 @@
         {% endif %}
 
         {% if can_access('inventario_corporativo') %}
-        <!-- Inventario Corporativo -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-modulo card-modulo-inventario text-white text-center p-4"
                  data-bs-toggle="modal" data-bs-target="#modalInventarioCorporativo">
@@ -217,7 +196,6 @@
         {% endif %}
 
         {% if can_access('prestamo_material') %}
-        <!-- Préstamo de Material -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-modulo card-modulo-prestamos text-center p-4"
                  data-bs-toggle="modal" data-bs-target="#modalPrestamos">
@@ -234,10 +212,6 @@
     </div>
 </div>
 
-<!-- ======================================= -->
-<!-- Modal: Material POP -->
-<!-- ======================================= -->
-
 <div class="modal fade" id="modalMaterialPOP" tabindex="-1" aria-labelledby="modalMaterialPOPLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -249,9 +223,7 @@
             </div>
 
             <div class="modal-body text-dark" style="background-color: #F8F9FA;">
-                <!-- Estadísticas mejoradas -->
                 <div class="row g-4 mb-4">
-                    <!-- 🔽 MATERIALES - Solo mostrar si tiene permisos 'view' -->
                     {% if can_access('materiales', 'view') %}
                     <div class="col-xl-3 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-4 bg-white h-100 text-dark">
@@ -268,7 +240,6 @@
                     </div>
                     {% endif %}
 
-                    <!-- Oficinas - Solo mostrar si tiene permisos -->
                     {% if can_access('oficinas', 'view') %}
                     <div class="col-xl-3 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-4 bg-white h-100 text-dark">
@@ -285,7 +256,6 @@
                     </div>
                     {% endif %}
 
-                    <!-- Solicitudes - Solo mostrar si tiene permisos -->
                     {% if can_access('solicitudes', 'view') %}
                     <div class="col-xl-3 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-4 bg-white h-100 text-dark">
@@ -302,7 +272,6 @@
                     </div>
                     {% endif %}
 
-                    <!-- Aprobadores - Solo mostrar si tiene permisos -->
                     {% if can_access('aprobadores', 'view') %}
                     <div class="col-xl-3 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-4 bg-white h-100 text-dark">
@@ -320,7 +289,6 @@
                     {% endif %}
                 </div>
 
-                <!-- Acciones Rápidas -->
                 <div class="card border-0 shadow-sm">
                     <div class="card-body text-dark">
                         <h5 class="fw-semibold mb-3" style="color: #A73493;">
@@ -328,7 +296,6 @@
                         </h5>
 
                         <div class="d-flex flex-wrap gap-3 acciones-rapidas">
-                            <!-- 🔽 CREAR MATERIAL - Solo para quienes tienen permiso 'create' -->
                             {% if can_access('materiales', 'create') %}
                             <a href="/materiales/crear" class="btn btn-primary btn-lg">
                                 <i class="fas fa-plus me-2"></i> Crear Material
@@ -366,10 +333,6 @@
     </div>
 </div>
 
-<!-- ======================================= -->
-<!-- Modal: Inventario Corporativo -->
-<!-- ======================================= -->
-
 <div class="modal fade" id="modalInventarioCorporativo" tabindex="-1" aria-labelledby="modalInventarioCorporativoLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -381,9 +344,7 @@
             </div>
 
             <div class="modal-body text-dark" style="background-color: #F8F9FA;">
-                <!-- Estadísticas mejoradas -->
                 <div class="row g-4 mb-4">
-                    <!-- Total Productos -->
                     <div class="col-xl-4 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-4 bg-white h-100 text-dark">
                             <div class="stats-icon mb-3" style="color: #0098B1;">
@@ -398,7 +359,6 @@
                         </div>
                     </div>
 
-                    <!-- Sede Principal -->
                     <div class="col-xl-4 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-4 bg-white h-100 text-dark">
                             <div class="stats-icon mb-3" style="color: #A73493;">
@@ -413,7 +373,6 @@
                         </div>
                     </div>
 
-                    <!-- Oficinas de Servicio -->
                     <div class="col-xl-4 col-md-6">
                         <div class="card stats-card border-0 shadow-sm text-center p-4 bg-white h-100 text-dark">
                             <div class="stats-icon mb-3" style="color: #28a745;">
@@ -429,7 +388,6 @@
                     </div>
                 </div>
 
-                <!-- Acciones Rápidas -->
                 <div class="card border-0 shadow-sm">
                     <div class="card-body text-dark">
                         <h5 class="fw-semibold mb-3" style="color: #0098B1;">
@@ -466,14 +424,9 @@
     </div>
 </div>
 
-<!-- ======================================= -->
-<!-- Modal: Préstamos -->
-<!-- ======================================= -->
-
 <div class="modal fade" id="modalPrestamos" tabindex="-1" aria-labelledby="modalPrestamosLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg rounded-3">
-
       <div class="modal-header" style="background-color: #A73493; color: #fff;">
         <h4 class="modal-title fw-bold d-flex align-items-center" id="modalPrestamosLabel">
           <i class="fas fa-exchange-alt me-3"></i> Préstamo de Material
@@ -485,8 +438,6 @@
         <p class="text-muted mb-4 fs-5">Elige una acción para gestionar los préstamos del sistema.</p>
 
         <div class="row g-4">
-
-          <!-- Crear Material - Solo mostrar si tiene permisos -->
           {% if can_access('prestamos', 'manage_materials') %}
           <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm stats-card">
@@ -506,7 +457,6 @@
           </div>
           {% endif %}
 
-          <!-- Nuevo Préstamo - Solo mostrar si tiene permisos -->
           {% if can_access('prestamos', 'create') %}
           <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm stats-card">
@@ -526,7 +476,6 @@
           </div>
           {% endif %}
 
-          <!-- Ver Préstamos - Solo mostrar si tiene permisos -->
           {% if can_access('prestamos', 'view') or can_access('prestamos', 'view_own') %}
           <div class="col-md-4">
             <div class="card h-100 border-0 shadow-sm stats-card">
@@ -545,7 +494,6 @@
             </div>
           </div>
           {% endif %}
-
         </div>
 
         <div class="alert alert-light border mt-4 mb-0 text-dark">
@@ -565,7 +513,6 @@
           <i class="fas fa-times me-2"></i>Cerrar
         </button>
       </div>
-
     </div>
   </div>
 </div>
@@ -574,7 +521,6 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Actualizar hora en tiempo real
     function actualizarHora() {
         const ahora = new Date();
         const hora = ahora.getHours().toString().padStart(2, '0');
@@ -589,9 +535,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (invModal) {
         invModal.addEventListener('show.bs.modal', function () {
-            console.log('Modal de inventario corporativo abierto, cargando estadísticas...');
-
-            // CORREGIDO: Usar la ruta correcta de la API
             fetch('{{ url_for("inventario_corporativo.api_estadisticas_dashboard") }}')
                 .then(response => {
                     if (!response.ok) {
@@ -600,22 +543,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Estadísticas dashboard recibidas:', data);
-
-                    document.getElementById('total-productos').textContent =
-                        data.total_productos || 0;
-
-                    document.getElementById('productos-sede').textContent =
-                        data.productos_sede || 0;
-
-                    document.getElementById('productos-oficinas').textContent =
-                        data.productos_oficinas || 0;
-
-                    console.log('Estadísticas actualizadas correctamente');
+                    document.getElementById('total-productos').textContent = data.total_productos || 0;
+                    document.getElementById('productos-sede').textContent = data.productos_sede || 0;
+                    document.getElementById('productos-oficinas').textContent = data.productos_oficinas || 0;
                 })
                 .catch(error => {
-                    console.error('Error cargando estadísticas dashboard:', error);
-
+                    console.error('Error cargando estadísticas:', error);
                     document.getElementById('total-productos').textContent = '0';
                     document.getElementById('productos-sede').textContent = '0';
                     document.getElementById('productos-oficinas').textContent = '0';
@@ -623,14 +556,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Efectos de hover mejorados para todas las tarjetas
     const cards = document.querySelectorAll('.stats-card, .card-modulo');
     cards.forEach(card => {
         card.addEventListener('mouseenter', function() {
             this.style.transition = 'all 0.3s ease';
         });
     });
-
 });
 </script>
 {% endblock %}

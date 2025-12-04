@@ -172,7 +172,7 @@ def crear_solicitud():
 
 
 # ============================
-# FUNCIONES DE APROBACIÓN - CORREGIDAS
+# FUNCIONES DE APROBACIÓN
 # ============================
 
 @solicitudes_bp.route('/aprobar/<int:solicitud_id>', methods=['POST'])
@@ -188,7 +188,7 @@ def aprobar_solicitud(solicitud_id):
 
         usuario_id = session.get('usuario_id') or session.get('user_id')
         
-        # LLAMADA CORREGIDA - El modelo retorna (success, message)
+      
         success, message = SolicitudModel.aprobar(solicitud_id, usuario_id)
         
         if success:
@@ -260,8 +260,7 @@ def rechazar_solicitud(solicitud_id):
         if not observacion:
             flash('❌ Debe ingresar un motivo para rechazar la solicitud', 'danger')
             return redirect(url_for('solicitudes.listar_solicitudes'))
-            
-        # CORRECCIÓN: La función rechazar del modelo retorna True/False
+             
         success = SolicitudModel.rechazar(solicitud_id, usuario_id, observacion)
         
         if success:
@@ -360,9 +359,9 @@ def api_solicitudes_pendientes():
         return jsonify({'error': 'Error interno del servidor'}), 500
 
 
-# ============================
-# NOVEDADES - CORREGIDAS CON CLAVES DE SESIÓN CONSISTENTES
-# ============================
+# ==========
+# NOVEDADES 
+# ==========
 
 @solicitudes_bp.route('/test-novedad')
 @login_required

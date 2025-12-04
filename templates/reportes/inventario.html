@@ -1,4 +1,3 @@
-<!-- templates/reportes/inventario.html - Versión simplificada y funcional -->
 {% extends "base.html" %}
 {% block title %}Reporte de Inventario{% endblock %}
 {% block styles %}
@@ -90,8 +89,10 @@
     <!-- Distribución por oficina -->
     {% if ubicaciones %}
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-light">
-            <h6 class="fw-semibold mb-0">Distribución por Oficina</h6>
+        <div class="card-header bg-primary text-white py-3">
+            <h6 class="fw-semibold mb-0">
+                <i class="fas fa-chart-pie me-2"></i>Distribución por Oficina
+            </h6>
         </div>
         <div class="card-body">
             <div class="row">
@@ -122,19 +123,25 @@
 
     <!-- Tabla de productos -->
     <div class="card border-0 shadow-sm">
-        <div class="card-header bg-light">
+        <div class="card-header bg-success text-white py-3">
             <div class="d-flex justify-content-between align-items-center">
-                <h6 class="fw-semibold mb-0">Detalle del Inventario</h6>
-                <div>
-                    <button onclick="exportarExcel()" class="btn btn-success btn-sm">
-                        <i class="fas fa-file-excel me-1"></i>Excel
+                <h6 class="fw-semibold mb-0">
+                    <i class="fas fa-table me-2"></i>Detalle del Inventario
+                    <span class="badge bg-light text-dark ms-2">{{ productos|length }}</span>
+                </h6>
+                <div class="d-flex gap-2">
+                    <button onclick="exportarExcel()" class="btn btn-light btn-sm">
+                        <i class="fas fa-file-excel text-success me-1"></i>Excel
+                    </button>
+                    <button onclick="exportarPDF()" class="btn btn-light btn-sm">
+                        <i class="fas fa-file-pdf text-danger me-1"></i>PDF
                     </button>
                 </div>
             </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive" style="max-height: 500px; overflow: auto;">
-                <table class="table table-hover table-sm align-middle mb-0">
+                <table id="tablaInventario" class="table table-hover table-sm align-middle mb-0">
                     <thead class="table-light sticky-top">
                         <tr>
                             <th class="ps-3">ID</th>
@@ -184,10 +191,195 @@
     </div>
 </div>
 
+<!-- Incluir las librerías para exportación -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
 <script>
 function exportarExcel() {
-    alert('Función de exportación a Excel - En desarrollo');
-    // Implementar exportación similar a otros reportes
+    try {
+        const tabla = document.getElementById('tablaInventario');
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.table_to_sheet(tabla);
+        XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+        
+        // Formatear columnas de dinero
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for (let C = 2; C <= range.e.c; C++) { // Columnas C y E son valores
+            if (C === 2 || C === 4) { // Columna C: V. Unitario, Columna E: V. Total
+                for (let R = range.s.r + 1; R <= range.e.r; R++) {
+                    const cell_address = {c: C, r: R};
+                    const cell_ref = XLSX.utils.encode_cell(cell_address);
+                    if (ws[cell_ref]) {
+                        ws[cell_ref].z = '"$"#,##0.00';
+                    }
+                }
+            }
+        }
+        
+        XLSX.writeFile(wb, `Reporte_Inventario_${new Date().toISOString().split('T')[0]}.xlsx`);
+        mostrarNotificacion('✅ Excel exportado correctamente', 'success');
+    } catch (error) {
+        console.error('Error en exportación Excel:', error);
+        mostrarNotificacion('❌ Error al exportar a Excel', 'error');
+    }
 }
+
+function exportarPDF() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('landscape');
+
+        // Título
+        doc.setFontSize(16);
+        doc.setTextColor(40, 40, 40);
+        doc.text('Reporte de Inventario - Sistema de Gestión', 14, 15);
+        
+        // Subtítulo
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Generado: ${new Date().toLocaleDateString('es-ES', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+        })}`, 14, 22);
+        doc.text(`Total productos: {{ productos|length }}`, 14, 28);
+        doc.text(`Valor total: ${{ "{:,.2f}".format(valor_total_inventario|default(0)|float) }}`, 14, 34);
+
+        // Tabla
+        doc.autoTable({
+            html: '#tablaInventario',
+            startY: 42,
+            theme: 'grid',
+            headStyles: { 
+                fillColor: [40, 167, 69], // Verde
+                textColor: [255, 255, 255],
+                fontSize: 9,
+                fontStyle: 'bold'
+            },
+            bodyStyles: { 
+                fontSize: 8,
+                cellPadding: 3
+            },
+            columnStyles: {
+                0: { cellWidth: 20 }, // ID
+                1: { cellWidth: 60 }, // Material
+                2: { cellWidth: 25, halign: 'right' }, // V. Unitario
+                3: { cellWidth: 20, halign: 'center' }, // Stock
+                4: { cellWidth: 25, halign: 'right' }, // V. Total
+                5: { cellWidth: 40 } // Oficina
+            },
+            styles: { 
+                overflow: 'linebreak',
+                cellWidth: 'wrap'
+            },
+            margin: { left: 10, right: 10 }
+        });
+
+        doc.save(`Reporte_Inventario_${new Date().toISOString().split('T')[0]}.pdf`);
+        mostrarNotificacion('✅ PDF exportado correctamente', 'success');
+    } catch (error) {
+        console.error('Error en exportación PDF:', error);
+        mostrarNotificacion('❌ Error al exportar a PDF', 'error');
+    }
+}
+
+function mostrarNotificacion(mensaje, tipo) {
+    // Crear toast simple
+    const toastHTML = `
+        <div class="position-fixed top-0 end-0 p-3" style="z-index: 1060">
+            <div class="toast align-items-center text-white bg-${tipo === 'success' ? 'success' : 'danger'} border-0 show" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-${tipo === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                        ${mensaje}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Insertar en el DOM
+    const div = document.createElement('div');
+    div.innerHTML = toastHTML;
+    document.body.appendChild(div.firstElementChild);
+    
+    // Auto-eliminar después de 3 segundos
+    setTimeout(() => {
+        const toastElement = document.querySelector('.toast');
+        if (toastElement) {
+            toastElement.classList.remove('show');
+            setTimeout(() => toastElement.remove(), 300);
+        }
+    }, 3000);
+}
+
+// Añadir tooltips a los botones
+document.addEventListener('DOMContentLoaded', function() {
+    // Tooltips para botones de exportación
+    const excelBtn = document.querySelector('button[onclick="exportarExcel()"]');
+    const pdfBtn = document.querySelector('button[onclick="exportarPDF()"]');
+    
+    if (excelBtn) {
+        excelBtn.setAttribute('title', 'Exportar a Excel');
+        excelBtn.setAttribute('data-bs-toggle', 'tooltip');
+    }
+    
+    if (pdfBtn) {
+        pdfBtn.setAttribute('title', 'Exportar a PDF');
+        pdfBtn.setAttribute('data-bs-toggle', 'tooltip');
+    }
+    
+    // Inicializar tooltips de Bootstrap
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
 </script>
+
+<style>
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .table th {
+        white-space: nowrap;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #dee2e6;
+        padding: 0.75rem 0.5rem;
+        background-color: #f8f9fa;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+        border-top: 1px solid #f0f0f0;
+    }
+    
+    .btn-sm {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        min-width: 70px;
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s;
+    }
+</style>
 {% endblock %}

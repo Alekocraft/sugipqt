@@ -1,9 +1,8 @@
-{% extends "base.html" %} 
+{% extends "base.html" %}
 {% block title %}Préstamos de Material - Sistema de Gestión{% endblock %}
 
 {% block content %}
 <div class="container-fluid fade-in">
-    <!-- Encabezado Mejorado -->
     <div class="row mb-4">
         <div class="col-md-12">
             <h1 class="fw-bold mb-3">
@@ -13,7 +12,6 @@
         </div>
     </div>
 
-    <!-- Banner informativo -->
     <div class="alert alert-info mb-4">
         <strong>📊 Vista de préstamos:</strong>
         {% if session.rol in ['administrador', 'lider_inventario'] %}
@@ -23,7 +21,6 @@
         {% endif %}
     </div>
 
-    <!-- Botones de acción -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -34,7 +31,6 @@
                             <a href="/prestamos/crear" class="btn btn-primary d-flex align-items-center">
                                 <i class="fas fa-plus me-2"></i>Nuevo Préstamo
                             </a>
-                            <!-- Exportación Frontend -->
                             <button class="btn btn-success d-flex align-items-center" onclick="exportarExcelPrestamos()">
                                 <i class="fas fa-file-excel me-2"></i>Exportar Excel
                             </button>
@@ -48,7 +44,6 @@
         </div>
     </div>
 
-    <!-- Tarjeta de Resumen Mejorada -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -79,7 +74,6 @@
         </div>
     </div>
 
-    <!-- Filtros Mejorados -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -121,7 +115,6 @@
         </div>
     </div>
 
-    <!-- Tabla Mejorada -->
     <div class="row">
         <div class="col-md-12">
             <div class="card">
@@ -250,7 +243,6 @@
     </div>
 </div>
 
-<!-- Modal Aprobar Parcial -->
 <div class="modal fade" id="aprobarParcialModal" tabindex="-1" aria-labelledby="aprobarParcialModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -295,7 +287,6 @@
     </div>
 </div>
 
-<!-- Modal Rechazar -->
 <div class="modal fade" id="rechazarModal" tabindex="-1" aria-labelledby="rechazarModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -340,7 +331,6 @@
     </div>
 </div>
 
-<!-- Modal Devolución -->
 <div class="modal fade" id="devolucionModal" tabindex="-1" aria-labelledby="devolucionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -438,15 +428,14 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- Librerías para exportación -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
 <script>
-    // ========== FUNCIONES DE MANEJO DE PRÉSTAMOS (REALES) ==========
-
-    // Aprobar préstamo
+    // Función: aprobarPrestamo
+    // Propósito: Aprobar completamente un préstamo pendiente
+    // Parámetros: prestamoId - ID del préstamo a aprobar
     function aprobarPrestamo(prestamoId) {
         if (confirm('¿Está seguro de que desea aprobar este préstamo?')) {
             fetch(`/prestamos/${prestamoId}/aprobar`, {
@@ -459,20 +448,21 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    mostrarNotificacion('✅ ' + data.message, 'success');
+                    mostrarNotificacion('Préstamo aprobado correctamente', 'success');
                     actualizarEstadoPrestamo(prestamoId, data.estado);
                 } else {
-                    mostrarNotificacion('❌ ' + (data.message || 'Error al aprobar el préstamo'), 'error');
+                    mostrarNotificacion('Error al aprobar el préstamo: ' + data.message, 'error');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                mostrarNotificacion('❌ Error al aprobar el préstamo', 'error');
+                mostrarNotificacion('Error al aprobar el préstamo', 'error');
             });
         }
     }
 
-    // Mostrar modal para aprobar parcialmente
+    // Función: mostrarModalAprobarParcial
+    // Propósito: Mostrar modal para aprobación parcial de préstamo
+    // Parámetros: prestamoId - ID del préstamo, cantidadMaxima - cantidad máxima disponible
     function mostrarModalAprobarParcial(prestamoId, cantidadMaxima) {
         document.getElementById('aprobar_parcial_prestamo_id').value = prestamoId;
         document.getElementById('cantidad_aprobada').value = cantidadMaxima;
@@ -483,13 +473,14 @@
         modal.show();
     }
 
-    // Aprobar parcialmente
+    // Función: aprobarParcial
+    // Propósito: Aprobar parcialmente un préstamo con cantidad específica
     function aprobarParcial() {
         const prestamoId = document.getElementById('aprobar_parcial_prestamo_id').value;
         const cantidadAprobada = document.getElementById('cantidad_aprobada').value;
         
         if (!cantidadAprobada || cantidadAprobada <= 0) {
-            mostrarNotificacion('❌ Por favor ingrese una cantidad válida', 'error');
+            mostrarNotificacion('Por favor ingrese una cantidad válida', 'error');
             return;
         }
         
@@ -504,22 +495,22 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                mostrarNotificacion('✅ ' + data.message, 'success');
+                mostrarNotificacion('Préstamo aprobado parcialmente', 'success');
                 actualizarEstadoPrestamo(prestamoId, data.estado);
-                // Cerrar modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('aprobarParcialModal'));
                 modal.hide();
             } else {
-                mostrarNotificacion('❌ ' + (data.message || 'Error al aprobar parcialmente'), 'error');
+                mostrarNotificacion('Error al aprobar parcialmente: ' + data.message, 'error');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            mostrarNotificacion('❌ Error al aprobar parcialmente', 'error');
+            mostrarNotificacion('Error al aprobar parcialmente', 'error');
         });
     }
 
-    // Mostrar modal para rechazar
+    // Función: mostrarModalRechazar
+    // Propósito: Mostrar modal para rechazar un préstamo
+    // Parámetros: prestamoId - ID del préstamo a rechazar
     function mostrarModalRechazar(prestamoId) {
         document.getElementById('rechazar_prestamo_id').value = prestamoId;
         document.getElementById('observacion').value = '';
@@ -528,13 +519,14 @@
         modal.show();
     }
 
-    // Rechazar préstamo
+    // Función: rechazarPrestamo
+    // Propósito: Rechazar un préstamo con observación obligatoria
     function rechazarPrestamo() {
         const prestamoId = document.getElementById('rechazar_prestamo_id').value;
         const observacion = document.getElementById('observacion').value.trim();
         
         if (!observacion) {
-            mostrarNotificacion('❌ Por favor ingrese una observación', 'error');
+            mostrarNotificacion('Por favor ingrese una observación', 'error');
             return;
         }
         
@@ -549,22 +541,22 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                mostrarNotificacion('✅ ' + data.message, 'success');
+                mostrarNotificacion('Préstamo rechazado correctamente', 'success');
                 actualizarEstadoPrestamo(prestamoId, data.estado);
-                // Cerrar modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('rechazarModal'));
                 modal.hide();
             } else {
-                mostrarNotificacion('❌ ' + (data.message || 'Error al rechazar el préstamo'), 'error');
+                mostrarNotificacion('Error al rechazar el préstamo: ' + data.message, 'error');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            mostrarNotificacion('❌ Error al rechazar el préstamo', 'error');
+            mostrarNotificacion('Error al rechazar el préstamo', 'error');
         });
     }
 
-    // Mostrar modal para devolución
+    // Función: mostrarModalDevolucion
+    // Propósito: Mostrar modal para registrar devolución de préstamo
+    // Parámetros: prestamoId - ID del préstamo a devolver
     function mostrarModalDevolucion(prestamoId) {
         document.getElementById('devolucion_prestamo_id').value = prestamoId;
         document.getElementById('observacion_devolucion').value = '';
@@ -573,7 +565,8 @@
         modal.show();
     }
 
-    // Registrar devolución
+    // Función: registrarDevolucion
+    // Propósito: Registrar la devolución de un préstamo aprobado
     function registrarDevolucion() {
         const prestamoId = document.getElementById('devolucion_prestamo_id').value;
         const observacion = document.getElementById('observacion_devolucion').value.trim();
@@ -589,37 +582,33 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                mostrarNotificacion('✅ ' + data.message, 'success');
+                mostrarNotificacion('Devolución registrada correctamente', 'success');
                 actualizarEstadoPrestamo(prestamoId, data.estado);
-                // Cerrar modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('devolucionModal'));
                 modal.hide();
             } else {
-                mostrarNotificacion('❌ ' + (data.message || 'Error al registrar la devolución'), 'error');
+                mostrarNotificacion('Error al registrar la devolución: ' + data.message, 'error');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            mostrarNotificacion('❌ Error al registrar la devolución', 'error');
+            mostrarNotificacion('Error al registrar la devolución', 'error');
         });
     }
 
-    // Actualizar estado del préstamo en la tabla (solo interfaz)
+    // Función: actualizarEstadoPrestamo
+    // Propósito: Actualizar la interfaz visual después de cambiar estado
+    // Parámetros: prestamoId - ID del préstamo, nuevoEstado - nuevo estado a mostrar
     function actualizarEstadoPrestamo(prestamoId, nuevoEstado) {
         const fila = document.getElementById(`prestamo-${prestamoId}`);
         if (!fila) return;
         
-        // Actualizar atributo de estado
         fila.setAttribute('data-estado', nuevoEstado);
         
-        // Actualizar badge de estado
         const estadoBadge = fila.querySelector('.estado-badge');
         const icono = fila.querySelector('.estado-badge i');
         
-        // Actualizar clases CSS
         estadoBadge.className = `badge rounded-pill fw-normal py-2 px-3 estado-badge estado-${nuevoEstado.toLowerCase().replace(' ', '-')}`;
         
-        // Actualizar icono
         const iconosMap = {
             'PRESTADO': 'fa-clock',
             'APROBADO': 'fa-check-circle',
@@ -630,10 +619,8 @@
         
         icono.className = `fas ${iconosMap[nuevoEstado] || 'fa-question-circle'} me-1`;
         
-        // Actualizar texto
         estadoBadge.innerHTML = `${icono.outerHTML} ${nuevoEstado}`;
         
-        // Actualizar botones de acción
         const accionesTd = fila.querySelector('td.text-center');
         if (accionesTd) {
             let nuevosBotones = '';
@@ -674,11 +661,11 @@
             accionesTd.innerHTML = nuevosBotones;
         }
         
-        // Actualizar contadores
         actualizarContadores();
     }
 
-    // Actualizar contadores de resumen
+    // Función: actualizarContadores
+    // Propósito: Actualizar los contadores de resumen en tiempo real
     function actualizarContadores() {
         const filas = document.querySelectorAll('#prestamos-body tr');
         let total = 0;
@@ -701,12 +688,11 @@
                     devueltos++;
                     break;
                 case 'APROBADO_PARCIAL':
-                    aprobados++; // Contar como aprobado para el resumen
+                    aprobados++;
                     break;
             }
         });
         
-        // Actualizar elementos en el DOM
         document.getElementById('total-prestamos').textContent = total;
         document.getElementById('pendientes').textContent = pendientes;
         document.getElementById('aprobados').textContent = aprobados;
@@ -714,8 +700,8 @@
         document.getElementById('total-registros').textContent = `${total} registros`;
     }
 
-    // ========== FUNCIONES DE EXPORTACIÓN ==========
-    
+    // Función: exportarExcelPrestamos
+    // Propósito: Exportar tabla de préstamos a formato Excel
     function exportarExcelPrestamos() {
         try {
             const tabla = document.getElementById('tablaPrestamos');
@@ -723,13 +709,14 @@
             const ws = XLSX.utils.table_to_sheet(tabla);
             XLSX.utils.book_append_sheet(wb, ws, 'Préstamos');
             XLSX.writeFile(wb, `Reporte_Préstamos_${new Date().toISOString().split('T')[0]}.xlsx`);
-            mostrarNotificacion('✅ Exportación a Excel completada exitosamente', 'success');
+            mostrarNotificacion('Exportación a Excel completada', 'success');
         } catch (error) {
-            console.error('Error en exportación Excel:', error);
-            mostrarNotificacion('❌ Error al exportar a Excel', 'error');
+            mostrarNotificacion('Error al exportar a Excel', 'error');
         }
     }
 
+    // Función: exportarPDFPrestamos
+    // Propósito: Exportar tabla de préstamos a formato PDF
     function exportarPDFPrestamos() {
         try {
             const { jsPDF } = window.jspdf;
@@ -756,16 +743,16 @@
             });
 
             doc.save(`Reporte_Préstamos_${new Date().toISOString().split('T')[0]}.pdf`);
-            mostrarNotificacion('✅ Exportación a PDF completada exitosamente', 'success');
+            mostrarNotificacion('Exportación a PDF completada', 'success');
         } catch (error) {
-            console.error('Error en exportación PDF:', error);
-            mostrarNotificacion('❌ Error al exportar a PDF', 'error');
+            mostrarNotificacion('Error al exportar a PDF', 'error');
         }
     }
 
-    // Función para mostrar notificaciones toast
+    // Función: mostrarNotificacion
+    // Propósito: Mostrar notificación toast al usuario
+    // Parámetros: mensaje - texto a mostrar, tipo - 'success' o 'error'
     function mostrarNotificacion(mensaje, tipo) {
-        // Crear elemento de notificación
         const toast = document.createElement('div');
         toast.className = `toast align-items-center text-white bg-${tipo === 'success' ? 'success' : 'danger'} border-0 position-fixed`;
         toast.style.zIndex = '1060';
@@ -783,11 +770,9 @@
         
         document.body.appendChild(toast);
         
-        // Mostrar toast
         const bsToast = new bootstrap.Toast(toast);
         bsToast.show();
         
-        // Remover del DOM después de ocultarse
         toast.addEventListener('hidden.bs.toast', function() {
             document.body.removeChild(toast);
         });

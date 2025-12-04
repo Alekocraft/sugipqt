@@ -19,7 +19,6 @@
         </div>
     </div>
 
-    <!-- Contenedor para mensajes dinámicos -->
     <div id="message-container"></div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -33,13 +32,11 @@
     {% endif %}
     {% endwith %}
 
-    <!-- Formulario con AJAX -->
     <form id="prestamoForm" method="post">
         <input type="hidden" name="solicitante_id" value="{{ solicitante_id }}">
         <input type="hidden" name="oficina_id" value="{{ oficina_id }}">
 
         <div class="row g-3">
-            <!-- Solicitante / Oficina -->
             <div class="col-md-6">
                 <label class="form-label">Solicitante</label>
                 <input class="form-control" value="{{ solicitante_nombre }}" readonly>
@@ -49,7 +46,6 @@
                 <input class="form-control" value="{{ oficina_nombre }}" readonly>
             </div>
 
-            <!-- Elemento -->
             <div class="col-md-6">
                 <label class="form-label">Elemento*</label>
                 <select name="elemento_id" id="elemento_id" class="form-select" required>
@@ -66,34 +62,29 @@
                 <div class="small text-muted mt-1" id="disp_hint"></div>
             </div>
 
-            <!-- Cantidad -->
             <div class="col-md-3">
                 <label class="form-label">Cantidad*</label>
                 <input type="number" name="cantidad" id="cantidad" class="form-control" min="1" value="1" required>
             </div>
 
-            <!-- Fecha prevista -->
             <div class="col-md-3">
                 <label class="form-label">Fecha devolución prevista*</label>
                 <input type="date" name="fecha_prevista" id="fecha_prevista" class="form-control" required
                        min="{{ fecha_minima }}">
             </div>
 
-            <!-- Evento / Motivo del préstamo -->
             <div class="col-md-6">
                 <label class="form-label">Evento/Motivo del Préstamo*</label>
                 <input type="text" name="evento" class="form-control" required
                        placeholder="Ej: Campaña publicitaria, Evento corporativo, etc.">
             </div>
 
-            <!-- Observaciones -->
             <div class="col-12">
                 <label class="form-label">Observaciones*</label>
                 <textarea name="observaciones" class="form-control" rows="2" required
                           placeholder="Detalles adicionales sobre el préstamo..."></textarea>
             </div>
 
-            <!-- Panel de imagen + valores -->
             <div class="col-md-4">
                 <div class="card border-0 shadow-sm">
                     <div class="card-body text-center">
@@ -128,27 +119,26 @@
 {% block scripts %}
 <script>
     (function () {
-        const sel = document.getElementById('elemento_id');
-        const qty = document.getElementById('cantidad');
+        const elementoSelect = document.getElementById('elemento_id');
+        const cantidadInput = document.getElementById('cantidad');
         const dispHint = document.getElementById('disp_hint');
-        const img = document.getElementById('img_elemento');
-        const imgPh = document.getElementById('img_placeholder');
-        const vu = document.getElementById('vu');
-        const subt = document.getElementById('subt');
-        const dispSpan = document.getElementById('disp');
+        const imagenElemento = document.getElementById('img_elemento');
+        const imagenPlaceholder = document.getElementById('img_placeholder');
+        const valorUnitarioSpan = document.getElementById('vu');
+        const subtotalSpan = document.getElementById('subt');
+        const disponibleSpan = document.getElementById('disp');
         const fechaInput = document.getElementById('fecha_prevista');
-        const form = document.getElementById('prestamoForm');
+        const prestamoForm = document.getElementById('prestamoForm');
         const submitBtn = document.getElementById('submitBtn');
         const messageContainer = document.getElementById('message-container');
 
         let valorUnitario = 0;
         let disponible = 0;
 
-        // Configurar fecha mínima como hoy
-        const today = new Date().toISOString().split('T')[0];
         if (fechaInput) {
+            const today = new Date().toISOString().split('T')[0];
             fechaInput.min = today;
-            // Establecer valor por defecto (hoy + 7 días)
+            
             if (!fechaInput.value) {
                 const nextWeek = new Date();
                 nextWeek.setDate(nextWeek.getDate() + 7);
@@ -156,41 +146,40 @@
             }
         }
 
-        function fmt(n) {
+        function formatearNumero(n) {
             return (Math.round(n * 100) / 100).toFixed(2);
         }
 
-        function loadElementoInfo() {
-            const selectedOption = sel.options[sel.selectedIndex];
-            if (!selectedOption || !selectedOption.value) {
-                resetElementoInfo();
+        function cargarInformacionElemento() {
+            const opcionSeleccionada = elementoSelect.options[elementoSelect.selectedIndex];
+            
+            if (!opcionSeleccionada || !opcionSeleccionada.value) {
+                resetearInformacionElemento();
                 return;
             }
 
-            // Obtener datos de los atributos data-*
-            valorUnitario = parseFloat(selectedOption.getAttribute('data-valor')) || 0;
-            disponible = parseInt(selectedOption.getAttribute('data-disponible')) || 0;
-            const imagenUrl = selectedOption.getAttribute('data-imagen');
+            valorUnitario = parseFloat(opcionSeleccionada.getAttribute('data-valor')) || 0;
+            disponible = parseInt(opcionSeleccionada.getAttribute('data-disponible')) || 0;
+            const imagenUrl = opcionSeleccionada.getAttribute('data-imagen');
 
-            // Actualizar la interfaz
-            updateUI(imagenUrl);
-            computeSubtotal();
+            actualizarInterfaz(imagenUrl);
+            calcularSubtotal();
         }
 
-        function resetElementoInfo() {
+        function resetearInformacionElemento() {
             dispHint.textContent = '';
-            img.style.display = 'none';
-            imgPh.style.display = 'flex';
-            vu.textContent = '0.00';
-            subt.textContent = '0.00';
-            dispSpan.textContent = '0';
+            imagenElemento.style.display = 'none';
+            imagenPlaceholder.style.display = 'flex';
+            valorUnitarioSpan.textContent = '0.00';
+            subtotalSpan.textContent = '0.00';
+            disponibleSpan.textContent = '0';
             valorUnitario = 0;
             disponible = 0;
         }
 
-        function updateUI(imagenUrl) {
-            vu.textContent = fmt(valorUnitario);
-            dispSpan.textContent = disponible;
+        function actualizarInterfaz(imagenUrl) {
+            valorUnitarioSpan.textContent = formatearNumero(valorUnitario);
+            disponibleSpan.textContent = disponible;
             dispHint.textContent = `Disponible: ${disponible}`;
 
             if (disponible > 0) {
@@ -199,40 +188,36 @@
                 dispHint.className = 'small text-danger';
             }
 
-            // Manejar la imagen
             if (imagenUrl && imagenUrl.trim() !== '') {
-                img.src = imagenUrl;
-                img.style.display = 'block';
-                imgPh.style.display = 'none';
+                imagenElemento.src = imagenUrl;
+                imagenElemento.style.display = 'block';
+                imagenPlaceholder.style.display = 'none';
 
-                // Verificar si la imagen carga correctamente
-                img.onerror = function () {
-                    console.warn('No se pudo cargar la imagen:', imagenUrl);
-                    img.style.display = 'none';
-                    imgPh.style.display = 'flex';
+                imagenElemento.onerror = function () {
+                    imagenElemento.style.display = 'none';
+                    imagenPlaceholder.style.display = 'flex';
                 };
             } else {
-                img.style.display = 'none';
-                imgPh.style.display = 'flex';
+                imagenElemento.style.display = 'none';
+                imagenPlaceholder.style.display = 'flex';
             }
         }
 
-        function computeSubtotal() {
-            const c = parseInt(qty.value || '0', 10);
-            const subtotal = (valorUnitario || 0) * (c || 0);
-            subt.textContent = fmt(subtotal);
+        function calcularSubtotal() {
+            const cantidad = parseInt(cantidadInput.value || '0', 10);
+            const subtotal = (valorUnitario || 0) * (cantidad || 0);
+            subtotalSpan.textContent = formatearNumero(subtotal);
 
-            // Validación contra disponible
-            if (c > disponible) {
-                qty.classList.add('is-invalid');
-                qty.setCustomValidity('La cantidad supera el stock disponible');
+            if (cantidad > disponible) {
+                cantidadInput.classList.add('is-invalid');
+                cantidadInput.setCustomValidity('La cantidad supera el stock disponible');
                 dispHint.classList.add('text-danger');
-            } else if (c <= 0) {
-                qty.classList.add('is-invalid');
-                qty.setCustomValidity('La cantidad debe ser mayor a 0');
+            } else if (cantidad <= 0) {
+                cantidadInput.classList.add('is-invalid');
+                cantidadInput.setCustomValidity('La cantidad debe ser mayor a 0');
             } else {
-                qty.classList.remove('is-invalid');
-                qty.setCustomValidity('');
+                cantidadInput.classList.remove('is-invalid');
+                cantidadInput.setCustomValidity('');
                 if (disponible > 0) {
                     dispHint.classList.remove('text-danger');
                     dispHint.classList.add('text-success');
@@ -240,110 +225,87 @@
             }
         }
 
-        function showMessage(type, message) {
-            // Limpiar mensajes anteriores
+        function mostrarMensaje(tipo, mensaje) {
             messageContainer.innerHTML = '';
             
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-            alertDiv.role = 'alert';
-            alertDiv.innerHTML = `
-                ${message}
+            const alertaDiv = document.createElement('div');
+            alertaDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
+            alertaDiv.role = 'alert';
+            alertaDiv.innerHTML = `
+                ${mensaje}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             `;
-            messageContainer.appendChild(alertDiv);
+            messageContainer.appendChild(alertaDiv);
             
-            // Auto-eliminar después de 5 segundos si no es error
-            if (type !== 'danger') {
+            if (tipo !== 'danger') {
                 setTimeout(() => {
-                    if (alertDiv.parentNode) {
-                        alertDiv.remove();
+                    if (alertaDiv.parentNode) {
+                        alertaDiv.remove();
                     }
                 }, 5000);
             }
         }
 
-        // Manejar envío del formulario con AJAX
-        form.addEventListener('submit', async function (e) {
+        prestamoForm.addEventListener('submit', async function (e) {
             e.preventDefault();
             
-            // Validar formulario
-            if (!form.checkValidity()) {
-                form.classList.add('was-validated');
+            if (!prestamoForm.checkValidity()) {
+                prestamoForm.classList.add('was-validated');
                 return;
             }
 
-            // Deshabilitar botón para evitar múltiples envíos
-            const originalText = submitBtn.innerHTML;
+            const textoOriginal = submitBtn.innerHTML;
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
 
             try {
-                // Crear FormData
-                const formData = new FormData(form);
+                const formData = new FormData(prestamoForm);
                 
-                // Añadir cabecera para identificar solicitud AJAX
                 const headers = {
                     'X-Requested-With': 'XMLHttpRequest'
                 };
                 
-                // Enviar solicitud POST
-                const response = await fetch('/prestamos/crear', {
+                const respuesta = await fetch('/prestamos/crear', {
                     method: 'POST',
                     headers: headers,
                     body: formData
                 });
 
-                // Procesar respuesta JSON
-                const result = await response.json();
+                const resultado = await respuesta.json();
                 
-                console.log('Respuesta del servidor:', result);
-                
-                if (result.success) {
-                    // Mostrar mensaje de éxito
-                    showMessage('success', result.message);
+                if (resultado.success) {
+                    mostrarMensaje('success', resultado.message);
                     
-                    // Limpiar formulario
-                    form.reset();
+                    prestamoForm.reset();
+                    resetearInformacionElemento();
                     
-                    // Resetear valores visuales
-                    resetElementoInfo();
-                    
-                    // Restablecer fecha predeterminada
                     const nextWeek = new Date();
                     nextWeek.setDate(nextWeek.getDate() + 7);
                     fechaInput.value = nextWeek.toISOString().split('T')[0];
                     
-                    // Restablecer selección de elemento
-                    sel.selectedIndex = 0;
-                    loadElementoInfo();
+                    elementoSelect.selectedIndex = 0;
+                    cargarInformacionElemento();
                     
-                    // Redirigir después de 3 segundos si hay redirección
-                    if (result.redirect) {
+                    if (resultado.redirect) {
                         setTimeout(() => {
-                            window.location.href = result.redirect;
+                            window.location.href = resultado.redirect;
                         }, 3000);
                     }
                 } else {
-                    // Mostrar mensaje de error
-                    showMessage('danger', result.message || 'Error al registrar el préstamo');
+                    mostrarMensaje('danger', resultado.message || 'Error al registrar el préstamo');
                 }
             } catch (error) {
-                console.error('Error en la solicitud:', error);
-                showMessage('danger', 'Error de conexión. Por favor, intente nuevamente.');
+                mostrarMensaje('danger', 'Error de conexión. Por favor, intente nuevamente.');
             } finally {
-                // Rehabilitar botón
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
+                submitBtn.innerHTML = textoOriginal;
             }
         });
 
-        // Event listeners para elementos
-        sel?.addEventListener('change', loadElementoInfo);
-        qty?.addEventListener('input', computeSubtotal);
+        elementoSelect?.addEventListener('change', cargarInformacionElemento);
+        cantidadInput?.addEventListener('input', calcularSubtotal);
 
-        // Estado inicial
-        loadElementoInfo();
+        cargarInformacionElemento();
     })();
 </script>
 {% endblock %}

@@ -2,7 +2,6 @@
 {% block title %}Lista de Solicitudes{% endblock %}
 {% block content %}
 <div class="container-fluid">
-    <!-- Botón de volver -->
     <div class="row mb-3">
         <div class="col-md-12">
             <a href="/dashboard" class="btn btn-secondary">
@@ -20,7 +19,7 @@
                 <span class="badge bg-light text-dark">{{ solicitudes|length }} registros</span>
             </h5>
             <a href="/solicitudes/crear" class="btn btn-light btn-sm">
-                <i class="fas fa-plus"></i> Nueva Solicitud
+                ＋ Nueva Solicitud
             </a>
         </div>
         <div class="card-body">
@@ -77,21 +76,19 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {# ✅ CORRECCIÓN: Convertimos el estado a minúsculas para la comparación #}
                                 {% if solicitud.estado|lower == 'pendiente' and session.rol in ['aprobador', 'administrador'] %}
                                 <div class="btn-group" role="group">
                                     <form method="POST" action="/solicitudes/aprobar/{{ solicitud.id }}"
                                           style="display: inline;" onsubmit="return confirm('¿Está seguro de que desea APROBAR esta solicitud?');">
                                         <button type="submit" class="btn btn-success btn-sm">
-                                            <i class="fas fa-check"></i> Aprobar
+                                            ✅ Aprobar
                                         </button>
                                     </form>
                                     <button type="button" class="btn btn-danger btn-sm"
                                             onclick="mostrarObservacion({{ solicitud.id }})">
-                                        <i class="fas fa-times"></i> Rechazar
+                                        ❌ Rechazar
                                     </button>
                                 </div>
-                                <!-- Campo de observación oculto -->
                                 <div id="observacionDiv_{{ solicitud.id }}" class="mt-2" style="display:none;">
                                     <form method="POST" action="/solicitudes/rechazar/{{ solicitud.id }}">
                                         <textarea name="observacion" class="form-control" rows="2"
@@ -125,11 +122,9 @@
 
 <script>
     function mostrarObservacion(solicitudId) {
-        // Ocultar todos los campos de observación primero
         document.querySelectorAll('[id^="observacionDiv_"]').forEach(div => {
             div.style.display = 'none';
         });
-        // Mostrar solo el de esta solicitud
         document.getElementById(`observacionDiv_${solicitudId}`).style.display = 'block';
     }
 </script>
@@ -138,13 +133,9 @@
     .table th {
         white-space: nowrap;
     }
-
+    
     .badge {
         font-size: 0.8em;
-    }
-
-    .card-body h4 {
-        margin-bottom: 0;
     }
 </style>
 {% endblock %}

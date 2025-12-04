@@ -1,32 +1,23 @@
-<!-- solicitudes/solicitudes.html -->
 {% extends "base.html" %}
 {% block title %}Gestión de Solicitudes{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <h1>📋 Solicitudes de Materiales</h1>
+    <h1>Solicitudes de Materiales</h1>
 
-    <!-- =============================
-         LÓGICA DE PERMISOS CORREGIDA
-    ============================== -->
     {% set rol_usuario = session.get('rol','')|lower %}
     {% set oficina_usuario = session.get('oficina_nombre', '')|lower %}
     
-    {# Lógica simplificada para detectar oficinas #}
     {% set es_oficina_por_nombre = 'oficina' in rol_usuario %}
     {% set roles_oficina_conocidos = ['oficina_coq', 'oficina_cali', 'oficina_pereira', 'oficina_neiva', 'oficina_kennedy', 'oficina_bucaramanga', 'oficina_polo_club', 'oficina_nogal', 'oficina_tunja', 'oficina_cartagena', 'oficina_morato', 'oficina_medellin', 'oficina_cedritos', 'oficina_lourdes', 'oficina_regular'] %}
     {% set es_oficina_por_lista = rol_usuario in roles_oficina_conocidos %}
     {% set es_oficina_por_oficina = oficina_usuario != '' and oficina_usuario != 'administrador' and oficina_usuario != 'lider_inventario' and oficina_usuario != 'aprobador' %}
     {% set es_oficina = es_oficina_por_nombre or es_oficina_por_lista or es_oficina_por_oficina %}
     
-    {# Permisos para novedades - Lógica corregida #}
     {% set puede_crear_novedad = es_oficina or rol_usuario in ['administrador', 'lider_inventario', 'aprobador'] %}
     {% set puede_gestionar_novedad = rol_usuario in ['administrador', 'lider_inventario', 'aprobador'] %}
     {% set tiene_permisos_aprobacion = rol_usuario in ['administrador', 'aprobador', 'lider_inventario'] %}
 
-    {# =============== 
-       MACRO FILA (permite ordenar por estado)
-    =============== #}
     {% macro render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) %}
         {% set material_nombre = solicitud.material_nombre or 'Material no encontrado' %}
         {% set stock_actual = solicitud.stock_disponible or 0 %}
@@ -76,7 +67,7 @@
                 {% elif estado_normalizado == 'entregada' %}
                     <span class="badge bg-primary">📦 Entregada</span>
                 {% elif estado_normalizado == 'novedad_registrada' %}
-                    <span class="badge bg-secondary">📝 Novedad Registrada</span>
+                    <span class="badge bg-secondary">⚠️ Novedad Registrada</span>
                 {% elif estado_normalizado == 'novedad_aceptada' %}
                     <span class="badge bg-success">✅ Novedad Aceptada</span>
                 {% elif estado_normalizado == 'novedad_rechazada' %}
@@ -88,8 +79,6 @@
 
             <td>
                 <div class="btn-group">
-
-                    <!-- Ver -->
                     <button class="btn btn-info btn-sm"
                         onclick='verDetallesSolicitud({{ solicitud|tojson }})'>
                         👁️ Ver
@@ -97,12 +86,14 @@
 
                     {% if tiene_permisos_aprobacion and esta_pendiente %}
                         <form action="/solicitudes/aprobar/{{ solicitud.id }}" method="POST" style="display:inline;">
-                            <button class="btn btn-success btn-sm" onclick="return confirm('¿Aprobar completamente esta solicitud?')">✅ Aprobar</button>
+                            <button class="btn btn-success btn-sm" onclick="return confirm('¿Aprobar completamente esta solicitud?')">
+                                ✅ Aprobar
+                            </button>
                         </form>
 
                         <button class="btn btn-warning btn-sm"
                             onclick='mostrarModalAprobacionParcial({{ solicitud.id }},{{ solicitud.cantidad_solicitada }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }})'>
-                            ⚠️ Parcial
+                            📋 Parcial
                         </button>
 
                         <button class="btn btn-danger btn-sm"
@@ -120,26 +111,22 @@
 
                     {% if puede_crear_novedad and (esta_aprobada or esta_aprobada_parcial or esta_entregada) %}
                         <button class="btn btn-secondary btn-sm"
-                            onclick='mostrarModalNovedad({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }},{{ solicitud.cantidad_entregada or solicitud.cantidad_solicitada }})'
-                            title="Registrar Novedad">
-                            📝 Novedad
+                            onclick='mostrarModalNovedad({{ solicitud.id }},{{ material_nombre|tojson }},{{ solicitante_nombre|tojson }},{{ solicitud.cantidad_entregada or solicitud.cantidad_solicitada }})'>
+                            ⚠️ Novedad
                         </button>
                     {% endif %}
 
                     {% if puede_gestionar_novedad and estado_normalizado == 'novedad_registrada' %}
                         <button class="btn btn-warning btn-sm"
-                            onclick='mostrarModalGestionNovedad({{ solicitud.id }})'
-                            title="Gestionar Novedad">
-                            ⚙️ Gestión Novedad
+                            onclick='mostrarModalGestionNovedad({{ solicitud.id }})'>
+                            📝 Gestionar Novedad
                         </button>
                     {% endif %}
-
                 </div>
             </td>
         </tr>
     {% endmacro %}
 
-    <!-- Filtros y búsqueda -->
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="card">
@@ -153,7 +140,6 @@
                                 <option value="aprobada" {% if filtro_estado=='aprobada' %}selected{% endif %}>Aprobada</option>
                                 <option value="rechazada" {% if filtro_estado=='rechazada' %}selected{% endif %}>Rechazada</option>
                                 <option value="devuelta" {% if filtro_estado=='devuelta' %}selected{% endif %}>Devuelta</option>
-                                <!-- Nuevos estados para novedades -->
                                 <option value="novedad_registrada" {% if filtro_estado=='novedad_registrada' %}selected{% endif %}>Novedad Registrada</option>
                                 <option value="novedad_aceptada" {% if filtro_estado=='novedad_aceptada' %}selected{% endif %}>Novedad Aceptada</option>
                                 <option value="novedad_rechazada" {% if filtro_estado=='novedad_rechazada' %}selected{% endif %}>Novedad Rechazada</option>
@@ -171,12 +157,16 @@
                         </div>
 
                         <div class="col-md-12 mt-2">
-                            <button type="submit" class="btn btn-primary me-2">🔍 Filtrar</button>
-                            <a href="/solicitudes" class="btn btn-secondary">🔄 Limpiar</a>
+                            <button type="submit" class="btn btn-primary me-2">
+                                Filtrar
+                            </button>
+                            <a href="/solicitudes" class="btn btn-secondary">
+                                Limpiar
+                            </a>
 
                             <a href="/reportes/solicitudes/exportar/excel?estado={{ filtro_estado }}&oficina={{ filtro_oficina }}&material={{ request.args.get('material', '') }}&solicitante={{ request.args.get('solicitante', '') }}"
                                class="btn btn-success">
-                                📊 Exportar a Excel
+                                Exportar a Excel
                             </a>
                         </div>
                     </form>
@@ -185,12 +175,11 @@
         </div>
     </div>
 
-    <!-- Resumen de estados -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">📊 Resumen de Estados</h5>
+                    <h5 class="mb-0">Resumen de Estados</h5>
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
@@ -239,7 +228,6 @@
                             </div>
                         </div>
 
-                        <!-- Nuevo card para novedades registradas -->
                         <div class="col-md-2">
                             <div class="card bg-secondary text-white clickable-card" onclick="filtrarPorEstado('novedad_registrada')">
                                 <div class="card-body">
@@ -254,20 +242,10 @@
         </div>
     </div>
 
-    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
                 <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {% if category == 'success' %}
-                        <i class="fas fa-check-circle me-2"></i>
-                    {% elif category == 'danger' %}
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                    {% elif category == 'warning' %}
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                    {% else %}
-                        <i class="fas fa-info-circle me-2"></i>
-                    {% endif %}
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -275,14 +253,13 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Tabla -->
     <div class="row">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">📝 Lista de Solicitudes ({{ solicitudes|length }} registros)</h5>
+                    <h5 class="mb-0">📋 Lista de Solicitudes ({{ solicitudes|length }} registros)</h5>
                     <a href="/solicitudes/crear" class="btn btn-light btn-sm">
-                        <i class="fas fa-plus"></i> Nueva Solicitud
+                        ➕ Nueva Solicitud
                     </a>
                 </div>
 
@@ -304,38 +281,31 @@
                                 </thead>
 
                                 <tbody>
-                                    {# 1) PENDIENTES PRIMERO #}
                                     {% for solicitud in solicitudes if (solicitud.estado or 'pendiente')|lower == 'pendiente' %}
                                         {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
                                     {% endfor %}
 
-                                    {# 2) APROBADAS #}
                                     {% for solicitud in solicitudes if (solicitud.estado or 'pendiente')|lower == 'aprobada' %}
                                         {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
                                     {% endfor %}
 
-                                    {# 3) ENTREGADAS #}
                                     {% for solicitud in solicitudes if (solicitud.estado or 'pendiente')|lower == 'entregada' %}
                                         {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
                                     {% endfor %}
 
-                                    {# 4) DEVUELTAS #}
                                     {% for solicitud in solicitudes if (solicitud.estado or 'pendiente')|lower == 'devuelta' %}
                                         {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
                                     {% endfor %}
 
-                                    {# 5) RECHAZADAS #}
                                     {% for solicitud in solicitudes if (solicitud.estado or 'pendiente')|lower == 'rechazada' %}
                                         {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
                                     {% endfor %}
 
-                                    {# 6) NOVEDADES Y OTROS ESTADOS ESPECIALES #}
                                     {% for solicitud in solicitudes 
                                            if (solicitud.estado or 'pendiente')|lower in ['novedad_registrada','novedad_aceptada','novedad_rechazada'] %}
                                         {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
                                     {% endfor %}
 
-                                    {# 7) CUALQUIER OTRO ESTADO NO CONSIDERADO ARRIBA #}
                                     {% for solicitud in solicitudes 
                                            if (solicitud.estado or 'pendiente')|lower not in 
                                               ['pendiente','aprobada','entregada','devuelta','rechazada',
@@ -343,13 +313,14 @@
                                         {{ render_fila_solicitud(solicitud, materiales_dict, puede_crear_novedad, puede_gestionar_novedad, tiene_permisos_aprobacion) }}
                                     {% endfor %}
                                 </tbody>
-
                             </table>
                         </div>
                     {% else %}
                         <div class="alert alert-info text-center">
                             <h5>📭 No hay solicitudes</h5>
-                            <a href="/solicitudes/crear" class="btn btn-primary">➕ Crear Primera Solicitud</a>
+                            <a href="/solicitudes/crear" class="btn btn-primary">
+                                ➕ Crear Primera Solicitud
+                            </a>
                         </div>
                     {% endif %}
                 </div>
@@ -358,13 +329,11 @@
     </div>
 </div>
 
-<!-- Modales -->
-<!-- Modal Detalles -->
 <div class="modal fade" id="modalDetalles" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">📋 Detalles de la Solicitud</h5>
+                <h5 class="modal-title">📄 Detalles de la Solicitud</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -377,12 +346,11 @@
     </div>
 </div>
 
-<!-- Modal Aprobación Parcial -->
 <div class="modal fade" id="modalAprobacionParcial" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-warning">
-                <h5 class="modal-title">⚠️ Aprobación Parcial</h5>
+                <h5 class="modal-title">📋 Aprobación Parcial</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -400,13 +368,12 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-warning" onclick="confirmarAprobacionParcial()">✅ Aprobar Parcialmente</button>
+                <button type="button" class="btn btn-warning" onclick="confirmarAprobacionParcial()">Aprobar Parcialmente</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Rechazar -->
 <div class="modal fade" id="modalRechazar" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -427,13 +394,12 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="confirmarRechazo()">❌ Rechazar Solicitud</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarRechazo()">Rechazar Solicitud</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Devolución -->
 <div class="modal fade" id="modalDevolucion" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -458,18 +424,17 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-info" onclick="confirmarDevolucion()">🔄 Registrar Devolución</button>
+                <button type="button" class="btn btn-info" onclick="confirmarDevolucion()">Registrar Devolución</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Novedad -->
 <div class="modal fade" id="modalNovedad" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-secondary text-white">
-                <h5 class="modal-title">📝 Registrar Novedad</h5>
+                <h5 class="modal-title">⚠️ Registrar Novedad</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -513,7 +478,6 @@
                         <div class="form-text">Formatos permitidos: JPG, PNG, GIF. Tamaño máximo: 5MB</div>
                     </div>
                     
-                    <!-- Vista previa de imagen -->
                     <div id="vistaPreviaImagen" class="text-center mt-3" style="display: none;">
                         <h6>Vista Previa:</h6>
                         <img id="previewImg" src="#" class="img-fluid rounded" style="max-height: 200px; object-fit: cover;" alt="Vista previa">
@@ -522,24 +486,23 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="confirmarRegistroNovedad()">📝 Registrar Novedad</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarRegistroNovedad()">Registrar Novedad</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Gestión de Novedad - INTEGRADO DEL PRIMER CÓDIGO -->
 <div class="modal fade" id="modalGestionNovedad" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-warning text-white">
-                <h5 class="modal-title">⚙️ Gestión de Novedad</h5>
+                <h5 class="modal-title">📝 Gestión de Novedad</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-8">
-                        <h6>📄 Información de la novedad</h6>
+                        <h6>Información de la novedad</h6>
                         <p><strong>ID Solicitud:</strong> <span id="gn_solicitud"></span></p>
                         <p><strong>ID Novedad:</strong> <span id="gn_novedad_id"></span></p>
                         <p><strong>Tipo:</strong> <span id="gn_tipo"></span></p>
@@ -551,7 +514,7 @@
                         <p id="gn_descripcion" class="border rounded p-2 bg-light" style="min-height: 60px;"></p>
                     </div>
                     <div class="col-md-4">
-                        <h6>🖼 Imagen</h6>
+                        <h6>Imagen</h6>
                         <div id="gn_contenedor_imagen" class="border rounded text-center p-2 bg-light" style="min-height: 220px;">
                             <img id="gn_imagen" src="" alt="Imagen Novedad" class="img-fluid rounded" style="max-height: 200px; display:none;">
                             <p id="gn_sin_imagen" class="text-muted mt-2" style="display:none;">Sin imagen asociada</p>
@@ -566,8 +529,8 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <button type="button" id="btnRechazarNovedad" class="btn btn-danger" onclick="procesarGestionNovedad('rechazar')">❌ Rechazar Novedad</button>
-                <button type="button" id="btnAceptarNovedad" class="btn btn-success" onclick="procesarGestionNovedad('aceptar')">✅ Aceptar Novedad</button>
+                <button type="button" id="btnRechazarNovedad" class="btn btn-danger" onclick="procesarGestionNovedad('rechazar')">Rechazar Novedad</button>
+                <button type="button" id="btnAceptarNovedad" class="btn btn-success" onclick="procesarGestionNovedad('aceptar')">Aceptar Novedad</button>
             </div>
         </div>
     </div>
@@ -579,9 +542,6 @@
 
 {% block scripts %}
 <script>
-/* ============================
-   FILTRAR POR ESTADO
-============================ */
 function filtrarPorEstado(estado) {
     const url = new URL(window.location.href);
     if (estado && estado !== 'todos') url.searchParams.set('estado', estado);
@@ -589,9 +549,6 @@ function filtrarPorEstado(estado) {
     window.location.href = url.toString();
 }
 
-/* ============================
-   VER DETALLES DE SOLICITUD
-============================ */
 function verDetallesSolicitud(solicitudData) {
     const solicitudId = solicitudData.id || 'N/A';
     const materialNombre = solicitudData.material_nombre || 'Material no especificado';
@@ -614,19 +571,19 @@ function verDetallesSolicitud(solicitudData) {
     let estadoBadge = '';
     const estadoLower = estado.toLowerCase();
     if (estadoLower.includes('pendiente')) {
-        estadoBadge = '<span class="badge bg-warning">⏳ ' + estado + '</span>';
+        estadoBadge = '<span class="badge bg-warning">' + estado + '</span>';
     } else if (estadoLower.includes('aprobada')) {
-        estadoBadge = '<span class="badge bg-success">✅ ' + estado + '</span>';
+        estadoBadge = '<span class="badge bg-success">' + estado + '</span>';
     } else if (estadoLower.includes('rechazada')) {
-        estadoBadge = '<span class="badge bg-danger">❌ ' + estado + '</span>';
+        estadoBadge = '<span class="badge bg-danger">' + estado + '</span>';
     } else if (estadoLower.includes('devuelta')) {
-        estadoBadge = '<span class="badge bg-info">🔄 ' + estado + '</span>';
+        estadoBadge = '<span class="badge bg-info">' + estado + '</span>';
     } else if (estadoLower.includes('novedad_registrada')) {
-        estadoBadge = '<span class="badge bg-secondary">📝 ' + estado + '</span>';
+        estadoBadge = '<span class="badge bg-secondary">' + estado + '</span>';
     } else if (estadoLower.includes('novedad_aceptada')) {
-        estadoBadge = '<span class="badge bg-success">✅ ' + estado + '</span>';
+        estadoBadge = '<span class="badge bg-success">' + estado + '</span>';
     } else if (estadoLower.includes('novedad_rechazada')) {
-        estadoBadge = '<span class="badge bg-danger">❌ ' + estado + '</span>';
+        estadoBadge = '<span class="badge bg-danger">' + estado + '</span>';
     } else {
         estadoBadge = '<span class="badge bg-secondary">' + estado + '</span>';
     }
@@ -634,7 +591,7 @@ function verDetallesSolicitud(solicitudData) {
     const detallesHTML = `
         <div class="row">
             <div class="col-md-6">
-                <h6>📋 Información Básica</h6>
+                <h6>Información Básica</h6>
                 <p><strong>ID Solicitud:</strong> #${solicitudId}</p>
                 <p><strong>Estado:</strong> ${estadoBadge}</p>
                 <p><strong>Fecha Solicitud:</strong> ${fechaSolicitud}</p>
@@ -642,7 +599,7 @@ function verDetallesSolicitud(solicitudData) {
             </div>
 
             <div class="col-md-6">
-                <h6>📦 Detalles del Material</h6>
+                <h6>Detalles del Material</h6>
                 <p><strong>Material:</strong> ${materialNombre}</p>
                 <p><strong>Cantidad Solicitada:</strong> <span class="badge bg-info">${cantidadSolicitada}</span></p>
                 <p><strong>Cantidad Entregada:</strong> <span class="badge bg-success">${cantidadEntregada}</span></p>
@@ -653,7 +610,7 @@ function verDetallesSolicitud(solicitudData) {
 
         <div class="row mt-3">
             <div class="col-md-12">
-                <h6>💰 Valores Financieros</h6>
+                <h6>Valores Financieros</h6>
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered">
                         <thead class="table-light">
@@ -683,7 +640,7 @@ function verDetallesSolicitud(solicitudData) {
 
         <div class="row mt-3">
             <div class="col-md-12">
-                <h6>👥 Información del Solicitante</h6>
+                <h6>Información del Solicitante</h6>
                 <p><strong>Solicitante:</strong> ${solicitanteNombre}</p>
                 <p><strong>Oficina:</strong> ${oficinaNombre}</p>
             </div>
@@ -694,7 +651,6 @@ function verDetallesSolicitud(solicitudData) {
     new bootstrap.Modal(document.getElementById("modalDetalles")).show();
 }
 
-// Función auxiliar para formato de moneda
 function formatoMoneda(valor) {
     if (isNaN(valor) || valor === null || valor === undefined) {
         return '$0.00';
@@ -702,10 +658,13 @@ function formatoMoneda(valor) {
     return `$${parseFloat(valor).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-/* ============================
-   RECHAZAR SOLICITUD - CORREGIDO
-============================ */
 let solicitudIdRechazar = null;
+let solicitudIdParcial = null;
+let solicitudIdDevolucion = null;
+let cantidadMaximaDevolucion = 0;
+let solicitudIdNovedad = null;
+let cantidadMaximaNovedad = 0;
+let solicitudIdGestionNovedad = null;
 
 function mostrarModalRechazar(id, materialNombre, solicitanteNombre) {
     solicitudIdRechazar = id;
@@ -717,7 +676,6 @@ function mostrarModalRechazar(id, materialNombre, solicitanteNombre) {
     new bootstrap.Modal(document.getElementById("modalRechazar")).show();
 }
 
-// En solicitudes.html, actualiza la función confirmarRechazo()
 function confirmarRechazo() {
     const motivo = document.getElementById("observacion").value.trim();
     if (!motivo) {
@@ -725,20 +683,16 @@ function confirmarRechazo() {
         return;
     }
 
-    // Crear formulario dinámico para enviar la solicitud
-    // NOTA IMPORTANTE: Usa /solicitudes/rechazar/ en lugar de /rechazar/
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = `/solicitudes/rechazar/${solicitudIdRechazar}`;
     
-    // Agregar el campo de observación
     const observacionInput = document.createElement('input');
     observacionInput.type = 'hidden';
     observacionInput.name = 'observacion';
     observacionInput.value = motivo;
     form.appendChild(observacionInput);
     
-    // Agregar CSRF token si está disponible
     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
     if (csrfMeta) {
         const csrfInput = document.createElement('input');
@@ -748,15 +702,9 @@ function confirmarRechazo() {
         form.appendChild(csrfInput);
     }
     
-    // Agregar formulario al DOM y enviar
     document.body.appendChild(form);
     form.submit();
 }
-
-/* ============================
-   APROBACIÓN PARCIAL
-============================ */
-let solicitudIdParcial = null;
 
 function mostrarModalAprobacionParcial(id, cantidad, materialNombre, solicitanteNombre) {
     solicitudIdParcial = id;
@@ -787,17 +735,10 @@ function confirmarAprobacionParcial() {
         return;
     }
 
-    // Usa la ruta correcta del blueprint solicitudes_bp
     const form = document.getElementById("formAprobacionParcial");
     form.action = `/solicitudes/aprobar_parcial/${solicitudIdParcial}`;
     form.submit();
 }
-
-/* ============================
-   DEVOLUCIÓN
-============================ */
-let solicitudIdDevolucion = null;
-let cantidadMaximaDevolucion = 0;
 
 function mostrarModalDevolucion(id, materialNombre, solicitanteNombre) {
     solicitudIdDevolucion = id;
@@ -809,7 +750,7 @@ function mostrarModalDevolucion(id, materialNombre, solicitanteNombre) {
         })
         .then(data => {
             if (data.error) {
-                alert("ERROR: " + data.error);
+                alert("Error: " + data.error);
                 return;
             }
 
@@ -866,12 +807,6 @@ function confirmarDevolucion() {
     form.submit();
 }
 
-/* ============================
-   REGISTRO DE NOVEDADES
-============================ */
-let solicitudIdNovedad = null;
-let cantidadMaximaNovedad = 0;
-
 function mostrarModalNovedad(id, materialNombre, solicitanteNombre, cantidadEntregada) {
     solicitudIdNovedad = id;
     cantidadMaximaNovedad = cantidadEntregada;
@@ -881,7 +816,6 @@ function mostrarModalNovedad(id, materialNombre, solicitanteNombre, cantidadEntr
     document.getElementById("infoCantidadNovedad").textContent = cantidadEntregada;
     document.getElementById("maximoNovedad").textContent = cantidadEntregada;
 
-    // Limpiar formulario
     document.getElementById("tipoNovedad").value = "";
     document.getElementById("cantidadAfectada").value = "";
     document.getElementById("descripcionNovedad").value = "";
@@ -936,50 +870,47 @@ function confirmarRegistroNovedad() {
     const imagenInput = document.getElementById("imagenNovedad");
     const imagenArchivo = imagenInput.files[0];
 
-    // Validaciones
     if (!tipoNovedad) {
-        alert("❌ Seleccione el tipo de novedad");
+        alert("Seleccione el tipo de novedad");
         return;
     }
 
     if (!cantidadAfectada || cantidadAfectada < 1) {
-        alert("❌ Ingrese una cantidad válida");
+        alert("Ingrese una cantidad válida");
         return;
     }
 
     if (cantidadAfectada > cantidadMaximaNovedad) {
-        alert(`❌ La cantidad no puede superar ${cantidadMaximaNovedad}`);
+        alert(`La cantidad no puede superar ${cantidadMaximaNovedad}`);
         return;
     }
 
     if (!descripcion || descripcion.length < 10) {
-        alert("❌ La descripción es obligatoria y debe tener al menos 10 caracteres");
+        alert("La descripción es obligatoria y debe tener al menos 10 caracteres");
         return;
     }
 
     if (!imagenArchivo) {
-        alert("❌ Debe adjuntar una imagen de la novedad");
+        alert("Debe adjuntar una imagen de la novedad");
         return;
     }
 
     const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif'];
     if (!tiposPermitidos.includes(imagenArchivo.type)) {
-        alert('❌ Solo se permiten archivos de imagen (JPG, PNG, GIF)');
+        alert('Solo se permiten archivos de imagen (JPG, PNG, GIF)');
         return;
     }
 
     if (imagenArchivo.size > 5 * 1024 * 1024) {
-        alert('❌ La imagen no puede superar los 5MB');
+        alert('La imagen no puede superar los 5MB');
         return;
     }
 
-    // Mostrar loading
     const btn = document.querySelector('#modalNovedad .btn.btn-primary');
     const originalText = btn.innerHTML;
-    btn.innerHTML = '⏳ Registrando...';
+    btn.innerHTML = 'Registrando...';
     btn.disabled = true;
 
-    // Crear FormData
     const formData = new FormData();
     formData.append('solicitud_id', solicitudIdNovedad);
     formData.append('tipo_novedad', tipoNovedad);
@@ -997,15 +928,15 @@ function confirmarRegistroNovedad() {
     })
     .then(data => {
         if (data.success) {
-            alert('✅ ' + (data.message || 'Novedad registrada exitosamente'));
+            alert(data.message || 'Novedad registrada exitosamente');
             bootstrap.Modal.getInstance(document.getElementById('modalNovedad')).hide();
             location.reload();
         } else {
-            alert('❌ ' + (data.message || 'Error al registrar la novedad'));
+            alert(data.message || 'Error al registrar la novedad');
         }
     })
     .catch(error => {
-        alert('❌ Error al registrar la novedad');
+        alert('Error al registrar la novedad');
     })
     .finally(() => {
         btn.innerHTML = originalText;
@@ -1013,17 +944,9 @@ function confirmarRegistroNovedad() {
     });
 }
 
-/* ============================
-   GESTIÓN DE NOVEDADES (ACEPTAR / RECHAZAR)
-============================ */
-let solicitudIdGestionNovedad = null;
-
 function mostrarModalGestionNovedad(solicitudId) {
     solicitudIdGestionNovedad = solicitudId;
 
-    console.log(`🔍 DEBUG: Llamando API para novedad de solicitud ${solicitudId}`);
-
-    // limpiar campos
     document.getElementById("gn_solicitud").textContent = '';
     document.getElementById("gn_novedad_id").textContent = '';
     document.getElementById("gn_tipo").textContent = '';
@@ -1041,32 +964,23 @@ function mostrarModalGestionNovedad(solicitudId) {
 
     fetch(`/solicitudes/api/${solicitudId}/novedad`)
         .then(r => {
-            console.log(`🔍 DEBUG: Status respuesta: ${r.status} ${r.statusText}`);
             if (!r.ok) {
-                console.error(`❌ DEBUG: Error HTTP ${r.status}`);
                 return r.text().then(text => {
-                    console.error(`❌ DEBUG: Respuesta error: ${text}`);
                     throw new Error('Error HTTP ' + r.status + ': ' + text);
                 });
             }
             return r.json();
         })
         .then(data => {
-            console.log('🔍 DEBUG: Datos recibidos:', data);
-            
             if (!data.success) {
-                console.error(`❌ DEBUG: API retornó success=false:`, data.error);
-                alert('❌ ' + (data.error || 'No se pudo cargar la novedad'));
+                alert(data.error || 'No se pudo cargar la novedad');
                 return;
             }
 
             const n = data.novedad;
-            console.log('🔍 DEBUG: Datos novedad:', n);
             
-            // Verificar que tenemos los datos necesarios
             if (!n.novedad_id && !n.id) {
-                console.error('❌ DEBUG: No se encontró ID de novedad');
-                alert('❌ No se pudo identificar la novedad');
+                alert('No se pudo identificar la novedad');
                 return;
             }
 
@@ -1079,10 +993,7 @@ function mostrarModalGestionNovedad(solicitudId) {
             document.getElementById("gn_fecha_registro").textContent = n.fecha_registro || '';
             document.getElementById("gn_descripcion").textContent = n.descripcion || '';
 
-            console.log(`🔍 DEBUG: Imagen URL: ${n.imagen_url}`);
-
             if (n.imagen_url) {
-                // Asegurar que la URL sea absoluta si es relativa
                 let imgUrl = n.imagen_url;
                 if (!imgUrl.startsWith('http') && !imgUrl.startsWith('/')) {
                     imgUrl = '/' + imgUrl;
@@ -1090,18 +1001,15 @@ function mostrarModalGestionNovedad(solicitudId) {
                 img.src = imgUrl;
                 img.style.display = "block";
                 sinImg.style.display = "none";
-                console.log(`✅ DEBUG: Imagen cargada: ${imgUrl}`);
             } else {
                 img.style.display = "none";
                 sinImg.style.display = "block";
-                console.log('⚠️ DEBUG: Sin imagen asociada');
             }
 
             new bootstrap.Modal(document.getElementById("modalGestionNovedad")).show();
         })
         .catch(err => {
-            console.error('❌ DEBUG: Error en fetch:', err);
-            alert('❌ Error al cargar la novedad: ' + err.message);
+            alert('Error al cargar la novedad: ' + err.message);
         });
 }
 
@@ -1124,7 +1032,7 @@ function procesarGestionNovedad(accion) {
         : document.getElementById("btnRechazarNovedad");
 
     const originalText = btn.innerHTML;
-    btn.innerHTML = '⏳ Procesando...';
+    btn.innerHTML = 'Procesando...';
     btn.disabled = true;
 
     const formData = new FormData();
@@ -1142,16 +1050,15 @@ function procesarGestionNovedad(accion) {
     })
     .then(data => {
         if (data.success) {
-            alert(`✅ Novedad ${accion === 'aceptar' ? 'aceptada' : 'rechazada'} exitosamente`);
+            alert(`Novedad ${accion === 'aceptar' ? 'aceptada' : 'rechazada'} exitosamente`);
             bootstrap.Modal.getInstance(document.getElementById("modalGestionNovedad")).hide();
             location.reload();
         } else {
-            alert('❌ ' + (data.message || 'Error al procesar la novedad'));
+            alert(data.message || 'Error al procesar la novedad');
         }
     })
     .catch(err => {
-        console.error(err);
-        alert('❌ Error al procesar la novedad');
+        alert('Error al procesar la novedad');
     })
     .finally(() => {
         btn.innerHTML = originalText;

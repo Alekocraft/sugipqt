@@ -34,18 +34,18 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 fw-bold mb-1" style="color: #6f42c1;">
-                <i class="fas fa-exclamation-circle me-2"></i>Reporte de Novedades
+                Reporte de Novedades
             </h1>
-            <p class="text-muted small">Registro de incidentes y reportes</p>
+            <p class="text-muted small">Registro de incidentes y reportes del sistema</p>
         </div>
         <div>
             {% if can_access('novedades', 'create') %}
             <a href="/novedades/crear" class="btn btn-sm me-2" style="background-color: #6f42c1; color: white;">
-                <i class="fas fa-plus me-1"></i>Nueva Novedad
+                Nueva Novedad
             </a>
             {% endif %}
             <a href="/reportes" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i>Volver
+                Volver a Reportes
             </a>
         </div>
     </div>
@@ -162,13 +162,13 @@
                 <div class="col-md-12">
                     <div class="d-flex justify-content-end gap-2">
                         <button id="btn-aplicar-filtros" class="btn btn-primary btn-sm">
-                            <i class="fas fa-filter me-1"></i>Aplicar Filtros
+                            Aplicar Filtros
                         </button>
                         <div class="btn-group">
-                            <button id="btn-exportar-excel" class="btn btn-success btn-sm">
+                            <button onclick="exportarExcel()" class="btn btn-success btn-sm">
                                 <i class="fas fa-file-excel me-1"></i>Excel
                             </button>
-                            <button id="btn-exportar-pdf" class="btn btn-danger btn-sm">
+                            <button onclick="exportarPDF()" class="btn btn-danger btn-sm">
                                 <i class="fas fa-file-pdf me-1"></i>PDF
                             </button>
                         </div>
@@ -180,12 +180,23 @@
 
     <!-- Tabla de novedades -->
     <div class="card border-0 shadow-sm">
-        <div class="card-body">
+        <div class="card-header bg-primary text-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="fas fa-list me-1"></i>Lista de Novedades
+                    <span class="badge bg-light text-dark ms-2">{{ total_novedades }}</span>
+                </h6>
+                <div class="text-white-50 small">
+                    <i class="fas fa-mouse-pointer me-1"></i>Click en botones para acciones
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table id="tabla-novedades" class="table table-hover" style="width:100%">
-                    <thead>
+                <table id="tabla-novedades" class="table table-hover table-sm align-middle mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <th>ID</th>
+                            <th class="ps-3">ID</th>
                             <th>Fecha Reporte</th>
                             <th>Tipo</th>
                             <th>Descripción</th>
@@ -193,20 +204,20 @@
                             <th>Estado</th>
                             <th>Reportado por</th>
                             <th>Asignado a</th>
-                            <th>Acciones</th>
+                            <th class="text-center pe-3">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for novedad in novedades %}
                         <tr class="{% if novedad.prioridad == 'alta' %}table-danger{% elif novedad.prioridad == 'media' %}table-warning{% endif %}">
-                            <td><span class="badge bg-secondary">#{{ novedad.id }}</span></td>
-                            <td>{{ novedad.fecha_reporte.strftime('%d/%m/%Y') }}</td>
+                            <td class="ps-3 fw-semibold small">#{{ novedad.id }}</td>
+                            <td class="small">{{ novedad.fecha_reporte.strftime('%d/%m/%Y') }}</td>
                             <td>
                                 <span class="badge badge-tipo-novedad" style="background-color: {{ novedad.color_tipo }}; color: white;">
                                     {{ novedad.tipo }}
                                 </span>
                             </td>
-                            <td>
+                            <td class="small">
                                 <small>{{ novedad.descripcion|truncate(100) }}</small>
                                 {% if novedad.comentarios %}
                                 <div class="comentario-box">
@@ -216,27 +227,27 @@
                             </td>
                             <td>
                                 {% if novedad.prioridad == 'alta' %}
-                                <span class="badge prioridad-alta">Alta</span>
+                                <span class="badge prioridad-alta small py-1 px-2">Alta</span>
                                 {% elif novedad.prioridad == 'media' %}
-                                <span class="badge prioridad-media">Media</span>
+                                <span class="badge prioridad-media small py-1 px-2">Media</span>
                                 {% elif novedad.prioridad == 'baja' %}
-                                <span class="badge prioridad-baja">Baja</span>
+                                <span class="badge prioridad-baja small py-1 px-2">Baja</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if novedad.estado == 'pendiente' %}
-                                <span class="badge bg-warning">Pendiente</span>
+                                <span class="badge bg-warning small py-1 px-2">Pendiente</span>
                                 {% elif novedad.estado == 'en_proceso' %}
-                                <span class="badge bg-primary">En Proceso</span>
+                                <span class="badge bg-primary small py-1 px-2">En Proceso</span>
                                 {% elif novedad.estado == 'resuelto' %}
-                                <span class="badge bg-success">Resuelto</span>
+                                <span class="badge bg-success small py-1 px-2">Resuelto</span>
                                 {% elif novedad.estado == 'cancelado' %}
-                                <span class="badge bg-secondary">Cancelado</span>
+                                <span class="badge bg-secondary small py-1 px-2">Cancelado</span>
                                 {% endif %}
                             </td>
-                            <td>{{ novedad.reportante_nombre }}</td>
-                            <td>{{ novedad.asignado_a_nombre or 'Sin asignar' }}</td>
-                            <td>
+                            <td class="small">{{ novedad.reportante_nombre }}</td>
+                            <td class="small">{{ novedad.asignado_a_nombre or 'Sin asignar' }}</td>
+                            <td class="text-center pe-3">
                                 <div class="btn-group btn-group-sm">
                                     <a href="/novedades/{{ novedad.id }}" class="btn btn-outline-primary">
                                         <i class="fas fa-eye"></i>
@@ -261,7 +272,7 @@
         </div>
     </div>
 
-    <!-- Novedades recientes (vista compacta) -->
+    <!-- Novedades recientes -->
     <div class="row mt-4">
         <div class="col-md-12">
             <div class="card border-0 shadow-sm">
@@ -298,100 +309,138 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- DataTables y botones de exportación -->
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<!-- Incluir las librerías para exportación -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
 <script>
-$(document).ready(function() {
-    // Inicializar DataTable
-    var table = $('#tabla-novedades').DataTable({
-        "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
-        },
-        "pageLength": 25,
-        "order": [[1, "desc"]],
-        "dom": 'Bfrtip',
-        "buttons": [
-            {
-                extend: 'excel',
-                text: '<i class="fas fa-file-excel me-1"></i>Excel',
-                className: 'btn btn-success btn-sm',
-                title: 'Reporte_Novedades_' + new Date().toLocaleDateString('es-ES'),
-                exportOptions: {
-                    columns: ':visible'
-                }
-            },
-            {
-                extend: 'pdf',
-                text: '<i class="fas fa-file-pdf me-1"></i>PDF',
-                className: 'btn btn-danger btn-sm',
-                title: 'Reporte_Novedades_' + new Date().toLocaleDateString('es-ES'),
-                exportOptions: {
-                    columns: ':visible'
-                },
-                customize: function(doc) {
-                    doc.content[1].table.widths = Array(doc.content[1].table.body[0].length).fill('*');
-                }
-            }
-        ]
-    });
+function exportarExcel() {
+    try {
+        const tabla = document.getElementById('tabla-novedades');
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.table_to_sheet(tabla);
+        XLSX.utils.book_append_sheet(wb, ws, 'Novedades');
+        
+        XLSX.writeFile(wb, `Reporte_Novedades_${new Date().toISOString().split('T')[0]}.xlsx`);
+        mostrarNotificacion('✅ Excel exportado correctamente', 'success');
+    } catch (error) {
+        console.error('Error en exportación Excel:', error);
+        mostrarNotificacion('❌ Error al exportar a Excel', 'error');
+    }
+}
 
-    // Filtros rápidos por estado
+function exportarPDF() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('landscape');
+
+        // Título
+        doc.setFontSize(16);
+        doc.setTextColor(40, 40, 40);
+        doc.text('Reporte de Novedades - Sistema de Gestión', 14, 15);
+        
+        // Subtítulo
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Generado: ${new Date().toLocaleDateString('es-ES', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+        })}`, 14, 22);
+        doc.text(`Total novedades: {{ total_novedades }}`, 14, 28);
+
+        // Tabla
+        doc.autoTable({
+            html: '#tabla-novedades',
+            startY: 35,
+            theme: 'grid',
+            headStyles: { 
+                fillColor: [111, 66, 193], // Color púrpura
+                textColor: [255, 255, 255],
+                fontSize: 9,
+                fontStyle: 'bold'
+            },
+            bodyStyles: { 
+                fontSize: 8,
+                cellPadding: 3
+            },
+            columnStyles: {
+                0: { cellWidth: 20 }, // ID
+                1: { cellWidth: 25 }, // Fecha
+                2: { cellWidth: 30 }, // Tipo
+                3: { cellWidth: 60 }, // Descripción
+                4: { cellWidth: 20 }, // Prioridad
+                5: { cellWidth: 25 }, // Estado
+                6: { cellWidth: 35 }, // Reportado por
+                7: { cellWidth: 35 }, // Asignado a
+                8: { cellWidth: 25 }  // Acciones
+            },
+            styles: { 
+                overflow: 'linebreak',
+                cellWidth: 'wrap'
+            },
+            margin: { left: 10, right: 10 }
+        });
+
+        doc.save(`Reporte_Novedades_${new Date().toISOString().split('T')[0]}.pdf`);
+        mostrarNotificacion('✅ PDF exportado correctamente', 'success');
+    } catch (error) {
+        console.error('Error en exportación PDF:', error);
+        mostrarNotificacion('❌ Error al exportar a PDF', 'error');
+    }
+}
+
+function mostrarNotificacion(mensaje, tipo) {
+    // Crear toast simple
+    const toastHTML = `
+        <div class="position-fixed top-0 end-0 p-3" style="z-index: 1060">
+            <div class="toast align-items-center text-white bg-${tipo === 'success' ? 'success' : 'danger'} border-0 show" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-${tipo === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                        ${mensaje}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Insertar en el DOM
+    const div = document.createElement('div');
+    div.innerHTML = toastHTML;
+    document.body.appendChild(div.firstElementChild);
+    
+    // Auto-eliminar después de 3 segundos
+    setTimeout(() => {
+        const toastElement = document.querySelector('.toast');
+        if (toastElement) {
+            toastElement.classList.remove('show');
+            setTimeout(() => toastElement.remove(), 300);
+        }
+    }, 3000);
+}
+
+// Filtros rápidos
+$(document).ready(function() {
+    // Filtros rápidos por estado de novedad
     $('.filtro-rapido').click(function() {
         var estado = $(this).data('estado');
-        table.columns(5).search(estado).draw();
+        $('.filtro-rapido').removeClass('active');
+        $(this).addClass('active');
+        // Implementar filtro aquí si es necesario
     });
 
-    // Filtros por prioridad
+    // Filtros por prioridad de novedad
     $('.filtro-prioridad').click(function() {
         var prioridad = $(this).data('prioridad');
-        table.columns(4).search(prioridad).draw();
+        $('.filtro-prioridad').removeClass('active');
+        $(this).addClass('active');
+        // Implementar filtro aquí si es necesario
     });
 
-    // Aplicar filtros avanzados
-    $('#btn-aplicar-filtros').click(function() {
-        var fechaDesde = $('#fecha-desde').val();
-        var fechaHasta = $('#fecha-hasta').val();
-        var tipo = $('#filtro-tipo').val();
-        var reportante = $('#filtro-reportante').val();
-        
-        // Aplicar múltiples filtros
-        table.columns(2).search(tipo).draw();
-        table.columns(6).search(reportante).draw();
-        
-        // Filtro de fecha
-        if (fechaDesde || fechaHasta) {
-            $.fn.dataTable.ext.search.push(
-                function(settings, data, dataIndex) {
-                    var fechaTabla = data[1];
-                    var fecha = new Date(fechaTabla.split('/').reverse().join('-'));
-                    
-                    var desde = fechaDesde ? new Date(fechaDesde) : null;
-                    var hasta = fechaHasta ? new Date(fechaHasta) : null;
-                    
-                    if ((desde === null && hasta === null) ||
-                        (desde === null && fecha <= hasta) ||
-                        (desde <= fecha && hasta === null) ||
-                        (desde <= fecha && fecha <= hasta)) {
-                        return true;
-                    }
-                    return false;
-                }
-            );
-            table.draw();
-            $.fn.dataTable.ext.search.pop();
-        }
-    });
-
-    // Función para cambiar estado de novedad
+    // Cambiar estado de novedad via API
     window.cambiarEstadoNovedad = function(id, nuevoEstado) {
         var confirmacion = confirm('¿Está seguro de cambiar el estado de esta novedad?');
         if (confirmacion) {
@@ -411,21 +460,52 @@ $(document).ready(function() {
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('Error al cambiar el estado');
+                alert('Error al cambiar el estado de la novedad');
             });
         }
     };
-
-    // Exportar Excel
-    $('#btn-exportar-excel').click(function() {
-        table.button('.buttons-excel').trigger();
-    });
-
-    // Exportar PDF
-    $('#btn-exportar-pdf').click(function() {
-        table.button('.buttons-pdf').trigger();
-    });
 });
 </script>
+
+<style>
+    .table th {
+        white-space: nowrap;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #dee2e6;
+        padding: 0.75rem 0.5rem;
+        background-color: #f8f9fa;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+        border-top: 1px solid #f0f0f0;
+    }
+    
+    .btn-sm {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        min-width: 70px;
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s;
+    }
+    
+    .filtro-rapido.active, .filtro-prioridad.active {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+    }
+</style>
 {% endblock %}

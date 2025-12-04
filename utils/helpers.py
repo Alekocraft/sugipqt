@@ -1,106 +1,166 @@
 import os
+import logging
+import random
+import string
+from datetime import datetime
 from werkzeug.utils import secure_filename
-from flask import flash
+from flask import flash, request, session
 from config.config import Config
 
+logger = logging.getLogger(__name__)
+
 def allowed_file(filename):
-    """Verificar si la extensión del archivo es permitida"""
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_EXTENSIONS
+    """Valida si la extensión del archivo está permitida según configuración"""
+    if not filename or '.' not in filename:
+        return False
+    extension = filename.rsplit('.', 1)[1].lower()
+    return extension in Config.ALLOWED_EXTENSIONS
 
 def save_uploaded_file(file, subfolder=''):
-    """Guardar archivo subido de forma segura"""
-    if file and file.filename:
-        if allowed_file(file.filename):
-            # Generar nombre seguro
-            filename = secure_filename(file.filename)
-            
-            # Crear subdirectorio si se especifica
-            upload_dir = os.path.join(Config.UPLOAD_FOLDER, subfolder)
-            os.makedirs(upload_dir, exist_ok=True)
-            
-            filepath = os.path.join(upload_dir, filename)
-            file.save(filepath)
-            
-            # Devolver ruta relativa para la web
-            return f'/{filepath.replace(os.sep, "/")}'
-        else:
-            raise ValueError(f"Tipo de archivo no permitido. Extensiones permitidas: {', '.join(Config.ALLOWED_EXTENSIONS)}")
-    return None
+    """
+    Guarda un archivo subido de forma segura en el sistema de archivos
+    
+    Args:
+        file: Objeto FileStorage de Flask
+        subfolder: Subdirectorio dentro de UPLOAD_FOLDER
+        
+    Returns:
+        str: Ruta relativa del archivo guardado o None si no se guardó
+        
+    Raises:
+        ValueError: Si el tipo de archivo no está permitido
+    """
+    if not file or not file.filename:
+        return None
+    
+    if not allowed_file(file.filename):
+        allowed_extensions = ', '.join(Config.ALLOWED_EXTENSIONS)
+        logger.warning(f"Intento de subir archivo con extensión no permitida: {file.filename}")
+        raise ValueError(f"Tipo de archivo no permitido. Extensiones permitidas: {allowed_extensions}")
+    
+    filename = secure_filename(file.filename)
+    upload_dir = os.path.join(Config.UPLOAD_FOLDER, subfolder)
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    filepath = os.path.join(upload_dir, filename)
+    file.save(filepath)
+    
+    logger.debug(f"Archivo guardado exitosamente: {filepath}")
+    return f'/{filepath.replace(os.sep, "/")}'
 
 def get_user_permissions():
-    """Obtener permisos del usuario actual basado en su rol"""
-    from flask import session
+    """Obtiene los permisos del usuario actual basados en su rol de sesión"""
     role = session.get('rol')
-    return Config.ROLES.get(role, [])
+    permissions = Config.ROLES.get(role, [])
+    logger.debug(f"Permisos obtenidos para rol '{role}': {len(permissions)} permisos")
+    return permissions
 
 def can_access(section):
-    """Verificar si el usuario puede acceder a una sección"""
-    permissions = get_user_permissions()
-    return section in permissions
+    """Verifica si el usuario actual tiene acceso a la sección especificada"""
+    has_access = section in get_user_permissions()
+    logger.debug(f"Acceso a sección '{section}': {has_access}")
+    return has_access
 
 def format_currency(value):
-    """Formatear valor como moneda"""
+    """Formatea un valor numérico como moneda colombiana"""
     if value is None:
         return "$0"
     try:
-        return f"${value:,.0f}"
-    except (ValueError, TypeError):
+        formatted = f"${value:,.0f}"
+        return formatted.replace(",", ".")
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Error formateando valor monetario: {value}, error: {e}")
         return "$0"
 
 def format_date(date_value, format_str='%d/%m/%Y'):
-    """Formatear fecha"""
-    if date_value:
-        try:
-            return date_value.strftime(format_str)
-        except (AttributeError, ValueError):
-            return str(date_value)
-    return ""
+    """Formatea un objeto datetime o date a string según formato especificado"""
+    if not date_value:
+        return ""
+    
+    try:
+        if isinstance(date_value, str):
+            return date_value
+        formatted = date_value.strftime(format_str)
+        return formatted
+    except (AttributeError, ValueError) as e:
+        logger.warning(f"Error formateando fecha: {date_value}, error: {e}")
+        return str(date_value)
 
 def get_pagination_params(default_per_page=20):
-    """Obtener parámetros de paginación desde request"""
-    from flask import request
+    """Extrae parámetros de paginación de la solicitud actual"""
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', default_per_page, type=int)
+    
+    if page < 1:
+        page = 1
+    if per_page < 1 or per_page > 100:
+        per_page = default_per_page
+    
+    logger.debug(f"Parámetros de paginación: página={page}, por_página={per_page}")
     return page, per_page
 
 def flash_errors(form):
-    """Flash todos los errores de un formulario"""
+    """Muestra todos los errores de validación de un formulario como mensajes flash"""
     for field, errors in form.errors.items():
         for error in errors:
             field_label = getattr(form, field).label.text if hasattr(form, field) else field
             flash(f"Error en {field_label}: {error}", 'danger')
+    
+    if form.errors:
+        logger.warning(f"Formulario con {len(form.errors)} errores de validación")
 
 def generate_codigo_unico(prefix, existing_codes):
-    """Generar código único automáticamente"""
-    import random
-    import string
+    """
+    Genera un código único con prefijo especificado
     
-    while True:
-        # Generar parte aleatoria
+    Args:
+        prefix: Prefijo del código
+        existing_codes: Conjunto o lista de códigos existentes
+        
+    Returns:
+        str: Código único generado
+    """
+    max_attempts = 100
+    for attempt in range(max_attempts):
         random_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         codigo = f"{prefix}-{random_part}"
         
-        # Verificar que no exista
         if codigo not in existing_codes:
+            logger.debug(f"Código único generado: {codigo} (intento {attempt + 1})")
             return codigo
+    
+    logger.error(f"No se pudo generar código único después de {max_attempts} intentos")
+    raise ValueError("No se pudo generar código único")
 
 def calcular_valor_total(cantidad, valor_unitario):
-    """Calcular valor total"""
+    """Calcula el valor total multiplicando cantidad por valor unitario"""
     try:
-        return cantidad * valor_unitario
-    except (TypeError, ValueError):
+        if cantidad is None or valor_unitario is None:
+            return 0
+        total = cantidad * valor_unitario
+        return total
+    except (TypeError, ValueError) as e:
+        logger.warning(f"Error calculando valor total: cantidad={cantidad}, valor={valor_unitario}, error: {e}")
         return 0
 
 def validar_stock(cantidad_solicitada, stock_disponible):
-    """Validar que la cantidad solicitada no exceda el stock"""
-    return cantidad_solicitada <= stock_disponible
+    """Valida que la cantidad solicitada no exceda el stock disponible"""
+    if cantidad_solicitada is None or stock_disponible is None:
+        logger.warning("Valores None en validación de stock")
+        return False
+    
+    es_valido = cantidad_solicitada <= stock_disponible
+    if not es_valido:
+        logger.info(f"Validación de stock fallida: solicitado={cantidad_solicitada}, disponible={stock_disponible}")
+    
+    return es_valido
 
 def obtener_mes_actual():
-    """Obtener nombre del mes actual en español"""
-    from datetime import datetime
+    """Devuelve el nombre del mes actual en español"""
     meses = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ]
-    return meses[datetime.now().month - 1]
+    mes_actual = meses[datetime.now().month - 1]
+    logger.debug(f"Mes actual obtenido: {mes_actual}")
+    return mes_actual
