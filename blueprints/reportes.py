@@ -903,7 +903,7 @@ def reporte_oficinas():
 
 @reportes_bp.route('/prestamos')
 def reporte_prestamos():
-    """Reporte de préstamos"""
+    """Reporte de préstamos - VERSIÓN CORREGIDA"""
     if not _require_login():
         return redirect('/login')
     
@@ -912,12 +912,12 @@ def reporte_prestamos():
         return redirect('/reportes')
     
     try:
-        # Obtener préstamos de la base de datos
         from database import get_database_connection
         
         conn = get_database_connection()
         cursor = conn.cursor()
         
+        # CONSULTA CORREGIDA - Usando la tabla CORRECTA: PrestamosElementos
         cursor.execute("""
             SELECT 
                 pe.PrestamoId,
@@ -934,7 +934,29 @@ def reporte_prestamos():
                 pe.Estado,
                 pe.Evento,
                 pe.Observaciones,
-                pe.UsuarioPrestador
+                pe.UsuarioPrestador,
+                pe.Activo,
+                pe.UsuarioDevolucion,
+                pe.UsuarioAprobador,
+                pe.FechaAprobacion,
+                pe.UsuarioRechazador,
+                pe.FechaRechazo,
+                -- Calcular días transcurridos
+                DATEDIFF(day, pe.FechaPrestamo, GETDATE()) as DiasTranscurridos,
+                -- Calcular si está vencido
+                CASE 
+                    WHEN pe.Estado = 'PRESTADO' AND pe.FechaDevolucionPrevista < GETDATE() THEN 1
+                    ELSE 0 
+                END as Vencido,
+                -- Calcular si está por vencer (7 días o menos)
+                CASE 
+                    WHEN pe.Estado = 'PRESTADO' 
+                         AND pe.FechaDevolucionPrevista BETWEEN GETDATE() AND DATEADD(day, 7, GETDATE()) 
+                    THEN 1
+                    ELSE 0 
+                END as PorVencer,
+                -- Calcular días restantes para devolución
+                DATEDIFF(day, GETDATE(), pe.FechaDevolucionPrevista) as DiasRestantes
             FROM PrestamosElementos pe
             INNER JOIN ElementosPublicitarios ep ON pe.ElementoId = ep.ElementoId
             INNER JOIN Usuarios u ON pe.UsuarioSolicitanteId = u.UsuarioId
@@ -944,6 +966,12 @@ def reporte_prestamos():
         """)
         
         prestamos = []
+        prestamos_activos = 0
+        vencidos = 0
+        por_vencer = 0
+        devueltos = 0
+        total_prestamos = 0
+        
         for row in cursor.fetchall():
             prestamo = {
                 'id': row[0],
@@ -960,9 +988,91 @@ def reporte_prestamos():
                 'estado': row[11],
                 'evento': row[12],
                 'observaciones': row[13],
-                'usuario_prestador': row[14]
+                'usuario_prestador': row[14],
+                'activo': bool(row[15]),
+                'usuario_devolucion': row[16],
+                'usuario_aprobador': row[17],
+                'fecha_aprobacion': row[18],
+                'usuario_rechazador': row[19],
+                'fecha_rechazo': row[20],
+                'dias_transcurridos': row[21],
+                'vencido': bool(row[22]),
+                'por_vencer': bool(row[23]),
+                'dias_restantes': row[24] if row[24] else 0
             }
             prestamos.append(prestamo)
+            
+            # Contar estadísticas
+            total_prestamos += 1
+            estado = prestamo['estado'].upper() if prestamo['estado'] else ''
+            
+            if estado == 'PRESTADO':
+                prestamos_activos += 1
+                if prestamo.get('vencido'):
+                    vencidos += 1
+                elif prestamo.get('por_vencer'):
+                    por_vencer += 1
+            elif estado == 'DEVUELTO':
+                devueltos += 1
+        
+        # Calcular tasa de devolución
+        tasa_devolucion = 0
+        if total_prestamos > 0:
+            tasa_devolucion = round((devueltos / total_prestamos) * 100, 1)
+        
+        # Obtener oficinas para filtro
+        cursor.execute("SELECT DISTINCT NombreOficina FROM Oficinas WHERE Activo = 1 ORDER BY NombreOficina")
+        oficinas = [{'nombre': row[0]} for row in cursor.fetchall()]
+        
+        # Obtener materiales más prestados - CONSULTA CORREGIDA
+        cursor.execute("""
+            SELECT TOP 5
+                ep.NombreElemento,
+                COUNT(*) as veces_prestado,
+                SUM(pe.CantidadPrestada) as total_prestado
+            FROM PrestamosElementos pe
+            INNER JOIN ElementosPublicitarios ep ON pe.ElementoId = ep.ElementoId
+            WHERE pe.Activo = 1
+            GROUP BY ep.NombreElemento
+            ORDER BY veces_prestado DESC
+        """)
+        
+        materiales_mas_prestados = []
+        for row in cursor.fetchall():
+            materiales_mas_prestados.append({
+                'nombre': row[0],
+                'veces_prestado': row[1],
+                'total_prestado': row[2]
+            })
+        
+        # Obtener próximos vencimientos - CONSULTA CORREGIDA
+        cursor.execute("""
+            SELECT TOP 5
+                pe.PrestamoId,
+                u.NombreUsuario as SolicitanteNombre,
+                ep.NombreElemento as MaterialNombre,
+                pe.FechaDevolucionPrevista,
+                DATEDIFF(day, GETDATE(), pe.FechaDevolucionPrevista) as DiasRestantes,
+                pe.CantidadPrestada
+            FROM PrestamosElementos pe
+            INNER JOIN ElementosPublicitarios ep ON pe.ElementoId = ep.ElementoId
+            INNER JOIN Usuarios u ON pe.UsuarioSolicitanteId = u.UsuarioId
+            WHERE pe.Estado = 'PRESTADO' 
+            AND pe.FechaDevolucionPrevista >= GETDATE()
+            AND pe.Activo = 1
+            ORDER BY pe.FechaDevolucionPrevista ASC
+        """)
+        
+        proximos_vencimientos = []
+        for row in cursor.fetchall():
+            proximos_vencimientos.append({
+                'id': row[0],
+                'solicitante_nombre': row[1],
+                'material_nombre': row[2],
+                'fecha_devolucion_estimada': row[3],
+                'dias_restantes': row[4],
+                'cantidad': row[5]
+            })
         
         conn.close()
         
@@ -970,27 +1080,54 @@ def reporte_prestamos():
         rol_usuario = session.get('rol', '').lower()
         oficina_id_usuario = session.get('oficina_id')
         
-        if rol_usuario.startswith('oficina_'):
-            prestamos = [p for p in prestamos if p.get('oficina_id') == oficina_id_usuario]
+        if rol_usuario and oficina_id_usuario:
+            # Verificar si el usuario solo puede ver préstamos de su oficina
+            if rol_usuario.startswith('oficina_'):
+                prestamos = [p for p in prestamos if p.get('oficina_id') == oficina_id_usuario]
+                # Recalcular estadísticas después de filtrar
+                prestamos_activos = len([p for p in prestamos if p.get('estado', '').upper() == 'PRESTADO'])
+                devueltos = len([p for p in prestamos if p.get('estado', '').upper() == 'DEVUELTO'])
+                vencidos = len([p for p in prestamos if p.get('estado', '').upper() == 'PRESTADO' and p.get('vencido')])
+                por_vencer = len([p for p in prestamos if p.get('estado', '').upper() == 'PRESTADO' and p.get('por_vencer')])
+                total_prestamos = len(prestamos)
+                tasa_devolucion = round((devueltos / total_prestamos) * 100, 1) if total_prestamos > 0 else 0
         
-        # Estadísticas
-        total_prestamos = len(prestamos)
-        prestamos_activos = len([p for p in prestamos if p.get('estado', '').upper() == 'PRESTADO'])
-        devueltos = len([p for p in prestamos if p.get('estado', '').upper() == 'DEVUELTO'])
+        # DEBUG: Mostrar información en consola
+        print(f"🔍 REPORTE PRÉSTAMOS - Estadísticas:")
+        print(f"   Total préstamos: {total_prestamos}")
+        print(f"   Activos: {prestamos_activos}")
+        print(f"   Devueltos: {devueltos}")
+        print(f"   Vencidos: {vencidos}")
+        print(f"   Por vencer: {por_vencer}")
+        print(f"   Tasa devolución: {tasa_devolucion}%")
         
         return render_template('reportes/prestamos.html',
                              prestamos=prestamos,
                              total_prestamos=total_prestamos,
                              prestamos_activos=prestamos_activos,
-                             devueltos=devueltos)
+                             devueltos=devueltos,
+                             vencidos=vencidos,
+                             por_vencer=por_vencer,
+                             tasa_devolucion=tasa_devolucion,
+                             oficinas=oficinas,
+                             materiales_mas_prestados=materiales_mas_prestados,
+                             proximos_vencimientos=proximos_vencimientos)
     except Exception as e:
         print(f"❌ Error generando reporte de préstamos: {e}")
+        import traceback
+        traceback.print_exc()
         flash('Error al generar el reporte de préstamos', 'danger')
         return render_template('reportes/prestamos.html',
                              prestamos=[],
                              total_prestamos=0,
                              prestamos_activos=0,
-                             devueltos=0)
+                             devueltos=0,
+                             vencidos=0,
+                             por_vencer=0,
+                             tasa_devolucion=0,
+                             oficinas=[],
+                             materiales_mas_prestados=[],
+                             proximos_vencimientos=[])
 
 # ============================================================================
 # RUTAS DE EXPORTACIÓN
@@ -2307,3 +2444,302 @@ def material_historial(material_id):
     except Exception as e:
         print(f"❌ Error obteniendo historial del material: {e}")
         return jsonify({'error': str(e)})
+
+# ============================================================================
+# API PARA DETALLE DE PRÉSTAMOS - FUNCIÓN CORREGIDA
+# ============================================================================
+
+@reportes_bp.route('/api/prestamos/<int:prestamo_id>/detalle')
+def api_prestamo_detalle(prestamo_id):
+    """API para obtener detalle de un préstamo específico - VERSIÓN CORREGIDA"""
+    if not _require_login():
+        return jsonify({'success': False, 'message': 'No autenticado'}), 401
+    
+    try:
+        from database import get_database_connection
+        
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        
+        # Obtener información detallada del préstamo - CONSULTA CORREGIDA
+        cursor.execute("""
+            SELECT 
+                pe.PrestamoId,
+                pe.ElementoId,
+                ep.NombreElemento as MaterialNombre,
+                pe.UsuarioSolicitanteId,
+                u.NombreUsuario as SolicitanteNombre,
+                pe.OficinaId,
+                o.NombreOficina as OficinaNombre,
+                pe.CantidadPrestada,
+                pe.FechaPrestamo,
+                pe.FechaDevolucionPrevista,
+                pe.FechaDevolucionReal,
+                pe.Estado,
+                pe.Evento,
+                pe.Observaciones,
+                pe.UsuarioPrestador,
+                pe.Activo,
+                pe.UsuarioDevolucion,
+                pe.UsuarioAprobador,
+                pe.FechaAprobacion,
+                pe.UsuarioRechazador,
+                pe.FechaRechazo,
+                DATEDIFF(day, pe.FechaPrestamo, GETDATE()) as DiasTranscurridos,
+                CASE 
+                    WHEN pe.Estado = 'PRESTADO' AND pe.FechaDevolucionPrevista < GETDATE() THEN 1
+                    ELSE 0 
+                END as Vencido,
+                CASE 
+                    WHEN pe.Estado = 'PRESTADO' 
+                         AND pe.FechaDevolucionPrevista BETWEEN GETDATE() AND DATEADD(day, 7, GETDATE()) 
+                    THEN 1
+                    ELSE 0 
+                END as PorVencer
+            FROM PrestamosElementos pe
+            INNER JOIN ElementosPublicitarios ep ON pe.ElementoId = ep.ElementoId
+            INNER JOIN Usuarios u ON pe.UsuarioSolicitanteId = u.UsuarioId
+            INNER JOIN Oficinas o ON pe.OficinaId = o.OficinaId
+            WHERE pe.PrestamoId = ?
+            AND pe.Activo = 1
+        """, (prestamo_id,))
+        
+        prestamo_data = cursor.fetchone()
+        
+        if not prestamo_data:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Préstamo no encontrado o inactivo'}), 404
+        
+        # Convertir a diccionario
+        column_names = [column[0] for column in cursor.description]
+        prestamo = dict(zip(column_names, prestamo_data))
+        
+        # Obtener historial de movimientos
+        cursor.execute("""
+            SELECT 
+                FechaCambio as Fecha,
+                EstadoNuevo as Accion,
+                UsuarioCambio as Usuario,
+                Observaciones
+            FROM PrestamosHistorialEstados 
+            WHERE PrestamoId = ?
+            ORDER BY FechaCambio DESC
+        """, (prestamo_id,))
+        
+        historial = []
+        for row in cursor.fetchall():
+            historial.append({
+                'fecha': row[0].strftime('%Y-%m-%d %H:%M:%S') if row[0] else None,
+                'accion': row[1],
+                'usuario': row[2],
+                'observaciones': row[3] or ''
+            })
+        
+        prestamo['historial'] = historial
+        
+        # Convertir fechas a formato string para JSON
+        date_fields = ['FechaPrestamo', 'FechaDevolucionPrevista', 'FechaDevolucionReal', 
+                      'FechaAprobacion', 'FechaRechazo']
+        for field in date_fields:
+            if prestamo.get(field):
+                prestamo[field] = prestamo[field].strftime('%Y-%m-%d %H:%M:%S')
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'prestamo': prestamo
+        })
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo detalle del préstamo: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f'Error interno del servidor: {str(e)}'
+        }), 500
+
+# ============================================================================
+# API PARA REGISTRAR DEVOLUCIÓN DE PRÉSTAMO
+# ============================================================================
+
+@reportes_bp.route('/api/prestamos/<int:prestamo_id>/devolver', methods=['POST'])
+def api_prestamo_devolver(prestamo_id):
+    """API para registrar devolución de un préstamo"""
+    if not _require_login():
+        return jsonify({'success': False, 'message': 'No autenticado'}), 401
+    
+    # Verificar permisos
+    if not can_access('prestamos', 'return'):
+        return jsonify({'success': False, 'message': 'No tiene permisos para registrar devoluciones'}), 403
+    
+    try:
+        from database import get_database_connection
+        
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        
+        # Verificar que el préstamo existe y está activo
+        cursor.execute("""
+            SELECT Estado, ElementoId, CantidadPrestada 
+            FROM PrestamosElementos 
+            WHERE PrestamoId = ? AND Activo = 1
+        """, (prestamo_id,))
+        
+        prestamo = cursor.fetchone()
+        if not prestamo:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Préstamo no encontrado o inactivo'}), 404
+        
+        estado, elemento_id, cantidad = prestamo
+        
+        if estado != 'PRESTADO':
+            conn.close()
+            return jsonify({'success': False, 'message': 'El préstamo no está en estado PRESTADO'}), 400
+        
+        # Obtener usuario actual
+        usuario_nombre = session.get('nombre_usuario', 'Sistema')
+        
+        # Registrar devolución
+        cursor.execute("""
+            UPDATE PrestamosElementos 
+            SET Estado = 'DEVUELTO',
+                FechaDevolucionReal = GETDATE(),
+                UsuarioDevolucion = ?,
+                FechaActualizacion = GETDATE(),
+                UsuarioActualizacion = ?
+            WHERE PrestamoId = ?
+        """, (usuario_nombre, usuario_nombre, prestamo_id))
+        
+        # Registrar en historial de estados
+        cursor.execute("""
+            INSERT INTO PrestamosHistorialEstados 
+            (PrestamoId, EstadoAnterior, EstadoNuevo, UsuarioCambio, FechaCambio, Observaciones, TipoAccion)
+            VALUES (?, ?, ?, ?, GETDATE(), 'Devolución registrada', 'DEVOLUCION')
+        """, (prestamo_id, 'PRESTADO', 'DEVUELTO', usuario_nombre))
+        
+        # Actualizar stock del elemento
+        cursor.execute("""
+            UPDATE ElementosPublicitarios 
+            SET CantidadDisponible = CantidadDisponible + ?
+            WHERE ElementoId = ?
+        """, (cantidad, elemento_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Devolución registrada exitosamente'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error registrando devolución del préstamo: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f'Error al registrar la devolución: {str(e)}'
+        }), 500
+
+@reportes_bp.route('/exportar/inventario-corporativo/excel')
+def exportar_inventario_corporativo_excel_duplicado():
+    """Exporta TODO el inventario corporativo a Excel"""
+    if not _require_login():
+        return redirect('/login')
+    
+    # Verificar permisos
+    if not can_access('inventario_corporativo', 'view'):
+        flash('No tiene permisos para exportar inventario corporativo', 'warning')
+        return redirect('/reportes')
+    
+    try:
+        from database import get_database_connection
+        
+        conn = get_database_connection()
+        
+        # CONSULTA CORREGIDA según tu estructura de base de datos
+        query = """
+        SELECT 
+            o.NombreOficina,
+            o.Ubicacion,
+            m.NombreElemento as Material,
+            m.CantidadDisponible as Stock,
+            m.ValorUnitario,
+            (m.CantidadDisponible * m.ValorUnitario) as ValorTotal,
+            m.CantidadMinima as StockMinimo,
+            m.UsuarioCreador as Responsable,
+            CASE WHEN m.Activo = 1 THEN 'Activo' ELSE 'Inactivo' END as Estado,
+            m.FechaCreacion
+        FROM Materiales m
+        INNER JOIN Oficinas o ON m.OficinaCreadoraId = o.OficinaId
+        WHERE m.Activo = 1
+        ORDER BY o.NombreOficina, m.NombreElemento
+        """
+        
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        
+        print(f"✅ EXPORTANDO INVENTARIO CORPORATIVO: {len(df)} registros")
+        print(f"   - Fuente: Tabla Materiales (INVENTARIO CORPORATIVO)")
+        print(f"   - Oficinas incluidas: {df['NombreOficina'].nunique()}")
+        print(f"   - Valor total exportado: ${df['ValorTotal'].sum():,.2f}")
+        
+        # Crear archivo Excel en memoria
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Hoja 1: Inventario completo
+            df.to_excel(writer, sheet_name='Inventario Corporativo', index=False)
+            
+            # Hoja 2: Resumen por oficina
+            resumen_df = df.groupby(['NombreOficina', 'Ubicacion']).agg({
+                'Material': 'count',
+                'Stock': 'sum',
+                'ValorTotal': 'sum'
+            }).reset_index()
+            resumen_df.columns = ['Oficina', 'Ubicación', 'Cantidad Materiales', 'Stock Total', 'Valor Total Inventario']
+            resumen_df['Valor Total Inventario'] = resumen_df['Valor Total Inventario'].round(2)
+            resumen_df.to_excel(writer, sheet_name='Resumen por Oficina', index=False)
+            
+            # Hoja 3: Totales generales
+            totales_data = {
+                'Métrica': [
+                    'Total Oficinas con Inventario',
+                    'Total Materiales',
+                    'Stock Total',
+                    'Valor Total Inventario',
+                    'Valor Promedio por Material',
+                    'Fecha de Exportación'
+                ],
+                'Valor': [
+                    resumen_df['Oficina'].nunique(),
+                    df['Material'].count(),
+                    int(df['Stock'].sum()),
+                    f"${df['ValorTotal'].sum():,.2f}",
+                    f"${df['ValorTotal'].mean():,.2f}" if len(df) > 0 else "$0.00",
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                ]
+            }
+            totales_df = pd.DataFrame(totales_data)
+            totales_df.to_excel(writer, sheet_name='Totales Generales', index=False)
+        
+        output.seek(0)
+        
+        # Crear nombre de archivo
+        fecha_actual = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'inventario_corporativo_completo_{fecha_actual}.xlsx'
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        print(f"❌ Error exportando inventario corporativo: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('Error al exportar el inventario corporativo', 'danger')
+        return redirect(url_for('reportes.reporte_oficinas'))
