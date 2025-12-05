@@ -11,7 +11,7 @@ class Database:
     """
     def __init__(self):
         self.server = 'localhost'
-        self.database = 'SistemaGestionInventarios'
+        self.database = 'SistemaGestionInventariost'
         self.driver = '{ODBC Driver 17 for SQL Server}'
     
     def get_connection(self):
