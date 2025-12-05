@@ -67,12 +67,12 @@ def reportes_index():
     return render_template('reportes/index.html')
 
 # ================================
-# REPORTE DE SOLICITUDES MEJORADO
+# REPORTE DE SOLICITUDES  
 # ===============================
 
 @reportes_bp.route('/solicitudes')
 def reporte_solicitudes():
-    """Reporte de solicitudes con filtros avanzados"""
+    """Reporte de solicitudes con filtros avanzados - VERSIÓN CORREGIDA"""
     if not _require_login():
         return redirect('/login')
     
@@ -104,25 +104,39 @@ def reporte_solicitudes():
             if filtro_estado != 'todos':
                 estado_solicitud = solicitud.get('estado', '').lower()
                 estado_filtro = filtro_estado.lower()
-                if estado_filtro not in estado_solicitud:
+                # CORRECCIÓN: Mejor comparación de estados
+                if estado_filtro == 'pendiente' and 'pendiente' not in estado_solicitud:
+                    continue
+                elif estado_filtro == 'aprobada' and 'aprobada' not in estado_solicitud:
+                    continue
+                elif estado_filtro == 'rechazada' and 'rechazada' not in estado_solicitud:
+                    continue
+                elif estado_filtro == 'parcial' and 'parcial' not in estado_solicitud:
+                    continue
+                elif estado_filtro == 'completada' and 'completada' not in estado_solicitud:
+                    continue
+                elif estado_filtro == 'devuelta' and 'devuelta' not in estado_solicitud:
                     continue
             
-            # Filtro por oficina
+            # Filtro por oficina - CORRECCIÓN: Usar ID en lugar de nombre
             if filtro_oficina != 'todas':
-                oficina_solicitud = solicitud.get('oficina_nombre', '')
-                if oficina_solicitud != filtro_oficina:
+                oficina_solicitud_id = solicitud.get('oficina_id')
+                # Intentar convertir ambos a string para comparación
+                if str(oficina_solicitud_id) != str(filtro_oficina):
                     continue
             
-            # Filtro por material (búsqueda por nombre)
+            # Filtro por material (búsqueda por parte del nombre) - CORRECCIÓN
             if filtro_material:
-                material_nombre = solicitud.get('material_nombre', '').lower()
-                if filtro_material.lower() not in material_nombre:
+                material_nombre = str(solicitud.get('material_nombre', '')).lower()
+                material_filtro = filtro_material.lower().strip()
+                if material_filtro not in material_nombre:
                     continue
             
-            # Filtro por solicitante
+            # Filtro por solicitante (búsqueda por parte del nombre) - CORRECCIÓN
             if filtro_solicitante:
-                solicitante = solicitud.get('usuario_solicitante', '').lower()
-                if filtro_solicitante.lower() not in solicitante:
+                solicitante = str(solicitud.get('usuario_solicitante', '')).lower()
+                solicitante_filtro = filtro_solicitante.lower().strip()
+                if solicitante_filtro not in solicitante:
                     continue
             
             # Filtro por fecha
@@ -130,22 +144,34 @@ def reporte_solicitudes():
                 try:
                     fecha_solicitud_str = solicitud.get('fecha_solicitud', '')
                     if fecha_solicitud_str:
-                        fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+                        # Manejar diferentes formatos de fecha
+                        if isinstance(fecha_solicitud_str, str):
+                            fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+                        else:
+                            fecha_solicitud = fecha_solicitud_str.date()
+                        
                         fecha_inicio = datetime.strptime(filtro_fecha_inicio, '%Y-%m-%d').date()
                         if fecha_solicitud < fecha_inicio:
                             continue
-                except:
+                except Exception as e:
+                    print(f"⚠️ Error procesando fecha inicio: {e}")
                     continue
             
             if filtro_fecha_fin:
                 try:
                     fecha_solicitud_str = solicitud.get('fecha_solicitud', '')
                     if fecha_solicitud_str:
-                        fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+                        # Manejar diferentes formatos de fecha
+                        if isinstance(fecha_solicitud_str, str):
+                            fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+                        else:
+                            fecha_solicitud = fecha_solicitud_str.date()
+                        
                         fecha_fin = datetime.strptime(filtro_fecha_fin, '%Y-%m-%d').date()
                         if fecha_solicitud > fecha_fin:
                             continue
-                except:
+                except Exception as e:
+                    print(f"⚠️ Error procesando fecha fin: {e}")
                     continue
             
             solicitudes_filtradas.append(solicitud)
@@ -167,15 +193,15 @@ def reporte_solicitudes():
             estado = solicitud.get('estado', 'pendiente').lower()
             if 'pendiente' in estado:
                 estados['pendiente'] += 1
-            elif 'aprobada' in estado or 'aprobado' in estado:
+            elif 'aprobada' in estado:
                 estados['aprobada'] += 1
-            elif 'rechazada' in estado or 'rechazado' in estado:
+            elif 'rechazada' in estado:
                 estados['rechazada'] += 1
             elif 'parcial' in estado:
                 estados['parcial'] += 1
-            elif 'completada' in estado or 'completado' in estado:
+            elif 'completada' in estado:
                 estados['completada'] += 1
-            elif 'devuelta' in estado or 'devuelto' in estado:
+            elif 'devuelta' in estado:
                 estados['devuelta'] += 1
             
             total_cantidad_solicitada += solicitud.get('cantidad_solicitada', 0)
@@ -192,6 +218,12 @@ def reporte_solicitudes():
         if total_solicitudes > 0:
             aprobadas_totales = estados['aprobada'] + estados['completada'] + estados['parcial']
             tasa_aprobacion = round((aprobadas_totales / total_solicitudes) * 100, 1)
+        
+        print(f"🔍 REPORTE SOLICITUDES - FILTROS APLICADOS:")
+        print(f"   Filtro oficina: {filtro_oficina}")
+        print(f"   Filtro material: {filtro_material}")
+        print(f"   Filtro solicitante: {filtro_solicitante}")
+        print(f"   Solicitudes encontradas: {len(solicitudes_filtradas)}")
         
         return render_template('reportes/solicitudes.html',
                              solicitudes=solicitudes_filtradas,
@@ -216,6 +248,8 @@ def reporte_solicitudes():
                              
     except Exception as e:
         print(f"❌ Error generando reporte de solicitudes: {e}")
+        import traceback
+        traceback.print_exc()
         flash('Error al generar el reporte de solicitudes', 'danger')
         return render_template('reportes/solicitudes.html',
                              solicitudes=[],
@@ -232,9 +266,10 @@ def reporte_solicitudes():
 # ----------------------------------
 # EXPORTACIÓN DE SOLICITUDES A EXCEL
 # ----------------------------------
+
 @reportes_bp.route('/solicitudes/exportar/excel')
 def exportar_solicitudes_excel():
-    """Exporta las solicitudes filtradas a Excel"""
+    """Exporta las solicitudes filtradas a Excel - VERSIÓN CORREGIDA"""
     if not _require_login():
         return redirect('/login')
     
@@ -259,32 +294,45 @@ def exportar_solicitudes_excel():
         if not (session.get('rol') in ['administrador', 'lider_inventario']):
             solicitudes = filtrar_por_oficina_usuario(solicitudes, 'oficina_id')
         
-        # Aplicar filtros adicionales
+        # Aplicar filtros adicionales (USANDO LA MISMA LÓGICA CORREGIDA)
         solicitudes_filtradas = []
         for solicitud in solicitudes:
             # Filtro por estado
             if filtro_estado != 'todos':
                 estado_solicitud = solicitud.get('estado', '').lower()
                 estado_filtro = filtro_estado.lower()
-                if estado_filtro not in estado_solicitud:
+                # CORRECCIÓN: Mejor comparación de estados
+                if estado_filtro == 'pendiente' and 'pendiente' not in estado_solicitud:
+                    continue
+                elif estado_filtro == 'aprobada' and 'aprobada' not in estado_solicitud:
+                    continue
+                elif estado_filtro == 'rechazada' and 'rechazada' not in estado_solicitud:
+                    continue
+                elif estado_filtro == 'parcial' and 'parcial' not in estado_solicitud:
+                    continue
+                elif estado_filtro == 'completada' and 'completada' not in estado_solicitud:
+                    continue
+                elif estado_filtro == 'devuelta' and 'devuelta' not in estado_solicitud:
                     continue
             
-            # Filtro por oficina
+            # Filtro por oficina - CORRECCIÓN
             if filtro_oficina != 'todas':
-                oficina_solicitud = solicitud.get('oficina_nombre', '')
-                if oficina_solicitud != filtro_oficina:
+                oficina_solicitud_id = solicitud.get('oficina_id')
+                if str(oficina_solicitud_id) != str(filtro_oficina):
                     continue
             
-            # Filtro por material
+            # Filtro por material - CORRECCIÓN
             if filtro_material:
-                material_nombre = solicitud.get('material_nombre', '').lower()
-                if filtro_material.lower() not in material_nombre:
+                material_nombre = str(solicitud.get('material_nombre', '')).lower()
+                material_filtro = filtro_material.lower().strip()
+                if material_filtro not in material_nombre:
                     continue
             
-            # Filtro por solicitante
+            # Filtro por solicitante - CORRECCIÓN
             if filtro_solicitante:
-                solicitante = solicitud.get('usuario_solicitante', '').lower()
-                if filtro_solicitante.lower() not in solicitante:
+                solicitante = str(solicitud.get('usuario_solicitante', '')).lower()
+                solicitante_filtro = filtro_solicitante.lower().strip()
+                if solicitante_filtro not in solicitante:
                     continue
             
             # Filtro por fecha
@@ -292,7 +340,11 @@ def exportar_solicitudes_excel():
                 try:
                     fecha_solicitud_str = solicitud.get('fecha_solicitud', '')
                     if fecha_solicitud_str:
-                        fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+                        if isinstance(fecha_solicitud_str, str):
+                            fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+                        else:
+                            fecha_solicitud = fecha_solicitud_str.date()
+                        
                         fecha_inicio = datetime.strptime(filtro_fecha_inicio, '%Y-%m-%d').date()
                         if fecha_solicitud < fecha_inicio:
                             continue
@@ -303,7 +355,11 @@ def exportar_solicitudes_excel():
                 try:
                     fecha_solicitud_str = solicitud.get('fecha_solicitud', '')
                     if fecha_solicitud_str:
-                        fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+                        if isinstance(fecha_solicitud_str, str):
+                            fecha_solicitud = datetime.strptime(str(fecha_solicitud_str).split()[0], '%Y-%m-%d').date()
+                        else:
+                            fecha_solicitud = fecha_solicitud_str.date()
+                        
                         fecha_fin = datetime.strptime(filtro_fecha_fin, '%Y-%m-%d').date()
                         if fecha_solicitud > fecha_fin:
                             continue
@@ -358,6 +414,7 @@ def exportar_solicitudes_excel():
                     f'Filtro Estado: {filtro_estado if filtro_estado != "todos" else "Todos"}',
                     f'Filtro Oficina: {filtro_oficina if filtro_oficina != "todas" else "Todas"}',
                     f'Filtro Material: {filtro_material if filtro_material else "Ninguno"}',
+                    f'Filtro Solicitante: {filtro_solicitante if filtro_solicitante else "Ninguno"}',
                     f'Fecha Generación: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
                 ]
             }
@@ -629,7 +686,6 @@ def reporte_oficinas():
                 
                 print(f"🔍 Procesando oficina: {oficina_nombre} (ID: {oficina_id})")
                 
-                
                 try:
                     
                     cursor.execute("""
@@ -703,7 +759,6 @@ def reporte_oficinas():
                     oficina['materiales'] = []
                     oficina['cantidad_materiales'] = 0
                     oficina['valor_total_inventario'] = 0
-                
                 
                 try:
                     cursor.execute("""
@@ -903,7 +958,7 @@ def reporte_oficinas():
 
 @reportes_bp.route('/prestamos')
 def reporte_prestamos():
-    """Reporte de préstamos - VERSIÓN CORREGIDA"""
+    """Reporte de préstamos - VERSIÓN COMPATIBLE CON TEMPLATE"""
     if not _require_login():
         return redirect('/login')
     
@@ -917,201 +972,145 @@ def reporte_prestamos():
         conn = get_database_connection()
         cursor = conn.cursor()
         
-        # CONSULTA CORREGIDA - Usando la tabla CORRECTA: PrestamosElementos
-        cursor.execute("""
+        # Obtener filtros del template
+        filtro_estado = request.args.get('estado', '')
+        filtro_oficina = request.args.get('oficina', '')
+        filtro_material = request.args.get('material', '').strip()
+        filtro_solicitante = request.args.get('solicitante', '').strip()
+        filtro_fecha_inicio = request.args.get('fecha_inicio', '')
+        filtro_fecha_fin = request.args.get('fecha_fin', '')
+        
+        print(f"🔍 Filtros recibidos:")
+        print(f"   Estado: {filtro_estado}")
+        print(f"   Oficina: {filtro_oficina}")
+        print(f"   Material: {filtro_material}")
+        print(f"   Solicitante: {filtro_solicitante}")
+        
+        # Construir consulta base con filtros
+        query = """
             SELECT 
                 pe.PrestamoId,
                 pe.ElementoId,
-                ep.NombreElemento as MaterialNombre,
+                ep.NombreElemento as Material,
                 pe.UsuarioSolicitanteId,
                 u.NombreUsuario as SolicitanteNombre,
                 pe.OficinaId,
                 o.NombreOficina as OficinaNombre,
-                pe.CantidadPrestada,
-                pe.FechaPrestamo,
-                pe.FechaDevolucionPrevista,
+                pe.CantidadPrestada as Cantidad,
+                pe.FechaPrestamo as Fecha,
+                pe.FechaDevolucionPrevista as FechaPrevista,
                 pe.FechaDevolucionReal,
                 pe.Estado,
                 pe.Evento,
                 pe.Observaciones,
                 pe.UsuarioPrestador,
-                pe.Activo,
-                pe.UsuarioDevolucion,
-                pe.UsuarioAprobador,
-                pe.FechaAprobacion,
-                pe.UsuarioRechazador,
-                pe.FechaRechazo,
-                -- Calcular días transcurridos
-                DATEDIFF(day, pe.FechaPrestamo, GETDATE()) as DiasTranscurridos,
-                -- Calcular si está vencido
-                CASE 
-                    WHEN pe.Estado = 'PRESTADO' AND pe.FechaDevolucionPrevista < GETDATE() THEN 1
-                    ELSE 0 
-                END as Vencido,
-                -- Calcular si está por vencer (7 días o menos)
-                CASE 
-                    WHEN pe.Estado = 'PRESTADO' 
-                         AND pe.FechaDevolucionPrevista BETWEEN GETDATE() AND DATEADD(day, 7, GETDATE()) 
-                    THEN 1
-                    ELSE 0 
-                END as PorVencer,
-                -- Calcular días restantes para devolución
-                DATEDIFF(day, GETDATE(), pe.FechaDevolucionPrevista) as DiasRestantes
+                ep.ValorUnitario,
+                (pe.CantidadPrestada * ep.ValorUnitario) as Subtotal
             FROM PrestamosElementos pe
             INNER JOIN ElementosPublicitarios ep ON pe.ElementoId = ep.ElementoId
             INNER JOIN Usuarios u ON pe.UsuarioSolicitanteId = u.UsuarioId
             INNER JOIN Oficinas o ON pe.OficinaId = o.OficinaId
             WHERE pe.Activo = 1
-            ORDER BY pe.FechaPrestamo DESC
-        """)
+        """
         
-        prestamos = []
-        prestamos_activos = 0
-        vencidos = 0
-        por_vencer = 0
-        devueltos = 0
-        total_prestamos = 0
+        params = []
         
-        for row in cursor.fetchall():
-            prestamo = {
-                'id': row[0],
-                'elemento_id': row[1],
-                'material_nombre': row[2],
-                'usuario_id': row[3],
-                'solicitante_nombre': row[4],
-                'oficina_id': row[5],
-                'oficina_nombre': row[6],
-                'cantidad': row[7],
-                'fecha_prestamo': row[8],
-                'fecha_devolucion_prevista': row[9],
-                'fecha_devolucion_real': row[10],
-                'estado': row[11],
-                'evento': row[12],
-                'observaciones': row[13],
-                'usuario_prestador': row[14],
-                'activo': bool(row[15]),
-                'usuario_devolucion': row[16],
-                'usuario_aprobador': row[17],
-                'fecha_aprobacion': row[18],
-                'usuario_rechazador': row[19],
-                'fecha_rechazo': row[20],
-                'dias_transcurridos': row[21],
-                'vencido': bool(row[22]),
-                'por_vencer': bool(row[23]),
-                'dias_restantes': row[24] if row[24] else 0
-            }
-            prestamos.append(prestamo)
-            
-            # Contar estadísticas
-            total_prestamos += 1
-            estado = prestamo['estado'].upper() if prestamo['estado'] else ''
-            
-            if estado == 'PRESTADO':
-                prestamos_activos += 1
-                if prestamo.get('vencido'):
-                    vencidos += 1
-                elif prestamo.get('por_vencer'):
-                    por_vencer += 1
-            elif estado == 'DEVUELTO':
-                devueltos += 1
+        # Aplicar filtro de estado
+        if filtro_estado:
+            query += " AND pe.Estado = ?"
+            params.append(filtro_estado)
         
-        # Calcular tasa de devolución
-        tasa_devolucion = 0
-        if total_prestamos > 0:
-            tasa_devolucion = round((devueltos / total_prestamos) * 100, 1)
-        
-        # Obtener oficinas para filtro
-        cursor.execute("SELECT DISTINCT NombreOficina FROM Oficinas WHERE Activo = 1 ORDER BY NombreOficina")
-        oficinas = [{'nombre': row[0]} for row in cursor.fetchall()]
-        
-        # Obtener materiales más prestados - CONSULTA CORREGIDA
-        cursor.execute("""
-            SELECT TOP 5
-                ep.NombreElemento,
-                COUNT(*) as veces_prestado,
-                SUM(pe.CantidadPrestada) as total_prestado
-            FROM PrestamosElementos pe
-            INNER JOIN ElementosPublicitarios ep ON pe.ElementoId = ep.ElementoId
-            WHERE pe.Activo = 1
-            GROUP BY ep.NombreElemento
-            ORDER BY veces_prestado DESC
-        """)
-        
-        materiales_mas_prestados = []
-        for row in cursor.fetchall():
-            materiales_mas_prestados.append({
-                'nombre': row[0],
-                'veces_prestado': row[1],
-                'total_prestado': row[2]
-            })
-        
-        # Obtener próximos vencimientos - CONSULTA CORREGIDA
-        cursor.execute("""
-            SELECT TOP 5
-                pe.PrestamoId,
-                u.NombreUsuario as SolicitanteNombre,
-                ep.NombreElemento as MaterialNombre,
-                pe.FechaDevolucionPrevista,
-                DATEDIFF(day, GETDATE(), pe.FechaDevolucionPrevista) as DiasRestantes,
-                pe.CantidadPrestada
-            FROM PrestamosElementos pe
-            INNER JOIN ElementosPublicitarios ep ON pe.ElementoId = ep.ElementoId
-            INNER JOIN Usuarios u ON pe.UsuarioSolicitanteId = u.UsuarioId
-            WHERE pe.Estado = 'PRESTADO' 
-            AND pe.FechaDevolucionPrevista >= GETDATE()
-            AND pe.Activo = 1
-            ORDER BY pe.FechaDevolucionPrevista ASC
-        """)
-        
-        proximos_vencimientos = []
-        for row in cursor.fetchall():
-            proximos_vencimientos.append({
-                'id': row[0],
-                'solicitante_nombre': row[1],
-                'material_nombre': row[2],
-                'fecha_devolucion_estimada': row[3],
-                'dias_restantes': row[4],
-                'cantidad': row[5]
-            })
-        
-        conn.close()
-        
-        # Aplicar filtro según permisos
+        # Aplicar filtro de oficina (solo para admin/lider)
         rol_usuario = session.get('rol', '').lower()
         oficina_id_usuario = session.get('oficina_id')
         
-        if rol_usuario and oficina_id_usuario:
-            # Verificar si el usuario solo puede ver préstamos de su oficina
-            if rol_usuario.startswith('oficina_'):
-                prestamos = [p for p in prestamos if p.get('oficina_id') == oficina_id_usuario]
-                # Recalcular estadísticas después de filtrar
-                prestamos_activos = len([p for p in prestamos if p.get('estado', '').upper() == 'PRESTADO'])
-                devueltos = len([p for p in prestamos if p.get('estado', '').upper() == 'DEVUELTO'])
-                vencidos = len([p for p in prestamos if p.get('estado', '').upper() == 'PRESTADO' and p.get('vencido')])
-                por_vencer = len([p for p in prestamos if p.get('estado', '').upper() == 'PRESTADO' and p.get('por_vencer')])
-                total_prestamos = len(prestamos)
-                tasa_devolucion = round((devueltos / total_prestamos) * 100, 1) if total_prestamos > 0 else 0
+        if rol_usuario in ['administrador', 'lider_inventario']:
+            if filtro_oficina:
+                query += " AND pe.OficinaId = ?"
+                params.append(filtro_oficina)
+        else:
+            # Usuario normal solo ve su oficina
+            query += " AND pe.OficinaId = ?"
+            params.append(oficina_id_usuario)
         
-        # DEBUG: Mostrar información en consola
-        print(f"🔍 REPORTE PRÉSTAMOS - Estadísticas:")
-        print(f"   Total préstamos: {total_prestamos}")
+        # Aplicar filtro de material (búsqueda parcial)
+        if filtro_material:
+            query += " AND ep.NombreElemento LIKE ?"
+            params.append(f'%{filtro_material}%')
+        
+        # Aplicar filtro de solicitante (búsqueda parcial)
+        if filtro_solicitante:
+            query += " AND u.NombreUsuario LIKE ?"
+            params.append(f'%{filtro_solicitante}%')
+        
+        # Aplicar filtro de fechas
+        if filtro_fecha_inicio:
+            query += " AND CAST(pe.FechaPrestamo AS DATE) >= ?"
+            params.append(filtro_fecha_inicio)
+        
+        if filtro_fecha_fin:
+            query += " AND CAST(pe.FechaPrestamo AS DATE) <= ?"
+            params.append(filtro_fecha_fin)
+        
+        # Ordenar
+        query += " ORDER BY pe.FechaPrestamo DESC"
+        
+        print(f"🔍 Consulta SQL: {query}")
+        print(f"🔍 Parámetros: {params}")
+        
+        cursor.execute(query, params)
+        
+        prestamos = []
+        for row in cursor.fetchall():
+            prestamo = {
+                'id': row[0],
+                'material': row[2],  # Nombre del material
+                'cantidad': row[7],
+                'valor_unitario': float(row[15] or 0),
+                'subtotal': float(row[16] or 0),
+                'solicitante_nombre': row[4],
+                'oficina_nombre': row[6],
+                'fecha': row[8],
+                'fecha_prevista': row[9],
+                'estado': row[11],
+                'evento': row[12],
+                'observaciones': row[13]
+            }
+            prestamos.append(prestamo)
+        
+        # Obtener oficinas para el filtro (solo para admin/lider)
+        oficinas = []
+        if rol_usuario in ['administrador', 'lider_inventario']:
+            cursor.execute("SELECT OficinaId, NombreOficina FROM Oficinas WHERE Activo = 1 ORDER BY NombreOficina")
+            oficinas = [{'id': row[0], 'nombre': row[1]} for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        # Calcular estadísticas
+        total_prestamos = len(prestamos)
+        prestamos_activos = len([p for p in prestamos if p['estado'] == 'PRESTADO'])
+        aprobados = len([p for p in prestamos if p['estado'] == 'APROBADO'])
+        devueltos = len([p for p in prestamos if p['estado'] == 'DEVUELTO'])
+        
+        print(f"✅ Préstamos encontrados: {total_prestamos}")
         print(f"   Activos: {prestamos_activos}")
+        print(f"   Aprobados: {aprobados}")
         print(f"   Devueltos: {devueltos}")
-        print(f"   Vencidos: {vencidos}")
-        print(f"   Por vencer: {por_vencer}")
-        print(f"   Tasa devolución: {tasa_devolucion}%")
         
         return render_template('reportes/prestamos.html',
                              prestamos=prestamos,
                              total_prestamos=total_prestamos,
                              prestamos_activos=prestamos_activos,
+                             aprobados=aprobados,
                              devueltos=devueltos,
-                             vencidos=vencidos,
-                             por_vencer=por_vencer,
-                             tasa_devolucion=tasa_devolucion,
-                             oficinas=oficinas,
-                             materiales_mas_prestados=materiales_mas_prestados,
-                             proximos_vencimientos=proximos_vencimientos)
+                             filtro_estado=filtro_estado,
+                             filtro_oficina=filtro_oficina,
+                             filtro_material=filtro_material,
+                             filtro_solicitante=filtro_solicitante,
+                             filtro_fecha_inicio=filtro_fecha_inicio,
+                             filtro_fecha_fin=filtro_fecha_fin,
+                             oficinas=oficinas)
+                             
     except Exception as e:
         print(f"❌ Error generando reporte de préstamos: {e}")
         import traceback
@@ -1121,13 +1120,15 @@ def reporte_prestamos():
                              prestamos=[],
                              total_prestamos=0,
                              prestamos_activos=0,
+                             aprobados=0,
                              devueltos=0,
-                             vencidos=0,
-                             por_vencer=0,
-                             tasa_devolucion=0,
-                             oficinas=[],
-                             materiales_mas_prestados=[],
-                             proximos_vencimientos=[])
+                             filtro_estado='',
+                             filtro_oficina='',
+                             filtro_material='',
+                             filtro_solicitante='',
+                             filtro_fecha_inicio='',
+                             filtro_fecha_fin='',
+                             oficinas=[])
 
 # ============================================================================
 # RUTAS DE EXPORTACIÓN
@@ -2642,104 +2643,3 @@ def api_prestamo_devolver(prestamo_id):
             'success': False,
             'message': f'Error al registrar la devolución: {str(e)}'
         }), 500
-
-@reportes_bp.route('/exportar/inventario-corporativo/excel')
-def exportar_inventario_corporativo_excel_duplicado():
-    """Exporta TODO el inventario corporativo a Excel"""
-    if not _require_login():
-        return redirect('/login')
-    
-    # Verificar permisos
-    if not can_access('inventario_corporativo', 'view'):
-        flash('No tiene permisos para exportar inventario corporativo', 'warning')
-        return redirect('/reportes')
-    
-    try:
-        from database import get_database_connection
-        
-        conn = get_database_connection()
-        
-        # CONSULTA CORREGIDA según tu estructura de base de datos
-        query = """
-        SELECT 
-            o.NombreOficina,
-            o.Ubicacion,
-            m.NombreElemento as Material,
-            m.CantidadDisponible as Stock,
-            m.ValorUnitario,
-            (m.CantidadDisponible * m.ValorUnitario) as ValorTotal,
-            m.CantidadMinima as StockMinimo,
-            m.UsuarioCreador as Responsable,
-            CASE WHEN m.Activo = 1 THEN 'Activo' ELSE 'Inactivo' END as Estado,
-            m.FechaCreacion
-        FROM Materiales m
-        INNER JOIN Oficinas o ON m.OficinaCreadoraId = o.OficinaId
-        WHERE m.Activo = 1
-        ORDER BY o.NombreOficina, m.NombreElemento
-        """
-        
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        
-        print(f"✅ EXPORTANDO INVENTARIO CORPORATIVO: {len(df)} registros")
-        print(f"   - Fuente: Tabla Materiales (INVENTARIO CORPORATIVO)")
-        print(f"   - Oficinas incluidas: {df['NombreOficina'].nunique()}")
-        print(f"   - Valor total exportado: ${df['ValorTotal'].sum():,.2f}")
-        
-        # Crear archivo Excel en memoria
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            # Hoja 1: Inventario completo
-            df.to_excel(writer, sheet_name='Inventario Corporativo', index=False)
-            
-            # Hoja 2: Resumen por oficina
-            resumen_df = df.groupby(['NombreOficina', 'Ubicacion']).agg({
-                'Material': 'count',
-                'Stock': 'sum',
-                'ValorTotal': 'sum'
-            }).reset_index()
-            resumen_df.columns = ['Oficina', 'Ubicación', 'Cantidad Materiales', 'Stock Total', 'Valor Total Inventario']
-            resumen_df['Valor Total Inventario'] = resumen_df['Valor Total Inventario'].round(2)
-            resumen_df.to_excel(writer, sheet_name='Resumen por Oficina', index=False)
-            
-            # Hoja 3: Totales generales
-            totales_data = {
-                'Métrica': [
-                    'Total Oficinas con Inventario',
-                    'Total Materiales',
-                    'Stock Total',
-                    'Valor Total Inventario',
-                    'Valor Promedio por Material',
-                    'Fecha de Exportación'
-                ],
-                'Valor': [
-                    resumen_df['Oficina'].nunique(),
-                    df['Material'].count(),
-                    int(df['Stock'].sum()),
-                    f"${df['ValorTotal'].sum():,.2f}",
-                    f"${df['ValorTotal'].mean():,.2f}" if len(df) > 0 else "$0.00",
-                    datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                ]
-            }
-            totales_df = pd.DataFrame(totales_data)
-            totales_df.to_excel(writer, sheet_name='Totales Generales', index=False)
-        
-        output.seek(0)
-        
-        # Crear nombre de archivo
-        fecha_actual = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'inventario_corporativo_completo_{fecha_actual}.xlsx'
-        
-        return send_file(
-            output,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=filename
-        )
-        
-    except Exception as e:
-        print(f"❌ Error exportando inventario corporativo: {e}")
-        import traceback
-        traceback.print_exc()
-        flash('Error al exportar el inventario corporativo', 'danger')
-        return redirect(url_for('reportes.reporte_oficinas'))

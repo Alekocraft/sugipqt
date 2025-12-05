@@ -1,10 +1,7 @@
-﻿﻿{% extends "base.html" %}
-
+﻿{% extends "base.html" %}
 {% block title %}Reporte de Solicitudes{% endblock %}
-
 {% block content %}
 <div class="container-fluid fade-in">
-    <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 fw-bold mb-1 text-primary">
@@ -51,8 +48,10 @@
                     <label class="form-label small fw-semibold">Oficina</label>
                     <select name="oficina" id="oficina" class="form-select form-select-sm">
                         <option value="todas" {% if filtro_oficina=='todas' %}selected{% endif %}>Todas las oficinas</option>
-                        {% for oficina in oficinas_unique %}
-                        <option value="{{ oficina }}" {% if filtro_oficina==oficina %}selected{% endif %}>{{ oficina }}</option>
+                        {% for oficina in oficinas %}
+                        <option value="{{ oficina.id }}" {% if filtro_oficina==oficina.id|string %}selected{% endif %}>
+                            {{ oficina.nombre }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -245,7 +244,22 @@ function exportarExcel() {
         const ws = XLSX.utils.table_to_sheet(tabla);
         XLSX.utils.book_append_sheet(wb, ws, 'Solicitudes');
         
-        XLSX.writeFile(wb, `Reporte_Solicitudes_${new Date().toISOString().split('T')[0]}.xlsx`);
+        // Obtener parámetros de filtro para el nombre del archivo
+        const oficina = document.getElementById('oficina').value;
+        const estado = document.getElementById('estado').value;
+        
+        let nombreArchivo = `Reporte_Solicitudes_${new Date().toISOString().split('T')[0]}`;
+        
+        if (oficina !== 'todas') {
+            const nombreOficina = document.getElementById('oficina').options[document.getElementById('oficina').selectedIndex].text;
+            nombreArchivo += `_${nombreOficina.replace(/\s+/g, '_')}`;
+        }
+        
+        if (estado !== 'todos') {
+            nombreArchivo += `_${estado}`;
+        }
+        
+        XLSX.writeFile(wb, `${nombreArchivo}.xlsx`);
         mostrarNotificacion('✅ Excel exportado correctamente', 'success');
     } catch (error) {
         console.error('Error en exportación Excel:', error);
@@ -258,6 +272,11 @@ function exportarPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('landscape');
 
+        // Obtener parámetros de filtro
+        const oficina = document.getElementById('oficina').value;
+        const estado = document.getElementById('estado').value;
+        const nombreOficina = document.getElementById('oficina').options[document.getElementById('oficina').selectedIndex].text;
+        
         // Título
         doc.setFontSize(16);
         doc.setTextColor(40, 40, 40);
@@ -271,13 +290,21 @@ function exportarPDF() {
             month: '2-digit', 
             year: 'numeric' 
         })}`, 14, 22);
-        doc.text(`Total solicitudes: {{ solicitudes|length }}`, 14, 28);
-        doc.text(`Filtros aplicados: {% if filtro_estado != 'todos' %}Estado={{ filtro_estado }}{% endif %} {% if filtro_oficina != 'todas' %}Oficina={{ filtro_oficina }}{% endif %}`, 14, 34);
+        
+        let infoFiltros = `Total solicitudes: {{ solicitudes|length }}`;
+        if (oficina !== 'todas') {
+            infoFiltros += ` | Oficina: ${nombreOficina}`;
+        }
+        if (estado !== 'todos') {
+            infoFiltros += ` | Estado: ${estado}`;
+        }
+        
+        doc.text(infoFiltros, 14, 28);
 
         // Tabla
         doc.autoTable({
             html: '#tablaSolicitudes',
-            startY: 42,
+            startY: 35,
             theme: 'grid',
             headStyles: { 
                 fillColor: [13, 110, 253], // Azul primario
@@ -305,7 +332,15 @@ function exportarPDF() {
             margin: { left: 10, right: 10 }
         });
 
-        doc.save(`Reporte_Solicitudes_${new Date().toISOString().split('T')[0]}.pdf`);
+        let nombreArchivo = `Reporte_Solicitudes_${new Date().toISOString().split('T')[0]}`;
+        if (oficina !== 'todas') {
+            nombreArchivo += `_${nombreOficina.replace(/\s+/g, '_')}`;
+        }
+        if (estado !== 'todos') {
+            nombreArchivo += `_${estado}`;
+        }
+
+        doc.save(`${nombreArchivo}.pdf`);
         mostrarNotificacion('✅ PDF exportado correctamente', 'success');
     } catch (error) {
         console.error('Error en exportación PDF:', error);
@@ -353,15 +388,19 @@ function aplicarFiltroEstado(estado) {
         url.searchParams.delete('estado');
     }
 
-    const oficina = '{{ filtro_oficina }}';
-    const material = '{{ request.args.get("material", "") }}';
-    const solicitante = '{{ request.args.get("solicitante", "") }}';
+    const oficina = document.getElementById('oficina').value;
+    const material = document.querySelector('input[name="material"]').value;
+    const solicitante = document.querySelector('input[name="solicitante"]').value;
 
     if (oficina && oficina !== 'todas') url.searchParams.set('oficina', oficina);
     if (material) url.searchParams.set('material', material);
     if (solicitante) url.searchParams.set('solicitante', solicitante);
 
     window.location.href = url.toString();
+}
+
+function limpiarFiltros() {
+    window.location.href = '/reportes/solicitudes';
 }
 
 document.addEventListener('DOMContentLoaded', function() {

@@ -74,41 +74,90 @@
         </div>
     </div>
 
+    <!-- Sección de Filtros Actualizada -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros de Búsqueda</h5>
+                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros de Búsqueda Avanzados</h5>
                 </div>
                 <div class="card-body">
-                    <form class="row g-3" method="get" action="/prestamos">
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Estado</label>
-                            <select class="form-select" name="estado" onchange="this.form.submit()">
-                                <option value="">-- Todos los estados --</option>
-                                {% for e in estados %}
-                                <option value="{{ e }}" {{ 'selected' if filtro_estado==e else '' }}>
-                                    {{ e }}
+                    <form method="GET" action="{{ url_for('reportes.reporte_solicitudes') }}" class="row g-3">
+                        <div class="col-md-2">
+                            <label class="form-label">Estado</label>
+                            <select name="estado" class="form-select">
+                                <option value="todos" {% if filtro_estado == 'todos' %}selected{% endif %}>Todos</option>
+                                <option value="pendiente" {% if filtro_estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                                <option value="aprobada" {% if filtro_estado == 'aprobada' %}selected{% endif %}>Aprobada</option>
+                                <option value="rechazada" {% if filtro_estado == 'rechazada' %}selected{% endif %}>Rechazada</option>
+                                <option value="parcial" {% if filtro_estado == 'parcial' %}selected{% endif %}>Parcial</option>
+                                <option value="completada" {% if filtro_estado == 'completada' %}selected{% endif %}>Completada</option>
+                                <option value="devuelta" {% if filtro_estado == 'devuelta' %}selected{% endif %}>Devuelta</option>
+                            </select>
+                        </div>
+                        
+                        {% if session.rol in ['administrador', 'lider_inventario'] %}
+                        <div class="col-md-2">
+                            <label class="form-label">Oficina</label>
+                            <select name="oficina" class="form-select">
+                                <option value="todas" {% if filtro_oficina == 'todas' %}selected{% endif %}>Todas las oficinas</option>
+                                {% for oficina in oficinas %}
+                                <option value="{{ oficina.id }}" {% if filtro_oficina == oficina.id|string %}selected{% endif %}>
+                                    {{ oficina.nombre }}
                                 </option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center">
-                                <i class="fas fa-filter me-2"></i>Filtrar
-                            </button>
-                        </div>
-                        {% if filtro_estado %}
-                        <div class="col-md-7 d-flex align-items-end justify-content-end">
-                            <span class="text-muted">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Filtrado por estado: <span class="fw-semibold">{{ filtro_estado }}</span>
-                                <a href="/prestamos" class="btn btn-sm btn-outline-secondary ms-2">
-                                    <i class="fas fa-times me-1"></i>Limpiar
-                                </a>
-                            </span>
-                        </div>
                         {% endif %}
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">Material (búsqueda parcial)</label>
+                            <input type="text" name="material" class="form-control" 
+                                   placeholder="Ej: lápiz, papel" 
+                                   value="{{ filtro_material }}">
+                            <small class="form-text text-muted">Buscar por parte del nombre</small>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">Solicitante (búsqueda parcial)</label>
+                            <input type="text" name="solicitante" class="form-control" 
+                                   placeholder="Ej: Juan, María" 
+                                   value="{{ filtro_solicitante }}">
+                            <small class="form-text text-muted">Buscar por parte del nombre</small>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">Fecha desde</label>
+                            <input type="date" name="fecha_inicio" class="form-control" 
+                                   value="{{ filtro_fecha_inicio }}">
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">Fecha hasta</label>
+                            <input type="date" name="fecha_fin" class="form-control" 
+                                   value="{{ filtro_fecha_fin }}">
+                        </div>
+                        
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary d-flex align-items-center">
+                                <i class="fas fa-filter me-2"></i>Aplicar Filtros
+                            </button>
+                            <a href="/prestamos" class="btn btn-secondary d-flex align-items-center">
+                                <i class="fas fa-times me-2"></i>Limpiar Filtros
+                            </a>
+                            
+                            <!-- Botón de exportación -->
+                            <a href="{{ url_for('reportes.exportar_solicitudes_excel', 
+                                              estado=filtro_estado, 
+                                              oficina=filtro_oficina,
+                                              material=filtro_material,
+                                              solicitante=filtro_solicitante,
+                                              fecha_inicio=filtro_fecha_inicio,
+                                              fecha_fin=filtro_fecha_fin) }}" 
+                               class="btn btn-success d-flex align-items-center">
+                                <i class="fas fa-file-excel me-2"></i>Exportar a Excel
+                            </a>
+                        </div>
                     </form>
                 </div>
             </div>

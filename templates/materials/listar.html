@@ -1,158 +1,371 @@
 {% extends "base.html" %}
-{% block title %}Gestión de Materiales{% endblock %}
-{% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2 class="card-title mb-0">
-                        <i class="fas fa-box"></i> Inventario de Materiales
-                    </h2>
-                    <a href="/materiales/crear" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Agregar Material
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                    {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    {% endfor %}
-                    {% endif %}
-                    {% endwith %}
+{% block title %}Préstamos de Material - Sistema de Gestión{% endblock %}
 
-                    {% if materiales %}
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <p class="text-muted mb-0">{{ materiales|length }} materiales registrados</p>
-                        <div class="text-muted small">
-                            <span class="badge bg-success me-2">Disponible</span>
-                            <span class="badge bg-warning me-2">Bajo stock</span>
-                            <span class="badge bg-danger">Agotado</span>
+{% block content %}
+<div class="container-fluid fade-in">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="fw-bold mb-3">
+                <i class="fas fa-exchange-alt me-2"></i>Préstamos de Material
+            </h1>
+            <p class="text-muted mb-0">Control y seguimiento de préstamos de material</p>
+        </div>
+    </div>
+
+    <div class="alert alert-info mb-4">
+        <strong>📊 Vista de préstamos:</strong>
+        {% if session.rol in ['administrador', 'lider_inventario'] %}
+        Mostrando préstamos de TODAS las oficinas (acceso total)
+        {% else %}
+        Mostrando préstamos únicamente de su oficina: <strong>{{ session.oficina_nombre }}</strong>
+        {% endif %}
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Acciones</h5>
+                        <div class="d-flex gap-2">
+                            <a href="/prestamos/crear" class="btn btn-primary d-flex align-items-center">
+                                <i class="fas fa-plus me-2"></i>Nuevo Préstamo
+                            </a>
+                            <button class="btn btn-success d-flex align-items-center" onclick="exportarExcelPrestamos()">
+                                <i class="fas fa-file-excel me-2"></i>Exportar Excel
+                            </button>
+                            <button class="btn btn-danger d-flex align-items-center" onclick="exportarPDFPrestamos()">
+                                <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+                            </button>
                         </div>
                     </div>
-                    
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-dark">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">📊 Resumen General de Préstamos</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 border-end">
+                            <h4 class="fw-bold mb-0 text-primary" id="total-prestamos">{{ prestamos|length }}</h4>
+                            <small class="text-muted">Total Préstamos</small>
+                        </div>
+                        <div class="col-md-3 border-end">
+                            <h4 class="fw-bold mb-0 text-warning" id="pendientes">{{ prestamos|selectattr('estado', 'equalto', 'PRESTADO')|list|length }}</h4>
+                            <small class="text-muted">Pendientes</small>
+                        </div>
+                        <div class="col-md-3 border-end">
+                            <h4 class="fw-bold mb-0 text-success" id="aprobados">{{ prestamos|selectattr('estado', 'equalto', 'APROBADO')|list|length }}</h4>
+                            <small class="text-muted">Aprobados</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 class="fw-bold mb-0 text-info" id="devueltos">{{ prestamos|selectattr('estado', 'equalto', 'DEVUELTO')|list|length }}</h4>
+                            <small class="text-muted">Devueltos</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Filtros Actualizada -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros de Búsqueda Avanzados</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Nota: Cambié la acción a /prestamos ya que estás en esa vista -->
+                    <form method="GET" action="/prestamos" class="row g-3">
+                        <div class="col-md-2">
+                            <label class="form-label">Estado</label>
+                            <select name="estado" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="PRESTADO" {% if filtro_estado == 'PRESTADO' %}selected{% endif %}>Pendiente</option>
+                                <option value="APROBADO" {% if filtro_estado == 'APROBADO' %}selected{% endif %}>Aprobada</option>
+                                <option value="RECHAZADO" {% if filtro_estado == 'RECHAZADO' %}selected{% endif %}>Rechazada</option>
+                                <option value="APROBADO_PARCIAL" {% if filtro_estado == 'APROBADO_PARCIAL' %}selected{% endif %}>Parcial</option>
+                                <option value="DEVUELTO" {% if filtro_estado == 'DEVUELTO' %}selected{% endif %}>Devuelta</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Solo mostrar filtro de oficina si tienes permisos Y si la variable oficinas existe -->
+                        {% if session.rol in ['administrador', 'lider_inventario'] %}
+                        <div class="col-md-2">
+                            <label class="form-label">Oficina</label>
+                            <select name="oficina" class="form-select">
+                                <option value="">Todas las oficinas</option>
+                                {% if oficinas %}
+                                    {% for oficina in oficinas %}
+                                    <option value="{{ oficina.id }}" {% if filtro_oficina == oficina.id|string %}selected{% endif %}>
+                                        {{ oficina.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="">No hay oficinas disponibles</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">Material</label>
+                            <input type="text" name="material" class="form-control" 
+                                   placeholder="Ej: lápiz, papel" 
+                                   value="{{ filtro_material or '' }}">
+                            <small class="form-text text-muted">Búsqueda parcial</small>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">Solicitante</label>
+                            <input type="text" name="solicitante" class="form-control" 
+                                   placeholder="Ej: Juan, María" 
+                                   value="{{ filtro_solicitante or '' }}">
+                            <small class="form-text text-muted">Búsqueda parcial</small>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">Fecha desde</label>
+                            <input type="date" name="fecha_inicio" class="form-control" 
+                                   value="{{ filtro_fecha_inicio or '' }}">
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">Fecha hasta</label>
+                            <input type="date" name="fecha_fin" class="form-control" 
+                                   value="{{ filtro_fecha_fin or '' }}">
+                        </div>
+                        
+                        <div class="col-12 mt-3">
+                            <button type="submit" class="btn btn-primary d-flex align-items-center">
+                                <i class="fas fa-filter me-2"></i>Aplicar Filtros
+                            </button>
+                            <a href="/prestamos" class="btn btn-secondary d-flex align-items-center">
+                                <i class="fas fa-times me-2"></i>Limpiar Filtros
+                            </a>
+                            
+                            <!-- Botón de exportación - Asegúrate de que esta ruta exista en tu Flask -->
+                            {% if session.rol in ['administrador', 'lider_inventario'] %}
+                            <a href="{{ url_for('reportes.exportar_solicitudes_excel', 
+                                              estado=filtro_estado or '', 
+                                              oficina=filtro_oficina or '',
+                                              material=filtro_material or '',
+                                              solicitante=filtro_solicitante or '',
+                                              fecha_inicio=filtro_fecha_inicio or '',
+                                              fecha_fin=filtro_fecha_fin or '') }}" 
+                               class="btn btn-success d-flex align-items-center">
+                                <i class="fas fa-file-excel me-2"></i>Exportar a Excel
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- El resto del código permanece igual -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Préstamos</h5>
+                    <span class="badge bg-light text-dark rounded-pill" id="total-registros">{{ prestamos|length }} registros</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive" style="max-height: 600px; overflow: auto;">
+                        <table class="table table-striped table-hover table-sm align-middle mb-0" id="tablaPrestamos">
+                            <thead class="table-dark sticky-top">
                                 <tr>
-                                    <th>Código</th>
+                                    <th>#</th>
                                     <th>Material</th>
-                                    <th>Valor Unitario</th>
-                                    <th>Stock</th>
-                                    <th>Ubicación</th>
-                                    <th>Imagen</th>
-                                    <th>Acciones</th>
+                                    <th class="text-end">Cant.</th>
+                                    <th class="text-end">V. Unitario</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th>Solicitante</th>
+                                    <th>Oficina</th>
+                                    <th>Fecha</th>
+                                    <th>Prevista</th>
+                                    <th>Estado</th>
+                                    {% if can_view_actions() %}
+                                        <th class="text-center">Acciones</th>
+                                    {% endif %}
                                 </tr>
                             </thead>
-                            <tbody>
-                                {% for material in materiales %}
-                                <tr>
-                                    <td><strong>MAT-{{ "%04d"|format(material.id) }}</strong></td>
-                                    <td>{{ material.nombre }}</td>
-                                    <td>${{ "{:,.2f}".format(material.valor_unitario) }}</td>
+                            <tbody id="prestamos-body">
+                                {% for r in prestamos %}
+                                <tr id="prestamo-{{ r.id }}" data-estado="{{ r.estado }}">
+                                    <td class="fw-semibold">{{ r.id }}</td>
                                     <td>
-                                        {% if material.cantidad > 10 %}
-                                        <span class="badge bg-success">{{ material.cantidad }} unidades</span>
-                                        {% elif material.cantidad > 0 %}
-                                        <span class="badge bg-warning text-dark">{{ material.cantidad }} unidades</span>
-                                        {% else %}
-                                        <span class="badge bg-danger">Agotado</span>
-                                        {% endif %}
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-box me-2 text-muted"></i>
+                                            <span>{{ r.material }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end fw-semibold">{{ r.cantidad }}</td>
+                                    <td class="text-end">${{ "%.2f"|format(r.valor_unitario) }}</td>
+                                    <td class="text-end fw-bold text-primary">${{ "%.2f"|format(r.subtotal) }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user me-2 text-muted"></i>
+                                            <span>{{ r.solicitante_nombre }}</span>
+                                        </div>
                                     </td>
                                     <td>
-                                        <span class="badge bg-secondary">
-                                            Oficina {{ material.oficina_id }}
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-building me-2 text-muted"></i>
+                                            <span>{{ r.oficina_nombre }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ r.fecha.strftime('%Y-%m-%d %H:%M') if r.fecha }}</small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ r.fecha_prevista.strftime('%Y-%m-%d %H:%M') if r.fecha_prevista }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge rounded-pill fw-normal py-2 px-3 estado-badge estado-{{ r.estado|lower|replace(' ', '-') }}">
+                                            <i class="fas {{
+                                                'fa-check-circle' if r.estado == 'APROBADO'
+                                                else 'fa-clock' if r.estado == 'PRESTADO'
+                                                else 'fa-times-circle' if r.estado == 'RECHAZADO'
+                                                else 'fa-check-double' if r.estado == 'APROBADO_PARCIAL'
+                                                else 'fa-undo' if r.estado == 'DEVUELTO'
+                                                else 'fa-question-circle'
+                                            }} me-1"></i>
+                                            {{ r.estado }}
                                         </span>
                                     </td>
-                                    <td>
-                                        {% if material.ruta_imagen %}
-                                        <img src="/static/uploads/{{ material.ruta_imagen }}"
-                                             alt="{{ material.nombre }}"
-                                             style="width: 60px; height: 60px; object-fit: cover;"
-                                             class="img-thumbnail border"
-                                             onerror="this.src='/static/img/placeholder-material.png'">
-                                        {% else %}
-                                        <div class="text-center text-muted">
-                                            <i class="fas fa-image fa-lg"></i>
-                                            <div class="small">Sin imagen</div>
+
+                                    {% if can_view_actions() %}
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {% if r.estado == 'PRESTADO' %}
+                                            <button type="button" class="btn btn-outline-success" onclick="aprobarPrestamo({{ r.id }})"
+                                                    title="Aprobar Préstamo">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning"
+                                                    onclick="mostrarModalAprobarParcial({{ r.id }}, {{ r.cantidad }})"
+                                                    title="Aprobar Parcialmente">
+                                                <i class="fas fa-check-double"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger"
+                                                    onclick="mostrarModalRechazar({{ r.id }})"
+                                                    title="Rechazar Préstamo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            {% elif r.estado in ['APROBADO', 'APROBADO_PARCIAL'] %}
+                                            <button type="button" class="btn btn-outline-info"
+                                                    onclick="mostrarModalDevolucion({{ r.id }})"
+                                                    title="Registrar Devolución">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted small">N/A</span>
+                                            {% endif %}
                                         </div>
-                                        {% endif %}
                                     </td>
-                                    <td>
-                                        <div class="d-flex gap-2">
-                                            <a href="/materiales/editar/{{ material.id }}" 
-                                               class="btn btn-outline-primary btn-sm"
-                                               title="Editar material">
-                                                <i class="fas fa-edit"></i>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+
+                                {% if not prestamos %}
+                                <tr>
+                                    <td colspan="{% if can_view_actions() %}11{% else %}10{% endif %}" class="text-center py-5">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                            <h5 class="text-muted">No se encontraron préstamos</h5>
+                                            <p class="text-muted">No hay préstamos que coincidan con los criterios de búsqueda</p>
+                                            <a href="/prestamos/crear" class="btn btn-primary mt-2">
+                                                <i class="fas fa-plus me-2"></i>Crear primer préstamo
                                             </a>
-                                            <form method="POST" 
-                                                  action="/materiales/eliminar/{{ material.id }}"
-                                                  onsubmit="return confirm('¿Confirmar eliminación del material {{ material.nombre }}?');">
-                                                <button type="submit" 
-                                                        class="btn btn-outline-danger btn-sm"
-                                                        title="Eliminar material">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
                                         </div>
                                     </td>
                                 </tr>
-                                {% endfor %}
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>
-                    {% else %}
-                    <div class="text-center py-5">
-                        <div class="mb-3">
-                            <i class="fas fa-box-open fa-3x text-muted"></i>
-                        </div>
-                        <h4 class="text-muted mb-3">Inventario vacío</h4>
-                        <p class="text-muted mb-4">No hay materiales registrados en el sistema</p>
-                        <a href="/materiales/crear" class="btn btn-primary">
-                            <i class="fas fa-plus-circle me-2"></i>Registrar primer material
-                        </a>
-                    </div>
-                    {% endif %}
                 </div>
-                {% if materiales %}
-                <div class="card-footer text-muted">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <small>Última actualización: {{ fecha_actual|default('N/A') }}</small>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <small>Total de registros: {{ materiales|length }}</small>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
+<!-- Los modales permanecen igual -->
+<div class="modal fade" id="aprobarParcialModal" tabindex="-1" aria-labelledby="aprobarParcialModalLabel" aria-hidden="true">
+    <!-- ... contenido del modal ... -->
+</div>
+
+<div class="modal fade" id="rechazarModal" tabindex="-1" aria-labelledby="rechazarModalLabel" aria-hidden="true">
+    <!-- ... contenido del modal ... -->
+</div>
+
+<div class="modal fade" id="devolucionModal" tabindex="-1" aria-labelledby="devolucionModalLabel" aria-hidden="true">
+    <!-- ... contenido del modal ... -->
+</div>
+
 <style>
-.table th {
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-.table td {
-    vertical-align: middle;
-}
-.img-thumbnail {
-    border-radius: 4px;
-    padding: 2px;
-    background-color: #fff;
-}
-.badge {
-    font-weight: 500;
-    padding: 0.35em 0.65em;
-}
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .table th {
+        white-space: nowrap;
+        position: relative;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .btn-sm {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .estado-badge {
+        font-size: 0.75rem;
+    }
+    
+    .estado-prestado {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .estado-aprobado {
+        background-color: #d1edff;
+        color: #0d6efd;
+    }
+    
+    .estado-rechazado {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .estado-aprobado-parcial {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .estado-devuelto {
+        background-color: #d1e7dd;
+        color: #0f5132;
+    }
 </style>
+{% endblock %}
+
+<!-- Los scripts permanecen igual -->
+{% block scripts %}
+<!-- ... scripts JavaScript ... -->
 {% endblock %}
