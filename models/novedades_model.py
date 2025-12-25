@@ -209,40 +209,35 @@ class NovedadModel:
                 pass
     
     @staticmethod
-    def crear(solicitud_id, tipo_novedad, descripcion, usuario_reporta, cantidad_afectada=None, prioridad='media'):
+    def crear(solicitud_id, tipo_novedad, descripcion, usuario_reporta, cantidad_afectada=None, ruta_imagen=None):
         """Crea una nueva novedad"""
         conn = get_database_connection()
         if conn is None:
             return None
-        
+    
         cursor = conn.cursor()
         try:
             cursor.execute("""
                 INSERT INTO NovedadesSolicitudes (
                     SolicitudId, TipoNovedad, Descripcion, CantidadAfectada,
-                    EstadoNovedad, UsuarioRegistra, FechaRegistro, Prioridad
+                    EstadoNovedad, UsuarioRegistra, FechaRegistro, RutaImagen
                 )
-                VALUES (?, ?, ?, ?, 'pendiente', ?, GETDATE(), ?)
-            """, (solicitud_id, tipo_novedad, descripcion, cantidad_afectada, usuario_reporta, prioridad))
-            
+                VALUES (?, ?, ?, ?, 'registrada', ?, GETDATE(), ?)
+            """, (solicitud_id, tipo_novedad, descripcion, cantidad_afectada, usuario_reporta, ruta_imagen))
+        
             conn.commit()
+            print(f"✅ Novedad creada para solicitud {solicitud_id}. Imagen: {ruta_imagen}")
             return cursor.rowcount > 0
-            
+        
         except Exception as e:
-            try:
-                conn.rollback()
-            except:
-                pass
+            conn.rollback()
             print(f"❌ Error creando novedad: {e}")
             import traceback
             traceback.print_exc()
             return None
         finally:
-            try:
-                cursor.close()
-                conn.close()
-            except:
-                pass
+            cursor.close()
+            conn.close()
     
     @staticmethod
     def actualizar_estado(novedad_id, nuevo_estado, usuario_resuelve, comentario=""):

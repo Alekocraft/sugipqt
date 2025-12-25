@@ -1,0 +1,145 @@
+ESTRUCTURA DEL PROYECTO FLASK 
+============================= 
+Fecha: Wed 12/24/2025 20:38:38.53 
+Directorio actual: C:\Users\sinventarios\source\repos\sugipqt 
+ 
+[ARCHIVOS PRINCIPALES .PY] 
+-------------------------- 
+app.py 
+database.py 
+solicitudes.py 
+blueprints\api.py 
+blueprints\aprobacion.py 
+blueprints\aprobadores.py 
+blueprints\auth.py 
+blueprints\inventario_corporativo.py 
+blueprints\materiales.py 
+blueprints\novedades_model.py 
+blueprints\oficinas.py 
+blueprints\prestamos.py 
+blueprints\reportes.py 
+blueprints\solicitudes.py 
+blueprints\usuarios.py 
+config\config.py 
+config\ldap_config.py 
+config\permissions.py 
+config\__init__.py 
+models\generar_hash.py 
+models\inventario_corporativo_model.py 
+models\materiales_model.py 
+models\novedades_model.py 
+models\oficinas_model.py 
+models\prestamos_model.py 
+models\solicitudes_model.py 
+models\usuarios_model.py 
+models\__init__.py 
+services\auth_service.py 
+templates\materials\__init__.py 
+templates\reportes\__init__.py 
+templates\solicitudes\__init__.py 
+utils\auth.py 
+utils\filters.py 
+utils\helpers.py 
+utils\initialization.py 
+utils\ldap_auth.py 
+utils\permissions.py 
+utils\permissions_functions.py 
+utils\__init__.py 
+ 
+[ARCHIVOS HTML en /templates/] 
+------------------------------ 
+templates\base.html 
+templates\dashboard.html 
+templates\aprobadores\listar.html 
+templates\auth\listar.html 
+templates\auth\login.html 
+templates\auth\test_ldap.html 
+templates\error\404.html 
+templates\error\500.html 
+templates\inventario_corporativo\asignar.html 
+templates\inventario_corporativo\crear.html 
+templates\inventario_corporativo\detalle.html 
+templates\inventario_corporativo\editar.html 
+templates\inventario_corporativo\listar.html 
+templates\inventario_corporativo\listar_con_filtros.html 
+templates\inventario_corporativo\reportes.html 
+templates\materials\crear.html 
+templates\materials\editar.html 
+templates\materials\listar.html 
+templates\oficinas\detalle.html 
+templates\oficinas\listar.html 
+templates\prestamos\crear.html 
+templates\prestamos\elemento_crear.html 
+templates\prestamos\listar.html 
+templates\reportes\historial_material.html 
+templates\reportes\index.html 
+templates\reportes\inventario.html 
+templates\reportes\materiales.html 
+templates\reportes\material_detalle.html 
+templates\reportes\novedades.html 
+templates\reportes\oficinas.html 
+templates\reportes\prestamos.html 
+templates\reportes\solicitudes.html 
+templates\solicitudes\crear.html 
+templates\solicitudes\listar.html 
+templates\solicitudes\solicitudes.html 
+templates\usuarios\crear.html 
+templates\usuarios\editar.html 
+templates\usuarios\gestionar.html 
+templates\usuarios\listar.html 
+ 
+[ARCHIVOS CSS en /static/] 
+------------------------- 
+static\css\base.css 
+static\css\custom.css 
+static\css\dashboard.css 
+static\css\inventario_corporativo.css 
+static\css\login.css 
+ 
+[ARCHIVOS JS en /static/] 
+------------------------- 
+ 
+[ARCHIVOS DE CONFIGURACION] 
+--------------------------- 
+requirements.txt 
+ 
+[ARCHIVOS DE ENTORNO] 
+-------------------- 
+ 
+[ARCHIVOS DE LOGS] 
+------------------ 
+logs\ldap.log 
+logs\ldap.log 
+ 
+[ARCHIVOS LOG EN RAIZ] 
+---------------------- 
+ 
+[CARPETAS PRINCIPALES (excluyendo entornos virtuales)] 
+------------------------------------------------------ 
+[.git] 
+[.vs] 
+[blueprints] 
+[config] 
+[logs] 
+[models] 
+[services] 
+[static] 
+[templates] 
+[utils] 
+[__pycache__] 
+ 
+Resumen: 
+--------- 
+Archivos .py: 3755 
+Archivos HTML: 39 
+Archivos CSS: 5 
+Archivos JS: 0 
+Archivos de entorno: 0 
+Archivos de logs: 2 
+Carpetas (sin entornos virtuales): 11 
+ 
+[ENTORNOS VIRTUALES EXCLUIDOS] 
+------------------------------ 
+.venv 
+envirt 
+ 

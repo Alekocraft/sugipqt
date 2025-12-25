@@ -1,4 +1,4 @@
-# models/inventario_corporativo_model.py
+# models/inventario_corporativo_model.py.
 from database import get_database_connection
 
 
